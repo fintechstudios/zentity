@@ -1,13 +1,13 @@
 package org.elasticsearch.plugin.zentity;
 
 import io.zentity.model.Model;
-import io.zentity.model.ValidationException;
 import io.zentity.resolution.Job;
 import io.zentity.resolution.input.Input;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.inject.Inject;
-import org.elasticsearch.rest.BaseRestHandler;
+import org.elasticsearch.plugin.zentity.exceptions.BadRequestException;
+import org.elasticsearch.plugin.zentity.exceptions.NotFoundException;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
@@ -15,7 +15,7 @@ import org.elasticsearch.rest.RestStatus;
 
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 
-public class ResolutionAction extends BaseRestHandler {
+public class ResolutionAction extends BaseAction {
 
     @Inject
     ResolutionAction(RestController controller) {
@@ -69,63 +69,56 @@ public class ResolutionAction extends BaseRestHandler {
         int finalSearchMaxConcurrentShardRequests = searchMaxConcurrentShardRequests;
         int finalSearchPreFilterShardSize = searchPreFilterShardSize;
 
-        return channel -> {
-            try {
+        return wrappedConsumer(channel -> {
+            // Validate the request body.
+            if (body == null || body.equals(""))
+                throw new BadRequestException("Request body is missing.");
 
-                // Validate the request body.
-                if (body == null || body.equals(""))
-                    throw new ValidationException("Request body is missing.");
-
-                // Parse and validate the job input.
-                Input input;
-                if (entityType == null || entityType.equals("")) {
-                    input = new Input(body);
-                } else {
-                    GetResponse getResponse = ModelsAction.getEntityModel(entityType, client);
-                    if (!getResponse.isExists())
-                        throw new NotFoundException("Entity type '" + entityType + "' not found.");
-                    String model = getResponse.getSourceAsString();
-                    input = new Input(body, new Model(model));
-                }
-
-                // Prepare the entity resolution job.
-                Job job = new Job(client);
-                job.includeAttributes(includeAttributes);
-                job.includeErrorTrace(includeErrorTrace);
-                job.includeExplanation(includeExplanation);
-                job.includeHits(includeHits);
-                job.includeQueries(includeQueries);
-                job.includeScore(includeScore);
-                job.includeSeqNoPrimaryTerm(includeSeqNoPrimaryTerm);
-                job.includeSource(includeSource);
-                job.includeVersion(includeVersion);
-                job.maxDocsPerQuery(maxDocsPerQuery);
-                job.maxHops(maxHops);
-                job.maxTimePerQuery(maxTimePerQuery);
-                job.pretty(pretty);
-                job.profile(profile);
-                job.input(input);
-
-                // Optional search parameters
-                job.searchAllowPartialSearchResults(searchAllowPartialSearchResults);
-                job.searchBatchedReduceSize(finalSearchBatchedReduceSize);
-                job.searchMaxConcurrentShardRequests(finalSearchMaxConcurrentShardRequests);
-                job.searchPreFilterShardSize(finalSearchPreFilterShardSize);
-                job.searchPreference(searchPreference);
-                job.searchRequestCache(searchRequestCache);
-
-                // Run the entity resolution job.
-                String response = job.run();
-                if (job.failed())
-                    channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, "application/json", response));
-                else
-                    channel.sendResponse(new BytesRestResponse(RestStatus.OK, "application/json", response));
-
-            } catch (ValidationException e) {
-                channel.sendResponse(new BytesRestResponse(channel, RestStatus.BAD_REQUEST, e));
-            } catch (NotFoundException e) {
-                channel.sendResponse(new BytesRestResponse(channel, RestStatus.NOT_FOUND, e));
+            // Parse and validate the job input.
+            Input input;
+            if (entityType == null || entityType.equals("")) {
+                input = new Input(body);
+            } else {
+                GetResponse getResponse = ModelsAction.getEntityModel(entityType, client);
+                if (!getResponse.isExists())
+                    throw new NotFoundException("Entity type '" + entityType + "' not found.");
+                String model = getResponse.getSourceAsString();
+                input = new Input(body, new Model(model));
             }
-        };
+
+            // Prepare the entity resolution job.
+            Job job = Job.newBuilder()
+                .client(client)
+                .includeAttributes(includeAttributes)
+                .includeErrorTrace(includeErrorTrace)
+                .includeExplanation(includeExplanation)
+                .includeHits(includeHits)
+                .includeQueries(includeQueries)
+                .includeScore(includeScore)
+                .includeSeqNoPrimaryTerm(includeSeqNoPrimaryTerm)
+                .includeSource(includeSource)
+                .includeVersion(includeVersion)
+                .maxDocsPerQuery(maxDocsPerQuery)
+                .maxHops(maxHops)
+                .maxTimePerQuery(maxTimePerQuery)
+                .pretty(pretty)
+                .profile(profile)
+                .input(input)
+                // Optional search parameters
+                .searchAllowPartialSearchResults(searchAllowPartialSearchResults)
+                .searchBatchedReduceSize(finalSearchBatchedReduceSize)
+                .searchMaxConcurrentShardRequests(finalSearchMaxConcurrentShardRequests)
+                .searchPreFilterShardSize(finalSearchPreFilterShardSize)
+                .searchPreference(searchPreference)
+                .searchRequestCache(searchRequestCache)
+                .build();
+
+            // Run the entity resolution job.
+            String response = job.run();
+            if (job.failed())
+                channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, "application/json", response));
+            else
+                channel.sendResponse(new BytesRestResponse(RestStatus.OK, "application/json", response));
+        });
     }
 }

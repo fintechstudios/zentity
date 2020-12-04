@@ -8,7 +8,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.rest.BaseRestHandler;
+import org.elasticsearch.plugin.zentity.exceptions.NotImplementedException;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
@@ -19,7 +19,7 @@ import java.util.Properties;
 import static org.elasticsearch.rest.RestRequest.Method;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 
-public class SetupAction extends BaseRestHandler {
+public class SetupAction extends BaseAction {
 
     public static final int DEFAULT_NUMBER_OF_SHARDS = 1;
     public static final int DEFAULT_NUMBER_OF_REPLICAS = 1;
@@ -106,23 +106,17 @@ public class SetupAction extends BaseRestHandler {
         int numberOfReplicas = restRequest.paramAsInt("number_of_replicas", 1);
         Method method = restRequest.method();
 
-        return channel -> {
-            try {
-                if (method == POST) {
-
-                    createIndex(client, numberOfShards, numberOfReplicas);
-                    XContentBuilder content = XContentFactory.jsonBuilder();
-                    if (pretty)
-                        content.prettyPrint();
-                    content.startObject().field("acknowledged", true).endObject();
-                    channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
-
-                } else {
-                    throw new NotImplementedException("Method and endpoint not implemented.");
-                }
-            } catch (NotImplementedException e) {
-                channel.sendResponse(new BytesRestResponse(channel, RestStatus.NOT_IMPLEMENTED, e));
+        return wrappedConsumer(channel -> {
+            if (method == POST) {
+                createIndex(client, numberOfShards, numberOfReplicas);
+                XContentBuilder content = XContentFactory.jsonBuilder();
+                if (pretty)
+                    content.prettyPrint();
+                content.startObject().field("acknowledged", true).endObject();
+                channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
+            } else {
+                throw new NotImplementedException("Method and endpoint not implemented.");
             }
-        };
+        });
     }
 }

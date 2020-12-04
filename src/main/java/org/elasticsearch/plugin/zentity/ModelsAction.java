@@ -1,7 +1,6 @@
 package org.elasticsearch.plugin.zentity;
 
 import io.zentity.model.Model;
-import io.zentity.model.ValidationException;
 import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequestBuilder;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
@@ -20,6 +19,9 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.IndexNotFoundException;
+import org.elasticsearch.plugin.zentity.exceptions.BadRequestException;
+import org.elasticsearch.plugin.zentity.exceptions.ForbiddenException;
+import org.elasticsearch.plugin.zentity.exceptions.NotImplementedException;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
@@ -32,7 +34,7 @@ import static org.elasticsearch.rest.RestRequest.Method.GET;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
-public class ModelsAction extends BaseRestHandler {
+public class ModelsAction extends BaseAction {
 
     public static final String INDEX_NAME = ".zentity-models";
 
@@ -71,7 +73,7 @@ public class ModelsAction extends BaseRestHandler {
      */
     public static SearchResponse getEntityModels(NodeClient client) throws ForbiddenException {
         SearchRequestBuilder request = client.prepareSearch(INDEX_NAME);
-        request.setSize(10000);
+        request.setSize(10000); // max request size
         try {
             return request.get();
         } catch (IndexNotFoundException e) {
@@ -175,77 +177,67 @@ public class ModelsAction extends BaseRestHandler {
         Method method = restRequest.method();
         String requestBody = restRequest.content().utf8ToString();
 
-        return channel -> {
-            try {
+        return wrappedConsumer(channel -> {
+            // Validate input
+            if (method == POST || method == PUT) {
 
-                // Validate input
-                if (method == POST || method == PUT) {
+                // Parse the request body.
+                if (requestBody == null || requestBody.equals(""))
+                    throw new BadRequestException("Request body is missing.");
 
-                    // Parse the request body.
-                    if (requestBody == null || requestBody.equals(""))
-                        throw new ValidationException("Request body is missing.");
-
-                    // Parse and validate the entity model.
-                    new Model(requestBody);
-                }
-
-                // Handle request
-                if (method == GET && (entityType == null || entityType.equals(""))) {
-                    // GET _zentity/models
-                    SearchResponse response = getEntityModels(client);
-                    XContentBuilder content = XContentFactory.jsonBuilder();
-                    if (pretty)
-                        content.prettyPrint();
-                    content = response.toXContent(content, ToXContent.EMPTY_PARAMS);
-                    channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
-
-                } else if (method == GET) {
-                    // GET _zentity/models/{entity_type}
-                    GetResponse response = getEntityModel(entityType, client);
-                    XContentBuilder content = XContentFactory.jsonBuilder();
-                    if (pretty)
-                        content.prettyPrint();
-                    content = response.toXContent(content, ToXContent.EMPTY_PARAMS);
-                    channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
-
-                } else if (method == POST && !entityType.equals("")) {
-                    // POST _zentity/models/{entity_type}
-                    IndexResponse response = indexEntityModel(entityType, requestBody, client);
-                    XContentBuilder content = XContentFactory.jsonBuilder();
-                    if (pretty)
-                        content.prettyPrint();
-                    response.toXContent(content, ToXContent.EMPTY_PARAMS);
-                    channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
-
-                } else if (method == PUT && !entityType.equals("")) {
-                    // PUT _zentity/models/{entity_type}
-                    IndexResponse response = updateEntityModel(entityType, requestBody, client);
-                    XContentBuilder content = XContentFactory.jsonBuilder();
-                    if (pretty)
-                        content.prettyPrint();
-                    response.toXContent(content, ToXContent.EMPTY_PARAMS);
-                    channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
-
-                } else if (method == DELETE && !entityType.equals("")) {
-                    // DELETE _zentity/models/{entity_type}
-                    DeleteResponse response = deleteEntityModel(entityType, client);
-                    XContentBuilder content = XContentFactory.jsonBuilder();
-                    if (pretty)
-                        content.prettyPrint();
-                    response.toXContent(content, ToXContent.EMPTY_PARAMS);
-                    channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
-
-                } else {
-                    throw new NotImplementedException("Method and endpoint not implemented.");
-                }
-
-            } catch (ValidationException e) {
-                channel.sendResponse(new BytesRestResponse(channel, RestStatus.BAD_REQUEST, e));
-            } catch (ForbiddenException e) {
-                channel.sendResponse(new BytesRestResponse(channel, RestStatus.FORBIDDEN, e));
-            } catch (NotImplementedException e) {
-                channel.sendResponse(new BytesRestResponse(channel, RestStatus.NOT_IMPLEMENTED, e));
+                // Parse and validate the entity model.
+                new Model(requestBody);
             }
-        };
+
+            // Handle request
+            if (method == GET && (entityType == null || entityType.equals(""))) {
+                // GET _zentity/models
+                SearchResponse response = getEntityModels(client);
+                XContentBuilder content = XContentFactory.jsonBuilder();
+                if (pretty)
+                    content.prettyPrint();
+                content = response.toXContent(content, ToXContent.EMPTY_PARAMS);
+                channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
+
+            } else if (method == GET) {
+                // GET _zentity/models/{entity_type}
+                GetResponse response = getEntityModel(entityType, client);
+                XContentBuilder content = XContentFactory.jsonBuilder();
+                if (pretty)
+                    content.prettyPrint();
+                content = response.toXContent(content, ToXContent.EMPTY_PARAMS);
+                channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
+
+            } else if (method == POST && !entityType.equals("")) {
+                // POST _zentity/models/{entity_type}
+                IndexResponse response = indexEntityModel(entityType, requestBody, client);
+                XContentBuilder content = XContentFactory.jsonBuilder();
+                if (pretty)
+                    content.prettyPrint();
+                response.toXContent(content, ToXContent.EMPTY_PARAMS);
+                channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
+
+            } else if (method == PUT && !entityType.equals("")) {
+                // PUT _zentity/models/{entity_type}
+                IndexResponse response = updateEntityModel(entityType, requestBody, client);
+                XContentBuilder content = XContentFactory.jsonBuilder();
+                if (pretty)
+                    content.prettyPrint();
+                response.toXContent(content, ToXContent.EMPTY_PARAMS);
+                channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
+
+            } else if (method == DELETE && !entityType.equals("")) {
+                // DELETE _zentity/models/{entity_type}
+                DeleteResponse response = deleteEntityModel(entityType, client);
+                XContentBuilder content = XContentFactory.jsonBuilder();
+                if (pretty)
+                    content.prettyPrint();
+                response.toXContent(content, ToXContent.EMPTY_PARAMS);
+                channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
+
+            } else {
+                throw new NotImplementedException("Method and endpoint not implemented.");
+            }
+        });
     }
 }

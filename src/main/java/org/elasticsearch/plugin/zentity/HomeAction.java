@@ -14,7 +14,7 @@ import java.util.Properties;
 
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 
-public class HomeAction extends BaseRestHandler {
+public class HomeAction extends BaseAction {
 
     @Inject
     public HomeAction(RestController controller) {
@@ -32,7 +32,7 @@ public class HomeAction extends BaseRestHandler {
         Properties props = ZentityPlugin.properties();
         boolean pretty = restRequest.paramAsBoolean("pretty", false);
 
-        return channel -> {
+        return wrappedConsumer(channel -> {
             XContentBuilder content = XContentFactory.jsonBuilder();
             if (pretty)
                 content.prettyPrint();
@@ -48,6 +48,6 @@ public class HomeAction extends BaseRestHandler {
 
             content.endObject();
             channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
-        };
+        });
     }
 }
