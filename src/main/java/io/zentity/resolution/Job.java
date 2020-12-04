@@ -76,33 +76,11 @@ public class Job {
     public static Boolean DEFAULT_SEARCH_REQUEST_CACHE = null;
 
     // Job configuration
-    private Input input;
-    private boolean includeAttributes = DEFAULT_INCLUDE_ATTRIBUTES;
-    private boolean includeErrorTrace = DEFAULT_INCLUDE_ERROR_TRACE;
-    private boolean includeExplanation = DEFAULT_INCLUDE_EXPLANATION;
-    private boolean includeHits = DEFAULT_INCLUDE_HITS;
-    private boolean includeQueries = DEFAULT_INCLUDE_QUERIES;
-    private boolean includeScore = DEFAULT_INCLUDE_SCORE;
-    private boolean includeSeqNoPrimaryTerm = DEFAULT_INCLUDE_SEQ_NO_PRIMARY_TERM;
-    private boolean includeSource = DEFAULT_INCLUDE_SOURCE;
-    private boolean includeVersion = DEFAULT_INCLUDE_VERSION;
-    private int maxDocsPerQuery = DEFAULT_MAX_DOCS_PER_QUERY;
-    private int maxHops = DEFAULT_MAX_HOPS;
-    private String maxTimePerQuery = DEFAULT_MAX_TIME_PER_QUERY;
-    private boolean pretty = DEFAULT_PRETTY;
-    private boolean profile = DEFAULT_PROFILE;
-
-    // Job configuration (optional search parameters)
-    private Boolean searchAllowPartialSearchResults = DEFAULT_SEARCH_ALLOW_PARTIAL_SEARCH_RESULTS;
-    private Integer searchBatchedReduceSize = DEFAULT_SEARCH_BATCHED_REDUCE_SIZE;
-    private Integer searchMaxConcurrentShardRequests = DEFAULT_SEARCH_MAX_CONCURRENT_SHARD_REQUESTS;
-    private Integer searchPreFilterShardSize = DEFAULT_SEARCH_PRE_FILTER_SHARD_SIZE;
-    private String searchPreference = DEFAULT_SEARCH_PREFERENCE;
-    private Boolean searchRequestCache = DEFAULT_SEARCH_REQUEST_CACHE;
+    private final NodeClient client;
+    private final JobConfig config;
 
     // Job state
-    private final NodeClient client;
-    private Map<String, Map<String, Map<String, Map<String, Double>>>> attributeIdentityConfidenceScores = new HashMap<>();
+    private AttributeIdConfidenceScoreMap attributeIdConfidenceScores = new AttributeIdConfidenceScoreMap();
     private Map<String, Attribute> attributes = new TreeMap<>();
     private Map<String, Set<String>> docIds = new TreeMap<>();
     private String error = null;
@@ -113,8 +91,9 @@ public class Job {
     private List<String> queries = new ArrayList<>();
     private boolean ran = false;
 
-    public Job(NodeClient client) {
+    public Job(NodeClient client, JobConfig config) {
         this.client = client;
+        this.config = config;
     }
 
     private static String serializeException(Exception e, boolean includeErrorTrace) {
@@ -136,7 +115,7 @@ public class Job {
     /**
      * Build a list of JSON strings to summarize a set of resolvers' attributes.
      *
-     * @param resolverMap map of resolver names to {@link Resolver Resolvers}
+     * @param resolverMap   map of resolver names to {@link Resolver Resolvers}
      * @param resolverNames list of resolver names to pull out from the map.
      * @return a list of JSON string summaries.
      */
@@ -146,7 +125,7 @@ public class Job {
             List<String> resolversAttributes = new ArrayList<>();
             for (String attributeName : resolverMap.get(resolverName).attributes())
                 resolversAttributes.add("\"" + attributeName + "\"");
-            summary.add("\"" + resolverName + "\":{\"attributes\":[" +  String.join(",", resolversAttributes) + "]}");
+            summary.add("\"" + resolverName + "\":{\"attributes\":[" + String.join(",", resolversAttributes) + "]}");
         }
         return summary;
     }
@@ -545,7 +524,7 @@ public class Job {
     /**
      * Group resolvers by their level of weight.
      *
-     * @param model The entity model.
+     * @param model     The entity model.
      * @param resolvers The names of the resolvers to reference in the entity model.
      * @return For each weight level, the names of the resolvers in that weight level.
      */
@@ -564,8 +543,8 @@ public class Job {
      * Resets the variables that hold the state of the job, in case the same Job object is reused.
      */
     private void resetState() {
-        this.attributeIdentityConfidenceScores = new HashMap<>();
-        this.attributes = new TreeMap<>(this.input().attributes());
+        this.attributeIdConfidenceScores = new AttributeIdConfidenceScoreMap();
+        this.attributes = new TreeMap<>(this.config.input.attributes());
         this.docIds = new TreeMap<>();
         this.error = null;
         this.failed = false;
@@ -576,163 +555,20 @@ public class Job {
         this.ran = false;
     }
 
-    public boolean includeAttributes() {
-        return this.includeAttributes;
-    }
-
-    public void includeAttributes(boolean includeAttributes) {
-        this.includeAttributes = includeAttributes;
-    }
-
-    public boolean includeErrorTrace() {
-        return this.includeErrorTrace;
-    }
-
-    public void includeErrorTrace(boolean includeErrorTrace) {
-        this.includeErrorTrace = includeErrorTrace;
-    }
-
-    public boolean includeExplanation() {
-        return this.includeExplanation;
-    }
-
-    public void includeExplanation(boolean includeExplanation) {
-        this.includeExplanation = includeExplanation;
-    }
-
-    public boolean includeHits() {
-        return this.includeHits;
-    }
-
-    public void includeHits(boolean includeHits) {
-        this.includeHits = includeHits;
-    }
-
-    public boolean includeQueries() {
-        return this.includeQueries;
-    }
-
-    public void includeQueries(boolean includeQueries) {
-        this.includeQueries = includeQueries;
-    }
-
-    public Boolean includeScore() {
-        return this.includeScore;
-    }
-
-    public void includeScore(Boolean includeScore) { this.includeScore = includeScore; }
-
-    public Boolean includeSeqNoPrimaryTerm() {
-        return this.includeSeqNoPrimaryTerm;
-    }
-
-    public void includeSeqNoPrimaryTerm(Boolean includeSeqNoPrimaryTerm) { this.includeSeqNoPrimaryTerm = includeSeqNoPrimaryTerm; }
-
-    public boolean includeSource() {
-        return this.includeSource;
-    }
-
-    public void includeSource(boolean includeSource) {
-        this.includeSource = includeSource;
-    }
-
-    public Boolean includeVersion() { return this.includeVersion;  }
-
-    public void includeVersion(Boolean includeVersion) { this.includeVersion = includeVersion; }
-
-    public int maxDocsPerQuery() {
-        return this.maxDocsPerQuery;
-    }
-
-    public void maxDocsPerQuery(int maxDocsPerQuery) {
-        this.maxDocsPerQuery = maxDocsPerQuery;
-    }
-
-    public int maxHops() {
-        return this.maxHops;
-    }
-
-    public void maxHops(int maxHops) {
-        this.maxHops = maxHops;
-    }
-
-    public String maxTimePerQuery() { return this.maxTimePerQuery; }
-
-    public void maxTimePerQuery(String maxTimePerQuery) { this.maxTimePerQuery = maxTimePerQuery; }
-
-    public boolean pretty() {
-        return this.pretty;
-    }
-
-    public void pretty(boolean pretty) {
-        this.pretty = pretty;
-    }
-
-    public Boolean profile() {
-        return this.profile;
-    }
-
-    public void profile(Boolean profile) {
-        this.profile = profile;
-    }
-
-    public Boolean searchAllowPartialSearchResults() {
-        return this.searchAllowPartialSearchResults;
-    }
-
-    public void searchAllowPartialSearchResults(Boolean searchAllowPartialSearchResults) { this.searchAllowPartialSearchResults = searchAllowPartialSearchResults; }
-
-    public Integer searchBatchedReduceSize() {
-        return this.searchBatchedReduceSize;
-    }
-
-    public void searchBatchedReduceSize(Integer searchBatchedReduceSize) { this.searchBatchedReduceSize = searchBatchedReduceSize; }
-
-    public Integer searchMaxConcurrentShardRequests() {
-        return this.searchMaxConcurrentShardRequests;
-    }
-
-    public void searchMaxConcurrentShardRequests(Integer searchMaxConcurrentShardRequests) { this.searchMaxConcurrentShardRequests = searchMaxConcurrentShardRequests; }
-
-    public Integer searchPreFilterShardSize() {
-        return this.searchPreFilterShardSize;
-    }
-
-    public void searchPreFilterShardSize(Integer searchPreFilterShardSize) { this.searchPreFilterShardSize = searchPreFilterShardSize; }
-
-    public String searchPreference() {
-        return this.searchPreference;
-    }
-
-    public void searchPreference(String searchPreference) { this.searchPreference = searchPreference; }
-    public Boolean searchRequestCache() {
-        return this.searchRequestCache;
-    }
-
-    public void searchRequestCache(Boolean searchRequestCache) { this.searchRequestCache = searchRequestCache; }
-
-    public Input input() {
-        return this.input;
-    }
-
     public void input(Input input) {
-        this.input = input;
+        this.config.input = input;
     }
 
     public boolean failed() {
         return this.failed;
     }
 
-    public boolean ran() {
-        return this.ran;
-    }
-
     /**
      * Combine a list of attribute identity confidence scores into a single composite identity confidence score using
      * conflation of probability distributions.
-     *
+     * <p>
      * https://arxiv.org/pdf/0808.1808v4.pdf
-     *
+     * <p>
      * If the list of attribute identity confidence scores contain both a 1.0 and a 0.0, this will lead to a division by
      * zero. When that happens, set the composite identity confidence score to 0.5, because there can be no certainty
      * when there are conflicting input scores that suggest both a complete confidence in a true match and a complete
@@ -791,36 +627,24 @@ public class Job {
      * @param matcherName
      * @param indexName
      * @param indexFieldName
-     * @return
+     * @return The confidence score.
      */
     private Double getAttributeIdentityConfidenceScore(String attributeName, String matcherName, String indexName, String indexFieldName) {
-
         // Return the cached match score if it exists.
-        if (
-            this.attributeIdentityConfidenceScores.containsKey(attributeName)
-            && this.attributeIdentityConfidenceScores.get(attributeName).containsKey(matcherName)
-            && this.attributeIdentityConfidenceScores.get(attributeName).get(matcherName).containsKey(indexName)
-            && this.attributeIdentityConfidenceScores.get(attributeName).get(matcherName).get(indexName).containsKey(indexFieldName)
-        ) {
-            return this.attributeIdentityConfidenceScores.get(attributeName).get(matcherName).get(indexName).get(indexFieldName);
+        if (this.attributeIdConfidenceScores.hasScore(attributeName, matcherName, indexName, indexFieldName)) {
+            return this.attributeIdConfidenceScores.getScore(attributeName, matcherName, indexName, indexFieldName);
         }
 
         // Calculate the match score, cache it, and return it.
-        Double attributeIdentityConfidenceBaseScore = this.input().model().attributes().get(attributeName).score();
-        Double matcherQualityScore = this.input().model().matchers().get(matcherName).quality();
-        Double indexFieldQualityScore = this.input().model().indices().get(indexName).fields().get(indexFieldName).quality();
+        Double attributeIdentityConfidenceBaseScore = this.config.input.model().attributes().get(attributeName).score();
+        Double matcherQualityScore = this.config.input.model().matchers().get(matcherName).quality();
+        Double indexFieldQualityScore = this.config.input.model().indices().get(indexName).fields().get(indexFieldName).quality();
+
         if (attributeIdentityConfidenceBaseScore == null)
             return null;
-        double attributeIdentityConfidenceScore = calculateAttributeIdentityConfidenceScore(attributeIdentityConfidenceBaseScore, matcherQualityScore, indexFieldQualityScore);
-        if (!this.attributeIdentityConfidenceScores.containsKey(attributeName))
-            this.attributeIdentityConfidenceScores.put(attributeName, new HashMap<>());
-        else if (!this.attributeIdentityConfidenceScores.get(attributeName).containsKey(matcherName))
-            this.attributeIdentityConfidenceScores.get(attributeName).put(matcherName, new HashMap<>());
-        else if (!this.attributeIdentityConfidenceScores.get(attributeName).get(matcherName).containsKey(indexName))
-            this.attributeIdentityConfidenceScores.get(attributeName).get(matcherName).put(indexName, new HashMap<>());
-        else if (!this.attributeIdentityConfidenceScores.get(attributeName).get(matcherName).get(indexName).containsKey(indexFieldName))
-            this.attributeIdentityConfidenceScores.get(attributeName).get(matcherName).get(indexName).put(indexFieldName, attributeIdentityConfidenceScore);
-        return attributeIdentityConfidenceScore;
+
+        double score = calculateAttributeIdentityConfidenceScore(attributeIdentityConfidenceBaseScore, matcherQualityScore, indexFieldQualityScore);
+        return this.attributeIdConfidenceScores.setScore(attributeName, matcherName, indexName, indexFieldName, score);
     }
 
     /**
@@ -835,25 +659,25 @@ public class Job {
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         SearchModule searchModule = new SearchModule(Settings.EMPTY, false, Collections.emptyList());
         try (XContentParser parser = XContentFactory.xContent(XContentType.JSON).createParser(new NamedXContentRegistry(searchModule
-                .getNamedXContents()), DeprecationHandler.THROW_UNSUPPORTED_OPERATION, query)) {
+            .getNamedXContents()), DeprecationHandler.THROW_UNSUPPORTED_OPERATION, query)) {
             searchSourceBuilder.parseXContent(parser);
         }
         SearchRequestBuilder searchRequestBuilder = new SearchRequestBuilder(client, SearchAction.INSTANCE);
         searchRequestBuilder.setIndices(indexName).setSource(searchSourceBuilder);
-        if (this.searchAllowPartialSearchResults != null)
-            searchRequestBuilder.setAllowPartialSearchResults(this.searchAllowPartialSearchResults);
-        if (this.searchBatchedReduceSize != null)
-            searchRequestBuilder.setBatchedReduceSize(this.searchBatchedReduceSize);
-        if (this.searchMaxConcurrentShardRequests != null)
-            searchRequestBuilder.setMaxConcurrentShardRequests(this.searchMaxConcurrentShardRequests);
-        if (this.searchPreFilterShardSize != null)
-            searchRequestBuilder.setPreFilterShardSize(this.searchPreFilterShardSize);
-        if (this.searchPreference != null)
-            searchRequestBuilder.setPreference(this.searchPreference);
-        if (this.searchRequestCache != null)
-            searchRequestBuilder.setRequestCache(this.searchRequestCache);
-        if (this.maxTimePerQuery != null)
-            searchRequestBuilder.setTimeout(TimeValue.parseTimeValue(this.maxTimePerQuery, "timeout"));
+        if (this.config.searchAllowPartialSearchResults != null)
+            searchRequestBuilder.setAllowPartialSearchResults(this.config.searchAllowPartialSearchResults);
+        if (this.config.searchBatchedReduceSize != null)
+            searchRequestBuilder.setBatchedReduceSize(this.config.searchBatchedReduceSize);
+        if (this.config.searchMaxConcurrentShardRequests != null)
+            searchRequestBuilder.setMaxConcurrentShardRequests(this.config.searchMaxConcurrentShardRequests);
+        if (this.config.searchPreFilterShardSize != null)
+            searchRequestBuilder.setPreFilterShardSize(this.config.searchPreFilterShardSize);
+        if (this.config.searchPreference != null)
+            searchRequestBuilder.setPreference(this.config.searchPreference);
+        if (this.config.searchRequestCache != null)
+            searchRequestBuilder.setRequestCache(this.config.searchRequestCache);
+        if (this.config.maxTimePerQuery != null)
+            searchRequestBuilder.setTimeout(TimeValue.parseTimeValue(this.config.maxTimePerQuery, "timeout"));
         return searchRequestBuilder.execute().actionGet();
     }
 
@@ -868,11 +692,11 @@ public class Job {
         // Prepare to collect attributes from the results of these queries as the inputs to subsequent queries.
         Map<String, Attribute> nextInputAttributes = new TreeMap<>();
         boolean newHits = false;
-        boolean namedFilters = this.includeExplanation || this.includeScore;
+        boolean namedFilters = this.config.includeExplanation || this.config.includeScore;
         int _query = 0;
 
         // Construct a query for each index that maps to a resolver.
-        for (String indexName : this.input.model().indices().keySet()) {
+        for (String indexName : this.config.input.model().indices().keySet()) {
 
             // Skip this index if a prior hop determined the index to be missing.
             if (this.missingIndices.contains(indexName))
@@ -888,13 +712,13 @@ public class Job {
 
             // Determine which resolvers can be queried for this index.
             List<String> resolvers = new ArrayList<>();
-            for (String resolverName : this.input.model().resolvers().keySet())
-                if (canQueryResolver(this.input.model(), indexName, resolverName, this.attributes))
+            for (String resolverName : this.config.input.model().resolvers().keySet())
+                if (canQueryResolver(this.config.input.model(), indexName, resolverName, this.attributes))
                     resolvers.add(resolverName);
 
             // Determine if we can query this index.
-            boolean canQueryIds = this.hop == 0 && this.input().ids().containsKey(indexName) && !this.input().ids().get(indexName).isEmpty();
-            boolean canQueryTerms = this.hop == 0 && !this.input.terms().isEmpty();
+            boolean canQueryIds = this.hop == 0 && this.config.input.ids().containsKey(indexName) && !this.config.input.ids().get(indexName).isEmpty();
+            boolean canQueryTerms = this.hop == 0 && !this.config.input.terms().isEmpty();
             boolean canQueryAttributes = resolvers.size() > 0;
             if (!canQueryAttributes && !canQueryIds && !canQueryTerms)
                 continue;
@@ -915,8 +739,8 @@ public class Job {
                 queryMustNotClauses.add("{\"ids\":{\"values\":[" + String.join(",", docIds) + "]}}");
 
             // Create "scope.exclude.attributes" clauses. Combine them into a single "should" clause.
-            if (!this.input.scope().exclude().attributes().isEmpty()) {
-                List<String> attributeClauses = makeAttributeClauses(this.input.model(), indexName, this.input.scope().exclude().attributes(), "should", namedFilters, _nameIdCounter);
+            if (!this.config.input.scope().exclude().attributes().isEmpty()) {
+                List<String> attributeClauses = makeAttributeClauses(this.config.input.model(), indexName, this.config.input.scope().exclude().attributes(), "should", namedFilters, _nameIdCounter);
                 int size = attributeClauses.size();
                 if (size > 1)
                     queryMustNotClauses.add("{\"bool\":{\"should\":[" + String.join(",", attributeClauses) + "]}}");
@@ -931,8 +755,8 @@ public class Job {
                 queryMustNotClause = "\"must_not\":" + queryMustNotClauses.get(0);
 
             // Construct "scope.include.attributes" clauses. Combine them into a single "filter" clause.
-            if (!this.input.scope().include().attributes().isEmpty()) {
-                List<String> attributeClauses = makeAttributeClauses(this.input.model(), indexName, this.input.scope().include().attributes(), "filter", namedFilters, _nameIdCounter);
+            if (!this.config.input.scope().include().attributes().isEmpty()) {
+                List<String> attributeClauses = makeAttributeClauses(this.config.input.model(), indexName, this.config.input.scope().include().attributes(), "filter", namedFilters, _nameIdCounter);
                 int size = attributeClauses.size();
                 if (size > 1)
                     queryFilterClauses.add("{\"bool\":{\"filter\":[" + String.join(",", attributeClauses) + "]}}");
@@ -943,7 +767,7 @@ public class Job {
             // Construct the "ids" clause if this is the first hop and if any ids are specified for this index.
             String idsClause = "";
             if (canQueryIds) {
-                Set<String> ids = this.input().ids().get(indexName);
+                Set<String> ids = this.config.input.ids().get(indexName);
                 idsClause = "{\"bool\":{\"filter\":[{\"ids\":{\"values\":[" + String.join(",", ids) + "]}}]}}";
             }
 
@@ -954,7 +778,7 @@ public class Job {
             if (!this.attributes.isEmpty()) {
 
                 // Group the resolvers by their weight level.
-                TreeMap<Integer, List<String>> resolverGroups = groupResolversByWeight(this.input.model(), resolvers);
+                TreeMap<Integer, List<String>> resolverGroups = groupResolversByWeight(this.config.input.model(), resolvers);
 
                 // Construct a clause for each weight level in descending order of weight.
                 List<Integer> weights = new ArrayList<>(resolverGroups.keySet());
@@ -963,11 +787,11 @@ public class Job {
                 for (int level = 0; level < numWeightLevels; level++) {
                     Integer weight = weights.get(level);
                     List<String> resolversGroup = resolverGroups.get(weight);
-                    Map<String, Integer> counts = countAttributesAcrossResolvers(this.input.model(), resolversGroup);
-                    List<List<String>> resolversSorted = sortResolverAttributes(this.input.model(), resolversGroup, counts);
+                    Map<String, Integer> counts = countAttributesAcrossResolvers(this.config.input.model(), resolversGroup);
+                    List<List<String>> resolversSorted = sortResolverAttributes(this.config.input.model(), resolversGroup, counts);
                     resolversFilterTree = makeResolversFilterTree(resolversSorted);
                     resolversFilterTreeGrouped.put(numWeightLevels - level - 1, resolversFilterTree);
-                    resolversClause = populateResolversFilterTree(this.input.model(), indexName, resolversFilterTree, this.attributes, namedFilters, _nameIdCounter);
+                    resolversClause = populateResolversFilterTree(this.config.input.model(), indexName, resolversFilterTree, this.attributes, namedFilters, _nameIdCounter);
 
                     // If there are multiple levels of weight, then each lower weight group of resolvers must ensure
                     // that every higher weight resolver either matches or does not exist.
@@ -984,7 +808,7 @@ public class Job {
 
                                 // Construct a clause that checks if any attribute of the resolver does not exist.
                                 List<String> attributeExistsClauses = new ArrayList<>();
-                                for (String attributeName : this.input.model().resolvers().get(parentResolverName).attributes())
+                                for (String attributeName : this.config.input.model().resolvers().get(parentResolverName).attributes())
                                     attributeExistsClauses.add("{\"bool\":{\"must_not\":{\"exists\":{\"field\":\"" + attributeName + "\"}}}}");
                                 String attributesExistsClause = "";
                                 if (attributeExistsClauses.size() > 1)
@@ -993,11 +817,11 @@ public class Job {
                                     attributesExistsClause = attributeExistsClauses.get(0);
 
                                 // Construct a clause for the resolver.
-                                List<String> parentResolverGroup = new ArrayList<>(Arrays.asList(parentResolverName));
-                                Map<String, Integer> parentCounts = countAttributesAcrossResolvers(this.input.model(), parentResolverGroup);
-                                List<List<String>> parentResolverSorted = sortResolverAttributes(this.input.model(), parentResolverGroup, parentCounts);
+                                List<String> parentResolverGroup = new ArrayList<>(Collections.singletonList(parentResolverName));
+                                Map<String, Integer> parentCounts = countAttributesAcrossResolvers(this.config.input.model(), parentResolverGroup);
+                                List<List<String>> parentResolverSorted = sortResolverAttributes(this.config.input.model(), parentResolverGroup, parentCounts);
                                 FilterTree parentResolverFilterTree = makeResolversFilterTree(parentResolverSorted);
-                                String parentResolverClause = populateResolversFilterTree(this.input.model(), indexName, parentResolverFilterTree, this.attributes, namedFilters, _nameIdCounter);
+                                String parentResolverClause = populateResolversFilterTree(this.config.input.model(), indexName, parentResolverFilterTree, this.attributes, namedFilters, _nameIdCounter);
 
                                 // Construct a "should" clause for the above two clauses.
                                 parentResolverClauses.add("{\"bool\":{\"should\":[" + attributesExistsClause + "," + parentResolverClause + "]}}");
@@ -1027,8 +851,8 @@ public class Job {
 
                 // Get the names of each attribute of each in-scope resolver.
                 TreeSet<String> resolverAttributes = new TreeSet<>();
-                for (String resolverName : this.input().model().resolvers().keySet())
-                    resolverAttributes.addAll(this.input().model().resolvers().get(resolverName).attributes());
+                for (String resolverName : this.config.input.model().resolvers().keySet())
+                    resolverAttributes.addAll(this.config.input.model().resolvers().get(resolverName).attributes());
 
                 // For each attribute, attempt to convert each term to a value of that attribute.
                 // If the term does not match the attribute type, or if the term cannot be converted to a value
@@ -1038,8 +862,8 @@ public class Job {
                 // the model attributes, or the model matchers in descending order of precedence. If the pa
                 Map<String, TreeSet<Value>> termValues = new TreeMap<>();
                 for (String attributeName : resolverAttributes) {
-                    String attributeType = this.input().model().attributes().get(attributeName).type();
-                    for (Term term : this.input().terms()) {
+                    String attributeType = this.config.input.model().attributes().get(attributeName).type();
+                    for (Term term : this.config.input.terms()) {
                         try {
                             switch (attributeType) {
                                 case "boolean":
@@ -1050,17 +874,17 @@ public class Job {
                                     break;
                                 case "date":
                                     // Determine which date format to use to parse the term.
-                                    Index index = this.input.model().indices().get(indexName);
+                                    Index index = this.config.input.model().indices().get(indexName);
                                     // Check if the "format" param is defined in the input attribute.
-                                    if (this.input.attributes().containsKey(attributeName) && this.input.attributes().get(attributeName).params().containsKey("format") && !this.input.attributes().get(attributeName).params().get("format").equals("null") && !Patterns.EMPTY_STRING.matcher(this.input.attributes().get(attributeName).params().get("format")).matches()) {
-                                        String format = this.input.attributes().get(attributeName).params().get("format");
+                                    if (this.config.input.attributes().containsKey(attributeName) && this.config.input.attributes().get(attributeName).params().containsKey("format") && !this.config.input.attributes().get(attributeName).params().get("format").equals("null") && !Patterns.EMPTY_STRING.matcher(this.config.input.attributes().get(attributeName).params().get("format")).matches()) {
+                                        String format = this.config.input.attributes().get(attributeName).params().get("format");
                                         if (term.isDate(format)) {
                                             termValues.putIfAbsent(attributeName, new TreeSet<>());
                                             termValues.get(attributeName).add(term.dateValue());
                                         }
                                     } else {
                                         // Otherwise check if the "format" param is defined in the model attribute.
-                                        Map<String, String> params = this.input.model().attributes().get(attributeName).params();
+                                        Map<String, String> params = this.config.input.model().attributes().get(attributeName).params();
                                         if (params.containsKey("format") && !params.get("format").equals("null") && !Patterns.EMPTY_STRING.matcher(params.get("format")).matches()) {
                                             String format = params.get("format");
                                             if (term.isDate(format)) {
@@ -1073,17 +897,17 @@ public class Job {
                                             // Add any date values that successfully parse.
                                             for (String indexFieldName : index.attributeIndexFieldsMap().get(attributeName).keySet()) {
                                                 String matcherName = index.attributeIndexFieldsMap().get(attributeName).get(indexFieldName).matcher();
-                                                params = input.model().matchers().get(matcherName).params();
+                                                params = this.config.input.model().matchers().get(matcherName).params();
                                                 if (params.containsKey("format") && !params.get("format").equals("null") && !Patterns.EMPTY_STRING.matcher(params.get("format")).matches()) {
                                                     String format = params.get("format");
                                                     if (term.isDate(format)) {
                                                         termValues.putIfAbsent(attributeName, new TreeSet<>());
                                                         termValues.get(attributeName).add(term.dateValue());
                                                     }
-                                                } else {
-                                                    // If we've gotten this far, then this term can't be converted
-                                                    // to a date value. Skip it and move on.
                                                 }
+                                                // else:
+                                                // If we've gotten this far, then this term can't be converted
+                                                // to a date value. Skip it and move on.
                                             }
                                         }
                                     }
@@ -1121,7 +945,7 @@ public class Job {
                 // Convert the values as if it was an input Attribute.
                 Map<String, Attribute> termAttributes = new TreeMap<>();
                 for (String attributeName : termValues.keySet()) {
-                    String attributeType = this.input().model().attributes().get(attributeName).type();
+                    String attributeType = this.config.input.model().attributes().get(attributeName).type();
                     List<String> jsonValues = new ArrayList<>();
                     for (Value value : termValues.get(attributeName)) {
                         if (value instanceof StringValue)
@@ -1131,10 +955,10 @@ public class Job {
                     }
                     // Pass params from the input "attributes" if any were defined.
                     String attributesJson;
-                    if (this.input.attributes().containsKey(attributeName) && !this.input.attributes().get(attributeName).params().isEmpty()) {
+                    if (this.config.input.attributes().containsKey(attributeName) && !this.config.input.attributes().get(attributeName).params().isEmpty()) {
                         Set<String> params = new TreeSet<>();
-                        for (String paramName : this.input.attributes().get(attributeName).params().keySet()) {
-                            String paramValue = this.input.attributes().get(attributeName).params().get(paramName);
+                        for (String paramName : this.config.input.attributes().get(attributeName).params().keySet()) {
+                            String paramValue = this.config.input.attributes().get(attributeName).params().get(paramName);
                             params.add("\"" + paramName + "\":" + "\"" + paramValue + "\"");
                         }
                         String paramsJson = "{" + String.join(",", params) + "}";
@@ -1146,16 +970,16 @@ public class Job {
                 }
 
                 // Determine which resolvers can be queried for this index using these attributes.
-                for (String resolverName : this.input.model().resolvers().keySet())
-                    if (canQueryResolver(this.input.model(), indexName, resolverName, termAttributes))
+                for (String resolverName : this.config.input.model().resolvers().keySet())
+                    if (canQueryResolver(this.config.input.model(), indexName, resolverName, termAttributes))
                         termResolvers.add(resolverName);
 
                 // Construct the resolvers clause for term attribute values.
                 if (termResolvers.size() > 0) {
-                    Map<String, Integer> counts = countAttributesAcrossResolvers(this.input.model(), termResolvers);
-                    List<List<String>> termResolversSorted = sortResolverAttributes(this.input.model(), termResolvers, counts);
+                    Map<String, Integer> counts = countAttributesAcrossResolvers(this.config.input.model(), termResolvers);
+                    List<List<String>> termResolversSorted = sortResolverAttributes(this.config.input.model(), termResolvers, counts);
                     termResolversFilterTree = makeResolversFilterTree(termResolversSorted);
-                    termResolversClause = populateResolversFilterTree(this.input.model(), indexName, termResolversFilterTree, termAttributes, namedFilters, _nameIdCounter);
+                    termResolversClause = populateResolversFilterTree(this.config.input.model(), indexName, termResolversFilterTree, termAttributes, namedFilters, _nameIdCounter);
                 }
 
                 // Combine the two resolvers clauses in a "filter" clause if both exist.
@@ -1210,19 +1034,19 @@ public class Job {
             topLevelClauses.add(queryClause);
 
             // Construct the "script_fields" clause.
-            String scriptFieldsClause = makeScriptFieldsClause(this.input, indexName);
+            String scriptFieldsClause = makeScriptFieldsClause(this.config.input, indexName);
             if (scriptFieldsClause != null)
                 topLevelClauses.add(scriptFieldsClause);
 
             // Construct the "size" clause.
-            topLevelClauses.add("\"size\":" + this.maxDocsPerQuery);
+            topLevelClauses.add("\"size\":" + this.config.maxDocsPerQuery);
 
             // Construct the "profile" clause.
-            if (this.profile)
+            if (this.config.profile)
                 topLevelClauses.add("\"profile\":true");
-            if (this.includeSeqNoPrimaryTerm)
+            if (this.config.includeSeqNoPrimaryTerm)
                 topLevelClauses.add("\"seq_no_primary_term\":true");
-            if (this.includeVersion)
+            if (this.config.includeVersion)
                 topLevelClauses.add("\"version\":true");
 
             // Construct the final query.
@@ -1249,7 +1073,7 @@ public class Job {
                 responseData = Json.ORDERED_MAPPER.readTree(response.toString());
 
             // Log queries.
-            if (this.includeQueries || this.profile) {
+            if (this.config.includeQueries || this.config.profile) {
                 String responseString;
                 if (responseData != null) {
                     JsonNode responseDataCopy = responseData.deepCopy();
@@ -1268,14 +1092,14 @@ public class Job {
                     // should never get here
                     responseString = "{\"error\":{\"root_cause\":[\"unknown\"],\"type\":\"" + ElasticsearchException.getExceptionName(responseError) + "\",\"reason\":\"" + responseError.getMessage() + "\"},\"status\":" + 500 + "}";
                 }
-                String logged = serializeLoggedQuery(this.input, this.hop, _query, indexName, query, responseString, resolvers, resolversFilterTreeGrouped, termResolvers, termResolversFilterTree);
+                String logged = serializeLoggedQuery(this.config.input, this.hop, _query, indexName, query, responseString, resolvers, resolversFilterTreeGrouped, termResolvers, termResolversFilterTree);
                 this.queries.add(logged);
             }
 
             // Stop traversing if there was an error not due to a missing index.
             // Include the logged query in the response.
             if (this.failed) {
-                this.error = serializeException(responseError, this.includeErrorTrace);
+                this.error = serializeException(responseError, this.config.includeErrorTrace);
                 return;
             }
 
@@ -1298,11 +1122,11 @@ public class Job {
                 // and include them in the attributes for subsequent queries.
                 TreeMap<String, TreeSet<Value>> docAttributes = new TreeMap<>();
                 TreeMap<String, JsonNode> docIndexFields = new TreeMap<>();
-                for (String indexFieldName : this.input.model().indices().get(indexName).fields().keySet()) {
-                    String attributeName = this.input.model().indices().get(indexName).fields().get(indexFieldName).attribute();
-                    if (this.input.model().attributes().get(attributeName) == null)
+                for (String indexFieldName : this.config.input.model().indices().get(indexName).fields().keySet()) {
+                    String attributeName = this.config.input.model().indices().get(indexName).fields().get(indexFieldName).attribute();
+                    if (this.config.input.model().attributes().get(attributeName) == null)
                         continue;
-                    String attributeType = this.input.model().attributes().get(attributeName).type();
+                    String attributeType = this.config.input.model().attributes().get(attributeName).type();
 
                     // Get the attribute values from the doc.
                     if (doc.has("fields") && doc.get("fields").has(indexFieldName)) {
@@ -1348,8 +1172,8 @@ public class Job {
                         // If it's not in the _source, remove the last part of the index field name from the dot notation.
                         // Index field names can reference multi-fields, which are not returned in the _source.
                         // If the document does not contain a given index field, skip that field.
-                        JsonPointer path = this.input.model().indices().get(indexName).fields().get(indexFieldName).path();
-                        JsonPointer pathParent = this.input.model().indices().get(indexName).fields().get(indexFieldName).pathParent();
+                        JsonPointer path = this.config.input.model().indices().get(indexName).fields().get(indexFieldName).path();
+                        JsonPointer pathParent = this.config.input.model().indices().get(indexName).fields().get(indexFieldName).pathParent();
                         JsonNode valueNode = doc.get("_source").at(path);
                         if (valueNode.isMissingNode()) {
                             if (pathParent != null)
@@ -1387,15 +1211,15 @@ public class Job {
                 }
 
                 // Modify doc metadata.
-                if (this.includeHits) {
+                if (this.config.includeHits) {
                     ObjectNode docObjNode = (ObjectNode) doc;
                     docObjNode.remove("_score");
                     docObjNode.remove("fields");
                     docObjNode.put("_hop", this.hop);
                     docObjNode.put("_query", _query);
-                    if (this.includeScore)
+                    if (this.config.includeScore)
                         docObjNode.putNull("_score");
-                    if (this.includeAttributes) {
+                    if (this.config.includeAttributes) {
                         ObjectNode docAttributesObjNode = docObjNode.putObject("_attributes");
                         for (String attributeName : docAttributes.keySet()) {
                             ArrayNode docAttributeArrNode = docAttributesObjNode.putArray(attributeName);
@@ -1429,21 +1253,21 @@ public class Job {
                             String indexFieldName = _name[1];
                             String matcherName = _name[2];
                             String attributeValueSerialized = new String(Base64.getDecoder().decode(_name[3]));
-                            String attributeType = this.input().model().attributes().get(attributeName).type();
+                            String attributeType = this.config.input.model().attributes().get(attributeName).type();
                             if (attributeType.equals("string") || attributeType.equals("date"))
                                 attributeValueSerialized = "\"" + attributeValueSerialized + "\"";
                             JsonNode attributeValueNode = Json.MAPPER.readTree("{\"attribute_value\":" + attributeValueSerialized + "}").get("attribute_value");
                             JsonNode matcherParamsNode;
-                            if (input.attributes().containsKey(attributeName))
-                                matcherParamsNode = Json.ORDERED_MAPPER.readTree(Json.ORDERED_MAPPER.writeValueAsString(input.attributes().get(attributeName).params()));
-                            else if (input.model().matchers().containsKey(matcherName))
-                                matcherParamsNode = Json.ORDERED_MAPPER.readTree(Json.ORDERED_MAPPER.writeValueAsString(input.model().matchers().get(matcherName).params()));
+                            if (this.config.input.attributes().containsKey(attributeName))
+                                matcherParamsNode = Json.ORDERED_MAPPER.readTree(Json.ORDERED_MAPPER.writeValueAsString(this.config.input.attributes().get(attributeName).params()));
+                            else if (this.config.input.model().matchers().containsKey(matcherName))
+                                matcherParamsNode = Json.ORDERED_MAPPER.readTree(Json.ORDERED_MAPPER.writeValueAsString(this.config.input.model().matchers().get(matcherName).params()));
                             else
                                 matcherParamsNode = Json.ORDERED_MAPPER.readTree("{}");
 
                             // Calculate the attribute identity confidence score for this match.
                             Double attributeIdentityConfidenceScore = null;
-                            if (this.includeScore) {
+                            if (this.config.includeScore) {
                                 attributeIdentityConfidenceScore = this.getAttributeIdentityConfidenceScore(attributeName, matcherName, indexName, indexFieldName);
                                 if (attributeIdentityConfidenceScore != null) {
                                     attributeIdentityConfidenceBaseScores.putIfAbsent(attributeName, new ArrayList<>());
@@ -1458,7 +1282,7 @@ public class Job {
                             docExpDetailsObjNode.put("input_value", attributeValueNode);
                             docExpDetailsObjNode.put("input_matcher", matcherName);
                             docExpDetailsObjNode.putPOJO("input_matcher_params", matcherParamsNode);
-                            if (this.includeScore)
+                            if (this.config.includeScore)
                                 if (attributeIdentityConfidenceScore == null)
                                     docExpDetailsObjNode.putNull("score");
                                 else
@@ -1467,7 +1291,7 @@ public class Job {
                             expAttributes.add(attributeName);
                         }
 
-                        if (this.includeScore) {
+                        if (this.config.includeScore) {
 
                             // Deconflict multiple attribute confidence scores for the same attribute
                             // by selecting the highest score.
@@ -1483,21 +1307,21 @@ public class Job {
                         }
 
                         // Summarize matched resolvers
-                        for (String resolverName : input.model().resolvers().keySet()) {
-                            if (expAttributes.containsAll(input.model().resolvers().get(resolverName).attributes())) {
+                        for (String resolverName : this.config.input.model().resolvers().keySet()) {
+                            if (expAttributes.containsAll(this.config.input.model().resolvers().get(resolverName).attributes())) {
                                 ObjectNode docExpResolverObjNode = docExpResolversObjNode.putObject(resolverName);
                                 ArrayNode docExpResolverAttributesArrNode = docExpResolverObjNode.putArray("attributes");
-                                for (String attributeName : input.model().resolvers().get(resolverName).attributes())
+                                for (String attributeName : this.config.input.model().resolvers().get(resolverName).attributes())
                                     docExpResolverAttributesArrNode.add(attributeName);
                             }
                         }
                         docObjNode.remove("matched_queries");
-                        if (!this.includeExplanation)
+                        if (!this.config.includeExplanation)
                             docObjNode.remove("_explanation");
                     }
 
                     // Either remove "_source" or move "_source" under "_attributes".
-                    if (!this.includeSource) {
+                    if (!this.config.includeSource) {
                         docObjNode.remove("_source");
                     } else {
                         JsonNode _sourceNode = docObjNode.get("_source");
@@ -1513,14 +1337,14 @@ public class Job {
         }
 
         // Stop traversing if we've reached max depth.
-        boolean maxDepthReached = this.maxHops > -1 && this.hop >= this.maxHops;
+        boolean maxDepthReached = this.config.maxHops > -1 && this.hop >= this.config.maxHops;
         if (maxDepthReached)
             return;
 
         // Update input attributes for the next queries.
         for (String attributeName : nextInputAttributes.keySet()) {
             if (!this.attributes.containsKey(attributeName)) {
-                String attributeType = this.input.model().attributes().get(attributeName).type();
+                String attributeType = this.config.input.model().attributes().get(attributeName).type();
                 this.attributes.put(attributeName, new Attribute(attributeName, attributeType));
             }
             for (Value value : nextInputAttributes.get(attributeName).values()) {
@@ -1553,7 +1377,7 @@ public class Job {
             if (this.ran)
                 this.resetState();
             else
-                this.attributes = new TreeMap<>(this.input.attributes());
+                this.attributes = new TreeMap<>(this.config.input.attributes());
 
             // Start timer and begin job
             String response;
@@ -1562,7 +1386,7 @@ public class Job {
                 this.traverse();
             } catch (Exception e) {
                 this.failed = true;
-                this.error = serializeException(e, this.includeErrorTrace);
+                this.error = serializeException(e, this.config.includeErrorTrace);
             } finally {
                 long took = TimeUnit.MILLISECONDS.convert(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
                 // Format response
@@ -1570,12 +1394,12 @@ public class Job {
                 responseParts.add("\"took\":" + Long.toString(took));
                 if (this.error != null)
                     responseParts.add("\"error\":{" + this.error + "}");
-                if (this.includeHits)
+                if (this.config.includeHits)
                     responseParts.add("\"hits\":{\"total\":" + this.hits.size() + ",\"hits\":[" + String.join(",", this.hits) + "]}");
-                if (this.includeQueries || this.profile)
+                if (this.config.includeQueries || this.config.profile)
                     responseParts.add("\"queries\":[" + queries + "]");
                 response = "{" + String.join(",", responseParts) + "}";
-                if (this.pretty)
+                if (this.config.pretty)
                     response = Json.ORDERED_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(Json.ORDERED_MAPPER.readTree(response));
             }
             return response;
@@ -1585,8 +1409,191 @@ public class Job {
         }
     }
 
+    public static Builder newBuilder() {
+        return new Builder();
+    }
+
     /**
      * A recursive {@link TreeMap} for filtering resolvers.
      */
-    static class FilterTree extends TreeMap<String, FilterTree> {}
+    static class FilterTree extends TreeMap<String, FilterTree> {
+    }
+
+    /**
+     * A map to cache confidence scores of attribute identities.
+     */
+    static class AttributeIdConfidenceScoreMap extends HashMap<String, Double> {
+        private static String makeKey(String attributeName, String matcherName, String indexName, String indexFieldName) {
+            return attributeName + "/" + matcherName + "/" + indexName + "/" + indexFieldName;
+        }
+
+        boolean hasScore(String attributeName, String matcherName, String indexName, String indexFieldName) {
+            String key = makeKey(attributeName, matcherName, indexName, indexFieldName);
+            return this.containsKey(key);
+        }
+
+        Double getScore(String attributeName, String matcherName, String indexName, String indexFieldName) {
+            String key = makeKey(attributeName, matcherName, indexName, indexFieldName);
+            return this.get(key);
+        }
+
+        Double setScore(String attributeName, String matcherName, String indexName, String indexFieldName, double score) {
+            String key = makeKey(attributeName, matcherName, indexName, indexFieldName);
+            return this.put(key, score);
+        }
+    }
+
+    /**
+     * All configuration options for the {@link Job}.
+     */
+    public static class JobConfig {
+        private Input input;
+        private boolean includeAttributes = DEFAULT_INCLUDE_ATTRIBUTES;
+        private boolean includeErrorTrace = DEFAULT_INCLUDE_ERROR_TRACE;
+        private boolean includeExplanation = DEFAULT_INCLUDE_EXPLANATION;
+        private boolean includeHits = DEFAULT_INCLUDE_HITS;
+        private boolean includeQueries = DEFAULT_INCLUDE_QUERIES;
+        private boolean includeScore = DEFAULT_INCLUDE_SCORE;
+        private boolean includeSeqNoPrimaryTerm = DEFAULT_INCLUDE_SEQ_NO_PRIMARY_TERM;
+        private boolean includeSource = DEFAULT_INCLUDE_SOURCE;
+        private boolean includeVersion = DEFAULT_INCLUDE_VERSION;
+        private int maxDocsPerQuery = DEFAULT_MAX_DOCS_PER_QUERY;
+        private int maxHops = DEFAULT_MAX_HOPS;
+        private String maxTimePerQuery = DEFAULT_MAX_TIME_PER_QUERY;
+        private boolean pretty = DEFAULT_PRETTY;
+        private boolean profile = DEFAULT_PROFILE;
+
+        // optional search parameters
+        private Boolean searchAllowPartialSearchResults = DEFAULT_SEARCH_ALLOW_PARTIAL_SEARCH_RESULTS;
+        private Integer searchBatchedReduceSize = DEFAULT_SEARCH_BATCHED_REDUCE_SIZE;
+        private Integer searchMaxConcurrentShardRequests = DEFAULT_SEARCH_MAX_CONCURRENT_SHARD_REQUESTS;
+        private Integer searchPreFilterShardSize = DEFAULT_SEARCH_PRE_FILTER_SHARD_SIZE;
+        private String searchPreference = DEFAULT_SEARCH_PREFERENCE;
+        private Boolean searchRequestCache = DEFAULT_SEARCH_REQUEST_CACHE;
+    }
+
+    /**
+     * A builder for a {@link Job}.
+     */
+    public static class Builder {
+        private NodeClient client;
+        private final JobConfig config = new JobConfig();
+
+        public Builder includeAttributes(boolean includeAttributes) {
+            this.config.includeAttributes = includeAttributes;
+            return this;
+        }
+
+        public Builder includeErrorTrace(boolean includeErrorTrace) {
+            this.config.includeErrorTrace = includeErrorTrace;
+            return this;
+        }
+
+        public Builder includeExplanation(boolean includeExplanation) {
+            this.config.includeExplanation = includeExplanation;
+            return this;
+        }
+
+        public Builder includeHits(boolean includeHits) {
+            this.config.includeHits = includeHits;
+            return this;
+        }
+
+        public Builder includeQueries(boolean includeQueries) {
+            this.config.includeQueries = includeQueries;
+            return this;
+        }
+
+        public Builder includeScore(Boolean includeScore) {
+            this.config.includeScore = includeScore;
+            return this;
+        }
+
+        public Builder includeSeqNoPrimaryTerm(Boolean includeSeqNoPrimaryTerm) {
+            this.config.includeSeqNoPrimaryTerm = includeSeqNoPrimaryTerm;
+            return this;
+        }
+
+        public Builder includeSource(boolean includeSource) {
+            this.config.includeSource = includeSource;
+            return this;
+        }
+
+        public Builder includeVersion(Boolean includeVersion) {
+            this.config.includeVersion = includeVersion;
+            return this;
+        }
+
+        public Builder maxDocsPerQuery(int maxDocsPerQuery) {
+            this.config.maxDocsPerQuery = maxDocsPerQuery;
+            return this;
+        }
+
+        public Builder maxHops(int maxHops) {
+            this.config.maxHops = maxHops;
+            return this;
+        }
+
+        public Builder maxTimePerQuery(String maxTimePerQuery) {
+            this.config.maxTimePerQuery = maxTimePerQuery;
+            return this;
+        }
+
+        public Builder pretty(boolean pretty) {
+            this.config.pretty = pretty;
+            return this;
+        }
+
+        public Builder profile(Boolean profile) {
+            this.config.profile = profile;
+            return this;
+        }
+
+        public Builder searchAllowPartialSearchResults(Boolean searchAllowPartialSearchResults) {
+            this.config.searchAllowPartialSearchResults = searchAllowPartialSearchResults;
+            return this;
+        }
+
+        public Builder searchBatchedReduceSize(Integer searchBatchedReduceSize) {
+            this.config.searchBatchedReduceSize = searchBatchedReduceSize;
+            return this;
+        }
+
+        public Builder searchMaxConcurrentShardRequests(Integer searchMaxConcurrentShardRequests) {
+            this.config.searchMaxConcurrentShardRequests = searchMaxConcurrentShardRequests;
+            return this;
+        }
+
+        public Builder searchPreFilterShardSize(Integer searchPreFilterShardSize) {
+            this.config.searchPreFilterShardSize = searchPreFilterShardSize;
+            return this;
+        }
+
+        public Builder searchPreference(String searchPreference) {
+            this.config.searchPreference = searchPreference;
+            return this;
+        }
+
+        public Builder searchRequestCache(Boolean searchRequestCache) {
+            this.config.searchRequestCache = searchRequestCache;
+            return this;
+        }
+
+        public Builder input(Input input) {
+            this.config.input = input;
+            return this;
+        }
+
+        public Builder client(NodeClient client) {
+            this.client = client;
+            return this;
+        }
+
+        public Job build() {
+            if (this.client == null) {
+                throw new IllegalStateException("Must set client");
+            }
+            return new Job(client, config);
+        }
+    }
 }
