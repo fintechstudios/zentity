@@ -26,8 +26,9 @@ public class Scope {
     }
 
     public void deserialize(JsonNode json, Model model) throws ValidationException, IOException {
-        if (!json.isNull() && !json.isObject())
+        if (!json.isNull() && !json.isObject()) {
             throw new ValidationException("The 'scope' field of the request body must be an object.");
+        }
 
         // Parse and validate the "scope.exclude" and "scope.include" fields of the request body.
         Iterator<Map.Entry<String, JsonNode>> fields = json.fields();

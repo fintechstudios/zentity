@@ -2,6 +2,7 @@ package org.elasticsearch.plugin.zentity;
 
 import io.zentity.model.Model;
 import io.zentity.resolution.Job;
+import io.zentity.resolution.Job.JobResult;
 import io.zentity.resolution.input.Input;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.client.node.NodeClient;
@@ -54,25 +55,35 @@ public class ResolutionAction extends BaseAction {
         // Note: org.elasticsearch.rest.RestRequest doesn't allow null values as default values for integer parameters,
         // which is why the code below handles the integer parameters differently from the others.
         boolean searchAllowPartialSearchResults = restRequest.paramAsBoolean("search.allow_partial_search_results", Job.DEFAULT_SEARCH_ALLOW_PARTIAL_SEARCH_RESULTS);
+
         int searchBatchedReduceSize = Job.DEFAULT_SEARCH_BATCHED_REDUCE_SIZE;
-        if (restRequest.hasParam("search.batched_reduce_size"))
+        if (restRequest.hasParam("search.batched_reduce_size")) {
             searchBatchedReduceSize = Integer.parseInt(restRequest.param("search.batched_reduce_size"));
+        }
+
+
         int searchMaxConcurrentShardRequests = Job.DEFAULT_SEARCH_MAX_CONCURRENT_SHARD_REQUESTS;
         if (restRequest.hasParam("search.max_concurrent_shard_requests"))
             searchMaxConcurrentShardRequests = Integer.parseInt(restRequest.param("search.max_concurrent_shard_requests"));
+
+
         int searchPreFilterShardSize = Job.DEFAULT_SEARCH_PRE_FILTER_SHARD_SIZE;
-        if (restRequest.hasParam("search.pre_filter_shard_size"))
+        if (restRequest.hasParam("search.pre_filter_shard_size")) {
             searchPreFilterShardSize = Integer.parseInt(restRequest.param("search.pre_filter_shard_size"));
+        }
+
         String searchPreference = restRequest.param("search.preference", Job.DEFAULT_SEARCH_PREFERENCE);
         boolean searchRequestCache = restRequest.paramAsBoolean("search.request_cache", Job.DEFAULT_SEARCH_REQUEST_CACHE);
+
         int finalSearchBatchedReduceSize = searchBatchedReduceSize;
         int finalSearchMaxConcurrentShardRequests = searchMaxConcurrentShardRequests;
         int finalSearchPreFilterShardSize = searchPreFilterShardSize;
 
         return wrappedConsumer(channel -> {
             // Validate the request body.
-            if (body == null || body.equals(""))
+            if (body == null || body.equals("")) {
                 throw new BadRequestException("Request body is missing.");
+            }
 
             // Parse and validate the job input.
             Input input;
@@ -114,11 +125,12 @@ public class ResolutionAction extends BaseAction {
                 .build();
 
             // Run the entity resolution job.
-            String response = job.run();
-            if (job.failed())
-                channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, "application/json", response));
-            else
-                channel.sendResponse(new BytesRestResponse(RestStatus.OK, "application/json", response));
+            JobResult res = job.run();
+            if (res.failed()) {
+                channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, "application/json", res.getResponse()));
+            } else {
+                channel.sendResponse(new BytesRestResponse(RestStatus.OK, "application/json", res.getResponse()));
+            }
         });
     }
 }

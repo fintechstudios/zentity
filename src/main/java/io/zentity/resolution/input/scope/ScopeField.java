@@ -35,24 +35,28 @@ public abstract class ScopeField {
      */
     public static Map<String, Attribute> parseAttributes(String scopeType, Model model, JsonNode scopeAttributes) throws ValidationException, JsonProcessingException {
         Map<String, Attribute> attributesObj = new TreeMap<>();
-        if (scopeAttributes.isNull())
+        if (scopeAttributes.isNull()) {
             return attributesObj;
-        if (!scopeAttributes.isObject())
+        }
+        if (!scopeAttributes.isObject()) {
             throw new ValidationException("'scope." + scopeType + ".attributes' must be an object.");
+        }
         Iterator<Map.Entry<String, JsonNode>> attributeNodes = scopeAttributes.fields();
         while (attributeNodes.hasNext()) {
             Map.Entry<String, JsonNode> attribute = attributeNodes.next();
             String attributeName = attribute.getKey();
 
             // Validate that the attribute exists in the entity model.
-            if (!model.attributes().containsKey(attributeName))
+            if (!model.attributes().containsKey(attributeName)) {
                 throw new ValidationException("'" + attributeName + "' is not defined in the entity model.");
+            }
 
             // Parse the attribute values.
             String attributeType = model.attributes().get(attributeName).type();
             JsonNode valuesNode = scopeAttributes.get(attributeName);
-            if (!valuesNode.isNull())
+            if (!valuesNode.isNull()) {
                 attributesObj.put(attributeName, new Attribute(attributeName, attributeType, valuesNode));
+            }
         }
         return attributesObj;
     }
@@ -67,20 +71,24 @@ public abstract class ScopeField {
      */
     public static Set<String> parseIndices(String scopeType, JsonNode scopeIndices) throws ValidationException {
         Set<String> indices = new TreeSet<>();
-        if (scopeIndices.isNull())
+        if (scopeIndices.isNull()) {
             return indices;
+        }
         if (scopeIndices.isTextual()) {
-            if (scopeIndices.asText().equals(""))
+            if (scopeIndices.asText().equals("")) {
                 throw new ValidationException("'scope." + scopeType + ".indices' must not have non-empty strings.");
+            }
             String index = scopeIndices.asText();
             indices.add(index);
         } else if (scopeIndices.isArray()) {
             for (JsonNode indexNode : scopeIndices) {
-                if (!indexNode.isTextual())
+                if (!indexNode.isTextual()) {
                     throw new ValidationException("'scope." + scopeType + ".indices' must be a string or an array of strings.");
+                }
                 String index = indexNode.asText();
-                if (index == null || index.equals(""))
+                if (index == null || index.equals("")) {
                     throw new ValidationException("'scope." + scopeType + ".indices' must not have non-empty strings.");
+                }
                 indices.add(index);
             }
         } else {
@@ -99,20 +107,25 @@ public abstract class ScopeField {
      */
     public static Set<String> parseResolvers(String scopeType, JsonNode scopeResolvers) throws ValidationException {
         Set<String> resolvers = new TreeSet<>();
-        if (scopeResolvers.isNull())
+        if (scopeResolvers.isNull()) {
             return resolvers;
+        }
+
         if (scopeResolvers.isTextual()) {
-            if (scopeResolvers.asText().equals(""))
+            if (scopeResolvers.asText().equals("")) {
                 throw new ValidationException("'scope." + scopeType + ".resolvers' must not have non-empty strings.");
+            }
             String resolver = scopeResolvers.asText();
             resolvers.add(resolver);
         } else if (scopeResolvers.isArray()) {
             for (JsonNode resolverNode : scopeResolvers) {
-                if (!resolverNode.isTextual())
+                if (!resolverNode.isTextual()) {
                     throw new ValidationException("'scope." + scopeType + ".resolvers' must be a string or an array of strings.");
+                }
                 String resolver = resolverNode.asText();
-                if (resolver == null || resolver.equals(""))
+                if (resolver == null || resolver.equals("")) {
                     throw new ValidationException("'scope." + scopeType + ".resolvers' must not have non-empty strings.");
+                }
                 resolvers.add(resolver);
             }
         } else {

@@ -30,8 +30,9 @@ public class Term implements Comparable<Term> {
     }
 
     private void validateTerm(String term) throws ValidationException {
-        if (Patterns.EMPTY_STRING.matcher(term).matches())
+        if (Patterns.EMPTY_STRING.matcher(term).matches()) {
             throw new ValidationException("A term must be a non-empty string.");
+        }
     }
 
     public String term() { return this.term; }
@@ -63,8 +64,9 @@ public class Term implements Comparable<Term> {
      * @return
      */
     public boolean isBoolean() {
-        if (this.isBoolean == null)
+        if (this.isBoolean == null) {
             this.isBoolean = isBoolean(this.term);
+        }
         return this.isBoolean;
     }
 
@@ -75,8 +77,9 @@ public class Term implements Comparable<Term> {
      * @return
      */
     public boolean isDate(String format) {
-        if (this.isDate == null)
+        if (this.isDate == null) {
             this.isDate = isDate(this.term, format);
+        }
         return this.isDate;
     }
 
@@ -101,8 +104,9 @@ public class Term implements Comparable<Term> {
      * @return
      */
     public boolean isNumber() {
-        if (this.isNumber == null)
+        if (this.isNumber == null) {
             this.isNumber = isNumber(this.term);
+        }
         return this.isNumber;
     }
 

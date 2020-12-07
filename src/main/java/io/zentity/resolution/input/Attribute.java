@@ -62,8 +62,9 @@ public class Attribute {
     }
 
     private void validateName(String value) throws ValidationException {
-        if (Patterns.EMPTY_STRING.matcher(value).matches())
+        if (Patterns.EMPTY_STRING.matcher(value).matches()) {
             throw new ValidationException("'attributes' has an attribute with empty name.");
+        }
     }
 
     /**
@@ -74,10 +75,12 @@ public class Attribute {
      * @throws ValidationException
      */
     private void validateType(String value) throws ValidationException {
-        if (Patterns.EMPTY_STRING.matcher(value).matches())
+        if (Patterns.EMPTY_STRING.matcher(value).matches()) {
             throw new ValidationException("'attributes." + this.name + ".type'' must not be empty.");
-        if (!io.zentity.model.Attribute.VALID_TYPES.contains(value))
+        }
+        if (!io.zentity.model.Attribute.VALID_TYPES.contains(value)) {
             throw new ValidationException("'attributes." + this.name + ".type' has an unrecognized type '" + value + "'.");
+        }
     }
 
     /**
@@ -127,10 +130,12 @@ public class Attribute {
      * @throws ValidationException
      */
     public void deserialize(JsonNode json) throws ValidationException, JsonProcessingException {
-        if (json.isNull())
+        if (json.isNull()) {
             return;
-        if (!json.isObject() && !json.isArray())
+        }
+        if (!json.isObject() && !json.isArray()) {
             throw new ValidationException("'attributes." + this.name + "' must be an object or array.");
+        }
 
         Iterator<JsonNode> valuesNode = ClassUtil.emptyIterator();
         Iterator<Map.Entry<String, JsonNode>> paramsNode = ClassUtil.emptyIterator();
@@ -143,15 +148,17 @@ public class Attribute {
 
             // Parse values from object
             if (json.has("values")) {
-                if (!json.get("values").isArray())
+                if (!json.get("values").isArray()) {
                     throw new ValidationException("'attributes." + this.name + ".values' must be an array.");
+                }
                 valuesNode = json.get("values").elements();
             }
 
             // Parse params from object
             if (json.has("params")) {
-                if (!json.get("params").isObject())
+                if (!json.get("params").isObject()) {
                     throw new ValidationException("'attributes." + this.name + ".params' must be an object.");
+                }
                 paramsNode = json.get("params").fields();
             }
         } else {

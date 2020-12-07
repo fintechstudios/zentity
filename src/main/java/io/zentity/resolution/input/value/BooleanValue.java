@@ -18,8 +18,9 @@ public class BooleanValue extends Value {
      */
     @Override
     public String serialize(JsonNode value) {
-        if (value.isNull())
+        if (value.isNull()) {
             return "null";
+        }
         return value.asText();
     }
 
@@ -31,8 +32,9 @@ public class BooleanValue extends Value {
      */
     @Override
     public void validate(JsonNode value) throws ValidationException {
-        if (!value.isBoolean() && !value.isNull())
+        if (!value.isBoolean() && !value.isNull()) {
             throw new ValidationException("Expected '" + this.type + "' attribute data type.");
+        }
     }
 
 }

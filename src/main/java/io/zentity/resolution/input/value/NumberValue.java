@@ -18,14 +18,15 @@ public class NumberValue extends Value {
      */
     @Override
     public String serialize(JsonNode value) {
-        if (value.isNull())
+        if (value.isNull()) {
             return "null";
-        else if (value.isIntegralNumber())
+        } else if (value.isIntegralNumber()) {
             return value.bigIntegerValue().toString();
-        else if (value.isFloatingPointNumber())
+        } else if (value.isFloatingPointNumber()) {
             return String.valueOf(value.doubleValue());
-        else
-            return value.numberValue().toString();
+        }
+
+        return value.numberValue().toString();
     }
 
     /**
@@ -36,7 +37,8 @@ public class NumberValue extends Value {
      */
     @Override
     public void validate(JsonNode value) throws ValidationException {
-        if (!value.isNumber() && !value.isNull())
+        if (!value.isNumber() && !value.isNull()) {
             throw new ValidationException("Expected '" + this.type + "' attribute data type.");
+        }
     }
 }
