@@ -110,8 +110,9 @@ public class SetupAction extends BaseAction {
             if (method == POST) {
                 createIndex(client, numberOfShards, numberOfReplicas);
                 XContentBuilder content = XContentFactory.jsonBuilder();
-                if (pretty)
+                if (pretty) {
                     content.prettyPrint();
+                }
                 content.startObject().field("acknowledged", true).endObject();
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
             } else {

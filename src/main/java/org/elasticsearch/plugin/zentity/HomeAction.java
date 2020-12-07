@@ -34,8 +34,9 @@ public class HomeAction extends BaseAction {
 
         return wrappedConsumer(channel -> {
             XContentBuilder content = XContentFactory.jsonBuilder();
-            if (pretty)
+            if (pretty) {
                 content.prettyPrint();
+            }
             content.startObject();
             content.field("name", props.getProperty("name"));
             content.field("description", props.getProperty("description"));

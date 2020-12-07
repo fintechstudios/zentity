@@ -2,6 +2,9 @@ package org.elasticsearch.plugin.zentity;
 
 import io.zentity.model.Model;
 import org.elasticsearch.ElasticsearchSecurityException;
+import org.elasticsearch.action.ActionRequest;
+import org.elasticsearch.action.ActionRequestBuilder;
+import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequestBuilder;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.delete.DeleteRequestBuilder;
@@ -22,7 +25,6 @@ import org.elasticsearch.index.IndexNotFoundException;
 import org.elasticsearch.plugin.zentity.exceptions.BadRequestException;
 import org.elasticsearch.plugin.zentity.exceptions.ForbiddenException;
 import org.elasticsearch.plugin.zentity.exceptions.NotImplementedException;
-import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
@@ -53,14 +55,33 @@ public class ModelsAction extends BaseAction {
      * @param client The client that will communicate with Elasticsearch.
      * @throws ForbiddenException
      */
-    public static void ensureIndex(NodeClient client) throws ForbiddenException {
+    static void ensureIndex(NodeClient client) throws ForbiddenException {
+        IndicesExistsRequestBuilder request = client.admin().indices().prepareExists(INDEX_NAME);
+        IndicesExistsResponse response = getResponseWithImplicitIndexCreation(client, request);
+        if (!response.isExists()) {
+            SetupAction.createIndex(client);
+        }
+    }
+
+    /**
+     *
+     * @param client The client that will communicate with Elasticsearch.
+     * @param <ReqT> The type of Request.
+     * @param <ResT> The type of Response.
+     * @return The response from Elasticsearch.
+     * @throws ForbiddenException If the user is not authorized to create the .zentity-models index.
+     */
+    static <ReqT extends ActionRequest, ResT extends ActionResponse> ResT getResponseWithImplicitIndexCreation(NodeClient client, ActionRequestBuilder<ReqT, ResT> builder) {
         try {
-            IndicesExistsRequestBuilder request = client.admin().indices().prepareExists(INDEX_NAME);
-            IndicesExistsResponse response = request.get();
-            if (!response.isExists())
+            // TODO: better future handling
+            return builder.get();
+        } catch (IndexNotFoundException e) {
+            try {
                 SetupAction.createIndex(client);
-        } catch (ElasticsearchSecurityException se) {
-            throw new ForbiddenException("The .zentity-models index does not exist and you do not have the 'create_index' privilege. An authorized user must create the index by submitting: POST _zentity/_setup");
+            } catch (ElasticsearchSecurityException se) {
+                throw new ForbiddenException("The .zentity-models index does not exist and you do not have the 'create_index' privilege. An authorized user must create the index by submitting: POST _zentity/_setup");
+            }
+            return builder.get();
         }
     }
 
@@ -69,21 +90,11 @@ public class ModelsAction extends BaseAction {
      *
      * @param client The client that will communicate with Elasticsearch.
      * @return The response from Elasticsearch.
-     * @throws ForbiddenException
      */
-    public static SearchResponse getEntityModels(NodeClient client) throws ForbiddenException {
+    static SearchResponse getEntityModels(NodeClient client) throws ForbiddenException {
         SearchRequestBuilder request = client.prepareSearch(INDEX_NAME);
         request.setSize(10000); // max request size
-        try {
-            return request.get();
-        } catch (IndexNotFoundException e) {
-            try {
-                SetupAction.createIndex(client);
-            } catch (ElasticsearchSecurityException se) {
-                throw new ForbiddenException("The .zentity-models index does not exist and you do not have the 'create_index' privilege. An authorized user must create the index by submitting: POST _zentity/_setup");
-            }
-            return request.get();
-        }
+        return getResponseWithImplicitIndexCreation(client, request);
     }
 
     /**
@@ -92,20 +103,10 @@ public class ModelsAction extends BaseAction {
      * @param entityType The entity type.
      * @param client     The client that will communicate with Elasticsearch.
      * @return The response from Elasticsearch.
-     * @throws ForbiddenException
      */
-    public static GetResponse getEntityModel(String entityType, NodeClient client) throws ForbiddenException {
+    static GetResponse getEntityModel(String entityType, NodeClient client) {
         GetRequestBuilder request = client.prepareGet(INDEX_NAME, "doc", entityType);
-        try {
-            return request.get();
-        } catch (IndexNotFoundException e) {
-            try {
-                SetupAction.createIndex(client);
-            } catch (ElasticsearchSecurityException se) {
-                throw new ForbiddenException("The .zentity-models index does not exist and you do not have the 'create_index' privilege. An authorized user must create the index by submitting: POST _zentity/_setup");
-            }
-            return request.get();
-        }
+        return getResponseWithImplicitIndexCreation(client, request);
     }
 
     /**
@@ -117,7 +118,7 @@ public class ModelsAction extends BaseAction {
      * @return The response from Elasticsearch.
      * @throws ForbiddenException
      */
-    public static IndexResponse indexEntityModel(String entityType, String requestBody, NodeClient client) throws ForbiddenException {
+    static IndexResponse indexEntityModel(String entityType, String requestBody, NodeClient client) throws ForbiddenException {
         ensureIndex(client);
         IndexRequestBuilder request = client.prepareIndex(INDEX_NAME, "doc", entityType);
         request.setSource(requestBody, XContentType.JSON).setCreate(true).setRefreshPolicy("wait_for");
@@ -133,7 +134,7 @@ public class ModelsAction extends BaseAction {
      * @return The response from Elasticsearch.
      * @throws ForbiddenException
      */
-    public static IndexResponse updateEntityModel(String entityType, String requestBody, NodeClient client) throws ForbiddenException {
+    static IndexResponse updateEntityModel(String entityType, String requestBody, NodeClient client) throws ForbiddenException {
         ensureIndex(client);
         IndexRequestBuilder request = client.prepareIndex(INDEX_NAME, "doc", entityType);
         request.setSource(requestBody, XContentType.JSON).setCreate(false).setRefreshPolicy("wait_for");
@@ -148,19 +149,10 @@ public class ModelsAction extends BaseAction {
      * @return The response from Elasticsearch.
      * @throws ForbiddenException
      */
-    private static DeleteResponse deleteEntityModel(String entityType, NodeClient client) throws ForbiddenException {
+    static DeleteResponse deleteEntityModel(String entityType, NodeClient client) throws ForbiddenException {
         DeleteRequestBuilder request = client.prepareDelete(INDEX_NAME, "doc", entityType);
         request.setRefreshPolicy("wait_for");
-        try {
-            return request.get();
-        } catch (IndexNotFoundException e) {
-            try {
-                SetupAction.createIndex(client);
-            } catch (ElasticsearchSecurityException se) {
-                throw new ForbiddenException("The .zentity-models index does not exist and you do not have the 'create_index' privilege. An authorized user must create the index by submitting: POST _zentity/_setup");
-            }
-            return request.get();
-        }
+        return getResponseWithImplicitIndexCreation(client, request);
     }
 
     @Override
@@ -182,8 +174,9 @@ public class ModelsAction extends BaseAction {
             if (method == POST || method == PUT) {
 
                 // Parse the request body.
-                if (requestBody == null || requestBody.equals(""))
+                if (requestBody == null || requestBody.equals("")) {
                     throw new BadRequestException("Request body is missing.");
+                }
 
                 // Parse and validate the entity model.
                 new Model(requestBody);
@@ -194,8 +187,9 @@ public class ModelsAction extends BaseAction {
                 // GET _zentity/models
                 SearchResponse response = getEntityModels(client);
                 XContentBuilder content = XContentFactory.jsonBuilder();
-                if (pretty)
+                if (pretty) {
                     content.prettyPrint();
+                }
                 content = response.toXContent(content, ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
 
@@ -203,8 +197,9 @@ public class ModelsAction extends BaseAction {
                 // GET _zentity/models/{entity_type}
                 GetResponse response = getEntityModel(entityType, client);
                 XContentBuilder content = XContentFactory.jsonBuilder();
-                if (pretty)
+                if (pretty) {
                     content.prettyPrint();
+                }
                 content = response.toXContent(content, ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
 
@@ -212,8 +207,9 @@ public class ModelsAction extends BaseAction {
                 // POST _zentity/models/{entity_type}
                 IndexResponse response = indexEntityModel(entityType, requestBody, client);
                 XContentBuilder content = XContentFactory.jsonBuilder();
-                if (pretty)
+                if (pretty) {
                     content.prettyPrint();
+                }
                 response.toXContent(content, ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
 
@@ -221,8 +217,9 @@ public class ModelsAction extends BaseAction {
                 // PUT _zentity/models/{entity_type}
                 IndexResponse response = updateEntityModel(entityType, requestBody, client);
                 XContentBuilder content = XContentFactory.jsonBuilder();
-                if (pretty)
+                if (pretty) {
                     content.prettyPrint();
+                }
                 response.toXContent(content, ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
 
@@ -230,8 +227,9 @@ public class ModelsAction extends BaseAction {
                 // DELETE _zentity/models/{entity_type}
                 DeleteResponse response = deleteEntityModel(entityType, client);
                 XContentBuilder content = XContentFactory.jsonBuilder();
-                if (pretty)
+                if (pretty) {
                     content.prettyPrint();
+                }
                 response.toXContent(content, ToXContent.EMPTY_PARAMS);
                 channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
 
