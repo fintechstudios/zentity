@@ -43,6 +43,7 @@
                 <arg value="&quot;"/>
             </exec>
 
+            <echo message="Running script @{script}"/>
             <exec executable="bash" osfamily="unix" dir="${temp.cwd}" failonerror="${failonerror}" spawn="@{spawn}"
                   taskname="${script.base}">
                 <arg value="@{script}"/>
@@ -97,7 +98,7 @@
 
     <!-- start elasticsearch and wait until its ready -->
     <macrodef name="startup-elasticsearch">
-        <attribute name="home"
+        <attribute name="installRoot"
                    default="${project.build.directory}/integration-tests/run/elasticsearch-${elasticsearch.version}"/>
         <attribute name="spawn" default="true"/>
         <attribute name="es.cluster.name" default="${integ.cluster.name}"/>
@@ -117,8 +118,8 @@
             <!-- run bin/elasticsearch with args -->
             <echo>Starting up external cluster...</echo>
 
-            <chmod file="@{home}/bin/elasticsearch" perm="ugo+rx"/>
-            <run-script script="@{home}/bin/elasticsearch"
+            <chmod file="@{installRoot}/bin/elasticsearch" perm="ugo+rx"/>
+            <run-script script="@{installRoot}/bin/elasticsearch"
                         spawn="@{spawn}">
                 <nested>
                     <arg value="-p=@{es.pidfile}"/>
@@ -137,7 +138,7 @@
 
             <!-- best effort, print console log. useful if it fails especially -->
             <local name="log.contents"/>
-            <loadfile srcFile="@{home}/logs/@{es.cluster.name}.log"
+            <loadfile srcFile="@{installRoot}/logs/@{es.cluster.name}.log"
                       property="log.contents"
                       failonerror="false"/>
             <echo message="${log.contents}" taskname="elasticsearch"/>
@@ -199,21 +200,44 @@
         <stop-node/>
     </target>
 
+    <!-- TODO: do this integration test setup w/ testcontainers.com, not ANT -->
     <target name="setup-workspace" depends="stop-external-cluster">
         <condition property="elasticsearchVersionGreaterThan6x">
             <matches string="${elasticsearch.version}" pattern="^7\."/>
         </condition>
+        <condition property="isWindows">
+            <os family="windows" />
+        </condition>
+
+        <condition property="isUnix">
+            <os family="unix" />
+        </condition>
+
         <sequential>
             <delete dir="${project.build.directory}/integration-tests/run"/>
             <mkdir dir="${project.build.directory}/integration-tests/binaries"/>
+
+            <!-- Windows -->
             <get src="https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-oss-${elasticsearch.version}-windows-x86_64.zip"
                  dest="${project.build.directory}/integration-tests/binaries/elasticsearch-oss-${elasticsearch.version}.zip"
-                 if:set="elasticsearchVersionGreaterThan6x"/>
-            <get src="https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-oss-${elasticsearch.version}.zip"
-                 dest="${project.build.directory}/integration-tests/binaries/elasticsearch-oss-${elasticsearch.version}.zip"
-                 unless:set="elasticsearchVersionGreaterThan6x"/>
+                 if:set="isWindows"/>
+
             <unzip src="${project.build.directory}/integration-tests/binaries/elasticsearch-oss-${elasticsearch.version}.zip"
-                   dest="${project.build.directory}/integration-tests/run"/>
+                   dest="${project.build.directory}/integration-tests/run"
+                   if:set="isWindows"/>
+
+            <!-- Linux -->
+            <get src="https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-oss-${elasticsearch.version}-linux-x86_64.tar.gz"
+                 dest="${project.build.directory}/integration-tests/binaries/elasticsearch-oss-${elasticsearch.version}.tar.gz"
+                 unless:set="isWindows"/>
+
+            <untar src="${project.build.directory}/integration-tests/binaries/elasticsearch-oss-${elasticsearch.version}.tar.gz"
+                   compression="gzip"
+                   dest="${project.build.directory}/integration-tests/run"
+                   unless:set="isWindows"/>
+
+            <!-- Bundled java must be executable -->
+            <chmod file="${project.build.directory}/integration-tests/run/elasticsearch-${elasticsearch.version}/jdk/bin/java" perm="ugo+rx"/>
         </sequential>
     </target>
 
@@ -230,7 +254,7 @@
 
     <!-- installs a plugin into elasticsearch -->
     <macrodef name="install-plugin">
-        <attribute name="home"
+        <attribute name="installRoot"
                    default="${project.build.directory}/integration-tests/run/elasticsearch-${elasticsearch.version}"/>
         <attribute name="name"/>
         <attribute name="file"/>
@@ -238,12 +262,12 @@
             <local name="url"/>
             <makeurl property="url" file="@{file}"/>
 
-            <property name="commandline" value="@{home}/bin/elasticsearch-plugin"/>
+            <property name="commandline" value="@{installRoot}/bin/elasticsearch-plugin"/>
 
             <!-- install plugin -->
             <echo>Installing plugin @{name}...</echo>
             <chmod file="${commandline}" perm="ugo+rx"/>
-            <chmod file="@{home}/bin/elasticsearch-cli" perm="ugo+rx"/>
+            <chmod file="@{installRoot}/bin/elasticsearch-cli" perm="ugo+rx"/>
             <run-script script="${commandline}">
                 <nested>
                     <arg value="install"/>
@@ -255,7 +279,7 @@
                 <condition>
                     <not>
                         <resourceexists>
-                            <file file="@{home}/plugins/@{name}"/>
+                            <file file="@{installRoot}/plugins/@{name}"/>
                         </resourceexists>
                     </not>
                 </condition>
