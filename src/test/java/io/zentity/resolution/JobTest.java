@@ -5,11 +5,13 @@ import io.zentity.model.Model;
 import io.zentity.model.ValidationException;
 import io.zentity.resolution.Job.FilterTree;
 import io.zentity.resolution.input.Input;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 public class JobTest {
 
@@ -40,9 +42,9 @@ public class JobTest {
         Map<String, Integer> counts = Job.countAttributesAcrossResolvers(model, resolversList);
         List<List<String>> resolversSorted = Job.sortResolverAttributes(model, resolversList, counts);
         FilterTree resolversFilterTree = Job.makeResolversFilterTree(resolversSorted);
-        String resolversClause = Job.populateResolversFilterTree(model, "index", resolversFilterTree, input.attributes(), false, new AtomicInteger());
+        String resolversClause = Job.buildResolversClause(model, "index", resolversFilterTree, input.attributes(), false, new AtomicInteger());
         String expected = "{\"bool\":{\"should\":[{\"match\":{\"id\":\"1234567890\",\"fuzziness\":\"auto\"}},{\"bool\":{\"filter\":[{\"bool\":{\"should\":[{\"term\":{\"name\":\"Alice Jones\"}},{\"term\":{\"name\":\"Alice Jones-Smith\"}}]}},{\"bool\":{\"should\":[{\"match\":{\"phone\":\"555-123-4567\",\"fuzziness\":\"2\"}},{\"bool\":{\"filter\":[{\"term\":{\"street\":\"123 Main St\"}},{\"bool\":{\"should\":[{\"bool\":{\"filter\":[{\"term\":{\"city\":\"Beverly Hills\"}},{\"term\":{\"state\":\"CA\"}}]}},{\"term\":{\"zip\":\"90210\"}}]}}]}}]}}]}}]}}";
-        Assert.assertEquals(resolversClause, expected);
+        assertEquals(resolversClause, expected);
     }
 
     /**
@@ -63,7 +65,7 @@ public class JobTest {
         TreeMap<String, String> params = new TreeMap<>();
         String matcherClause = Job.populateMatcherClause(matcher, "field_phone", "555-123-4567", params);
         String expected = "{\"match\":{\"field_phone\":\"555-123-4567\"}}";
-        Assert.assertEquals(matcherClause, expected);
+        assertEquals(matcherClause, expected);
     }
 
     /**
@@ -86,7 +88,7 @@ public class JobTest {
         params.put("foo", "bar");
         String matcherClause = Job.populateMatcherClause(matcher, "field_phone", "555-123-4567", params);
         String expected = "{\"match\":{\"field_phone\":\"555-123-4567\"}}";
-        Assert.assertEquals(matcherClause, expected);
+        assertEquals(matcherClause, expected);
     }
 
     /**
@@ -160,7 +162,7 @@ public class JobTest {
         TreeMap<String, String> params = new TreeMap<>();
         String matcherClause = Job.populateMatcherClause(matcher, "field_phone", "555-123-4567", params);
         String expected = "{\"match\":{\"field_phone\":{\"query\":\"555-123-4567\",\"fuzziness\":\"2\"}}}";
-        Assert.assertEquals(matcherClause, expected);
+        assertEquals(matcherClause, expected);
     }
 
     /**
@@ -207,7 +209,7 @@ public class JobTest {
         List<String> attributeClauses = Job.makeAttributeClauses(input.model(), "index", input.attributes(), "filter", false, new AtomicInteger());
         String expected = "{\"match\":{\"field_phone\":{\"query\":\"555-123-4567\",\"fuzziness\":\"1\"}}}";
         String actual = attributeClauses.get(0);
-        Assert.assertEquals(expected, actual);
+        assertEquals(expected, actual);
     }
 
     /**
@@ -257,7 +259,7 @@ public class JobTest {
         List<String> attributeClauses = Job.makeAttributeClauses(input.model(), "index", input.attributes(), "filter", false, new AtomicInteger());
         String expected = "{\"match\":{\"field_phone\":{\"query\":\"555-123-4567\",\"fuzziness\":\"1\"}}}";
         String actual = attributeClauses.get(0);
-        Assert.assertEquals(expected, actual);
+        assertEquals(expected, actual);
     }
 
     /**
@@ -306,7 +308,7 @@ public class JobTest {
         List<String> attributeClauses = Job.makeAttributeClauses(input.model(), "index", input.attributes(), "filter", false, new AtomicInteger());
         String expected = "{\"match\":{\"field_phone\":{\"query\":\"555-123-4567\",\"fuzziness\":\"2\"}}}";
         String actual = attributeClauses.get(0);
-        Assert.assertEquals(expected, actual);
+        assertEquals(expected, actual);
     }
 
     /**
@@ -361,7 +363,7 @@ public class JobTest {
         List<String> attributeClauses = Job.makeAttributeClauses(input.model(), "index", input.attributes(), "filter", false, new AtomicInteger());
         String expected = "{\"range\":{\"field_timestamp\":{\"gte\":\"123 Main St||-30m\",\"lte\":\"123 Main St||+30m\",\"format\":\"yyyy-MM-dd'T'HH:mm:ss\"}}}";
         String actual = attributeClauses.get(0);
-        Assert.assertEquals(expected, actual);
+        assertEquals(expected, actual);
     }
 
     /**
@@ -420,7 +422,7 @@ public class JobTest {
         List<String> attributeClauses = Job.makeAttributeClauses(input.model(), "index", input.attributes(), "filter", false, new AtomicInteger());
         String expected = "{\"range\":{\"field_timestamp\":{\"gte\":\"123 Main St||-30m\",\"lte\":\"123 Main St||+30m\",\"format\":\"yyyy-MM-dd'T'HH:mm:ss\"}}}";
         String actual = attributeClauses.get(0);
-        Assert.assertEquals(expected, actual);
+        assertEquals(expected, actual);
     }
 
     /**
@@ -484,7 +486,7 @@ public class JobTest {
         List<String> attributeClauses = Job.makeAttributeClauses(input.model(), "index", input.attributes(), "filter", false, new AtomicInteger());
         String expected = "{\"range\":{\"field_timestamp\":{\"gte\":\"123 Main St||-15m\",\"lte\":\"123 Main St||+15m\",\"format\":\"yyyy-MM-dd\"}}}";
         String actual = attributeClauses.get(0);
-        Assert.assertEquals(expected, actual);
+        assertEquals(expected, actual);
     }
 
     /**
@@ -634,7 +636,7 @@ public class JobTest {
         Input input = new Input(json, model);
         String scriptFieldsClause = Job.makeScriptFieldsClause(input, "index");
         String expected = "\"script_fields\":{\"field_timestamp\":{\"script\":{\"lang\":\"painless\",\"source\":\"DateFormat df = new SimpleDateFormat(params.format); df.setTimeZone(TimeZone.getTimeZone('UTC')); return df.format(doc[params.field].value.toInstant().toEpochMilli())\",\"params\":{\"field\":\"field_timestamp\",\"format\":\"yyyy-MM-dd\"}}}}";
-        Assert.assertEquals(scriptFieldsClause, expected);
+        assertEquals(scriptFieldsClause, expected);
     }
 
     /**
@@ -700,7 +702,7 @@ public class JobTest {
         Input input = new Input(json, model);
         String scriptFieldsClause = Job.makeScriptFieldsClause(input, "index");
         String expected = "\"script_fields\":{\"field_timestamp\":{\"script\":{\"lang\":\"painless\",\"source\":\"DateFormat df = new SimpleDateFormat(params.format); df.setTimeZone(TimeZone.getTimeZone('UTC')); return df.format(doc[params.field].value.toInstant().toEpochMilli())\",\"params\":{\"field\":\"field_timestamp\",\"format\":\"yyyy-MM-dd\"}}}}";
-        Assert.assertEquals(scriptFieldsClause, expected);
+        assertEquals(scriptFieldsClause, expected);
     }
 
     /**
@@ -762,7 +764,7 @@ public class JobTest {
         Input input = new Input(json, model);
         String scriptFieldsClause = Job.makeScriptFieldsClause(input, "index");
         String expected = "\"script_fields\":{\"field_timestamp\":{\"script\":{\"lang\":\"painless\",\"source\":\"DateFormat df = new SimpleDateFormat(params.format); df.setTimeZone(TimeZone.getTimeZone('UTC')); return df.format(doc[params.field].value.toInstant().toEpochMilli())\",\"params\":{\"field\":\"field_timestamp\",\"format\":\"yyyy-MM-dd\"}}}}";
-        Assert.assertEquals(scriptFieldsClause, expected);
+        assertEquals(scriptFieldsClause, expected);
     }
 
     /**
@@ -827,7 +829,7 @@ public class JobTest {
         Input input = new Input(json, model);
         String scriptFieldsClause = Job.makeScriptFieldsClause(input, "index");
         String expected = "\"script_fields\":{\"field_timestamp\":{\"script\":{\"lang\":\"painless\",\"source\":\"DateFormat df = new SimpleDateFormat(params.format); df.setTimeZone(TimeZone.getTimeZone('UTC')); return df.format(doc[params.field].value.toInstant().toEpochMilli())\",\"params\":{\"field\":\"field_timestamp\",\"format\":\"yyyy-MM-dd'T'HH:mm:ss\"}}}}";
-        Assert.assertEquals(scriptFieldsClause, expected);
+        assertEquals(scriptFieldsClause, expected);
     }
 
     /**
@@ -894,7 +896,7 @@ public class JobTest {
         Input input = new Input(json, model);
         String scriptFieldsClause = Job.makeScriptFieldsClause(input, "index");
         String expected = "\"script_fields\":{\"field_timestamp\":{\"script\":{\"lang\":\"painless\",\"source\":\"DateFormat df = new SimpleDateFormat(params.format); df.setTimeZone(TimeZone.getTimeZone('UTC')); return df.format(doc[params.field].value.toInstant().toEpochMilli())\",\"params\":{\"field\":\"field_timestamp\",\"format\":\"yyyy-MM-dd'T'HH:mm:ss.SSS\"}}}}";
-        Assert.assertEquals(scriptFieldsClause, expected);
+        assertEquals(scriptFieldsClause, expected);
     }
 
     /**
@@ -961,7 +963,7 @@ public class JobTest {
         Input input = new Input(json, model);
         String scriptFieldsClause = Job.makeScriptFieldsClause(input, "index");
         String expected = "\"script_fields\":{\"field_timestamp\":{\"script\":{\"lang\":\"painless\",\"source\":\"DateFormat df = new SimpleDateFormat(params.format); df.setTimeZone(TimeZone.getTimeZone('UTC')); return df.format(doc[params.field].value.toInstant().toEpochMilli())\",\"params\":{\"field\":\"field_timestamp\",\"format\":\"yyyy-MM-dd'T'HH:mm:ss\"}}}}";
-        Assert.assertEquals(scriptFieldsClause, expected);
+        assertEquals(scriptFieldsClause, expected);
     }
 
     /**
@@ -1091,31 +1093,31 @@ public class JobTest {
     public void testCalculateAttributeIdentityConfidenceScore() {
 
         // When all quality scores are 1.0,the output must be equal to the base score
-        Assert.assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.75, 1.00, 1.00), 0.75, 0.0000000001);
+        assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.75, 1.00, 1.00), 0.75, 0.0000000001);
 
         // When any quality score is 0.0, the output must be 0.5
-        Assert.assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.75, 1.00, 0.00), 0.50, 0.0000000001);
-        Assert.assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.75, 0.90, 0.00), 0.50, 0.0000000001);
-        Assert.assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.75, 0.00, 0.00), 0.50, 0.0000000001);
+        assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.75, 1.00, 0.00), 0.50, 0.0000000001);
+        assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.75, 0.90, 0.00), 0.50, 0.0000000001);
+        assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.75, 0.00, 0.00), 0.50, 0.0000000001);
 
         // The order of the quality scores must not matter
-        Assert.assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.75, 0.90, 0.80), 0.68, 0.0000000001);
-        Assert.assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.75, 0.80, 0.90), 0.68, 0.0000000001);
+        assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.75, 0.90, 0.80), 0.68, 0.0000000001);
+        assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.75, 0.80, 0.90), 0.68, 0.0000000001);
 
         // Any null quality scores must be omitted
-        Assert.assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.75, 0.90, null), 0.725, 0.0000000001);
-        Assert.assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.75, null, 0.8), 0.70, 0.0000000001);
-        Assert.assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.75, null, null), 0.75, 0.0000000001);
+        assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.75, 0.90, null), 0.725, 0.0000000001);
+        assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.75, null, 0.8), 0.70, 0.0000000001);
+        assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.75, null, null), 0.75, 0.0000000001);
 
         // When the base score is null, the output must be null
-        Assert.assertNull(Job.calculateAttributeIdentityConfidenceScore(null, 0.9, 0.8));
-        Assert.assertNull(Job.calculateAttributeIdentityConfidenceScore(null, 0.9, null));
-        Assert.assertNull(Job.calculateAttributeIdentityConfidenceScore(null, null, 0.8));
-        Assert.assertNull(Job.calculateAttributeIdentityConfidenceScore(null, null, null));
+        assertNull(Job.calculateAttributeIdentityConfidenceScore(null, 0.9, 0.8));
+        assertNull(Job.calculateAttributeIdentityConfidenceScore(null, 0.9, null));
+        assertNull(Job.calculateAttributeIdentityConfidenceScore(null, null, 0.8));
+        assertNull(Job.calculateAttributeIdentityConfidenceScore(null, null, null));
 
         // Various tests
-        Assert.assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.75, 0.625, 0.99), 0.6546875, 0.0000000001);
-        Assert.assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.87, 0.817, 0.93), 0.7811297, 0.0000000001);
+        assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.75, 0.625, 0.99), 0.6546875, 0.0000000001);
+        assertEquals(Job.calculateAttributeIdentityConfidenceScore(0.87, 0.817, 0.93), 0.7811297, 0.0000000001);
     }
 
     /**
@@ -1125,37 +1127,37 @@ public class JobTest {
     public void testCalculateCompositeIdentityConfidenceScore() {
 
         // Inputs of 1.0 must always produce an output of 1.0
-        Assert.assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.75, 1.00)), 1.00000000000, 0.0000000001);
+        assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.75, 1.00)), 1.00000000000, 0.0000000001);
 
         // Inputs of 0.5 or null must not affect the output score
-        Assert.assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.55, 0.65, 0.75)), 0.87195121951, 0.0000000001);
-        Assert.assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.55, 0.65, 0.75, 0.50)), 0.87195121951, 0.0000000001);
-        Assert.assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.55, 0.65, 0.75, null)), 0.87195121951, 0.0000000001);
+        assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.55, 0.65, 0.75)), 0.87195121951, 0.0000000001);
+        assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.55, 0.65, 0.75, 0.50)), 0.87195121951, 0.0000000001);
+        assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.55, 0.65, 0.75, null)), 0.87195121951, 0.0000000001);
 
         // Inputs of 0.0 must always produce an output of 0.0
-        Assert.assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.75, 0.00)), 0.00000000000, 0.0000000001);
+        assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.75, 0.00)), 0.00000000000, 0.0000000001);
 
         // Inputs of 1.0 and 0.0 together must always produce an output of 0.5
-        Assert.assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.75, 1.00, 0.00)), 0.50000000000, 0.0000000001);
+        assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.75, 1.00, 0.00)), 0.50000000000, 0.0000000001);
 
         // Output score must be null given an empty list of input scores.
         List<Double> scores = new ArrayList<>();
-        Assert.assertNull(Job.calculateCompositeIdentityConfidenceScore(scores));
+        assertNull(Job.calculateCompositeIdentityConfidenceScore(scores));
 
         // Output score must be null given only null input scores.
         Double nullScore = null;
-        Assert.assertNull(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(nullScore, nullScore)));
+        assertNull(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(nullScore, nullScore)));
 
         // The order of the inputs must not matter
-        Assert.assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.55, 0.75, 0.65)), 0.87195121951, 0.0000000001);
-        Assert.assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.65, 0.55, 0.75)), 0.87195121951, 0.0000000001);
-        Assert.assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.65, 0.75, 0.55)), 0.87195121951, 0.0000000001);
-        Assert.assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.75, 0.65, 0.55)), 0.87195121951, 0.0000000001);
-        Assert.assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.75, 0.55, 0.65)), 0.87195121951, 0.0000000001);
+        assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.55, 0.75, 0.65)), 0.87195121951, 0.0000000001);
+        assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.65, 0.55, 0.75)), 0.87195121951, 0.0000000001);
+        assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.65, 0.75, 0.55)), 0.87195121951, 0.0000000001);
+        assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.75, 0.65, 0.55)), 0.87195121951, 0.0000000001);
+        assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.75, 0.55, 0.65)), 0.87195121951, 0.0000000001);
 
         // Various tests
-        Assert.assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.75, 0.95)), 0.98275862069, 0.0000000001);
-        Assert.assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.75, 0.85)), 0.94444444444, 0.0000000001);
+        assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.75, 0.95)), 0.98275862069, 0.0000000001);
+        assertEquals(Job.calculateCompositeIdentityConfidenceScore(Arrays.asList(0.75, 0.85)), 0.94444444444, 0.0000000001);
     }
 
 }

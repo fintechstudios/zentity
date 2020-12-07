@@ -26,7 +26,7 @@ public abstract class AbstractITCase extends ESTestCase {
         try {
             Response response = client.performRequest(new Request("GET", "/"));
             JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
-            assertTrue(json.get("tagline").textValue().equals("You Know, for Search"));
+            assertEquals("You Know, for Search", json.get("tagline").textValue());
         } catch (IOException e) {
             // If we have an exception here, let's ignore the test
             assumeThat("Integration tests are skipped", e.getMessage(), not(containsString("Connection refused")));

@@ -1599,7 +1599,7 @@ public class JobIT extends AbstractITCase {
                 assertEquals(json.get("error").get("by").asText(), "elasticsearch");
                 assertEquals(json.get("error").get("type").asText(), "org.elasticsearch.common.ParsingException");
                 assertEquals(json.get("error").get("reason").asText(), "no [query] registered for [example_malformed_query]");
-                assertEquals(json.get("error").get("stack_trace").asText().startsWith("ParsingException[no [query] registered for [example_malformed_query]]"), true);
+                assertTrue(json.get("error").get("stack_trace").asText().startsWith("ParsingException[no [query] registered for [example_malformed_query]]"));
                 assertEquals(json.get("hits").get("total").asInt(), 2);
                 Set<String> docsExpected = new TreeSet<>();
                 docsExpected.add("a2,0");
@@ -1651,7 +1651,7 @@ public class JobIT extends AbstractITCase {
                 assertEquals(json.get("error").get("by").asText(), "zentity");
                 assertEquals(json.get("error").get("type").asText(), "io.zentity.model.ValidationException");
                 assertEquals(json.get("error").get("reason").asText(), "Expected 'number' attribute data type.");
-                assertEquals(json.get("error").get("stack_trace").asText().startsWith("io.zentity.model.ValidationException: Expected 'number' attribute data type."), true);
+                assertTrue(json.get("error").get("stack_trace").asText().startsWith("io.zentity.model.ValidationException: Expected 'number' attribute data type."));
                 assertEquals(json.get("hits").get("total").asInt(), 0);
             }
 
@@ -1670,8 +1670,8 @@ public class JobIT extends AbstractITCase {
                 assertEquals(json.get("error").get("by").asText(), "zentity");
                 assertEquals(json.get("error").get("type").asText(), "io.zentity.model.ValidationException");
                 assertEquals(json.get("error").get("reason").asText(), "Expected 'number' attribute data type.");
-                assertEquals(json.get("error").get("stack_trace"), null);
-                assertEquals(json.get("queries").isMissingNode(), false);
+                assertNull(json.get("error").get("stack_trace"));
+                assertFalse(json.get("queries").isMissingNode());
                 assertEquals(json.get("hits").get("total").asInt(), 0);
             }
         } finally {
@@ -1825,8 +1825,9 @@ public class JobIT extends AbstractITCase {
                     default:
                         Assert.fail();
                 }
-                for (JsonNode match : doc.get("_explanation").get("matches"))
+                for (JsonNode match : doc.get("_explanation").get("matches")) {
                     assertFalse(match.get("score").isMissingNode());
+                }
             }
         } finally {
             destroyTestResources(testResourceSet);
