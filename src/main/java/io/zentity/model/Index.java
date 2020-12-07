@@ -62,31 +62,39 @@ public class Index {
     }
 
     private void validateName(String value) throws ValidationException {
-        if (Patterns.EMPTY_STRING.matcher(value).matches())
+        if (Patterns.EMPTY_STRING.matcher(value).matches()) {
             throw new ValidationException("'indices' has an index with an empty name.");
+        }
     }
 
     private void validateField(String fieldName, JsonNode fieldObject) throws ValidationException {
-        if (fieldName.equals(""))
+        if (fieldName.equals("")) {
             throw new ValidationException("'indices." + this.name + ".fields' has a field with an empty name.");
-        if (!fieldObject.isObject())
+        }
+        if (!fieldObject.isObject()) {
             throw new ValidationException("'indices." + this.name + ".fields." + fieldName + "' must be an object.");
-        if (fieldObject.size() == 0)
+        }
+        if (fieldObject.size() == 0) {
             throw new ValidationException("'indices." + this.name + ".fields." + fieldName + "' must not be empty.");
+        }
     }
 
     private void validateFields(JsonNode value) throws ValidationException {
-        if (!value.isObject())
+        if (!value.isObject()) {
             throw new ValidationException("'indices." + this.name + ".fields' must be an object.");
-        if (value.size() == 0)
+        }
+        if (value.size() == 0) {
             throw new ValidationException("'indices." + this.name + ".fields' must not be empty.");
+        }
     }
 
     private void validateObject(JsonNode object) throws ValidationException {
-        if (!object.isObject())
+        if (!object.isObject()) {
             throw new ValidationException("'indices." + this.name + "' must be an object.");
-        if (object.size() == 0)
+        }
+        if (object.size() == 0) {
             throw new ValidationException("'indices." + this.name + "' is empty.");
+        }
     }
 
     /**
@@ -97,10 +105,12 @@ public class Index {
         this.attributeIndexFieldsMap = new TreeMap<>();
         for (String indexFieldName : this.fields().keySet()) {
             String attributeName = this.fields().get(indexFieldName).attribute();
-            if (!this.attributeIndexFieldsMap.containsKey(attributeName))
+            if (!this.attributeIndexFieldsMap.containsKey(attributeName)) {
                 this.attributeIndexFieldsMap.put(attributeName, new TreeMap<>());
-            if (!this.attributeIndexFieldsMap.get(attributeName).containsKey(indexFieldName))
+            }
+            if (!this.attributeIndexFieldsMap.get(attributeName).containsKey(indexFieldName)) {
                 this.attributeIndexFieldsMap.get(attributeName).put(indexFieldName, this.fields.get(indexFieldName));
+            }
         }
     }
 
@@ -124,8 +134,9 @@ public class Index {
 
         // Validate the existence of required fields.
         for (String field : REQUIRED_FIELDS)
-            if (!json.has(field))
+            if (!json.has(field)) {
                 throw new ValidationException("'indices." + this.name + "' is missing required field '" + field + "'.");
+            }
 
         // Validate and hold the state of fields.
         Iterator<Map.Entry<String, JsonNode>> fields = json.fields();

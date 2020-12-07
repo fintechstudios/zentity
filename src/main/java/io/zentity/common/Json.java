@@ -46,12 +46,13 @@ public class Json {
             Map.Entry<String, JsonNode> paramNode = iterator.next();
             String paramField = paramNode.getKey();
             JsonNode paramValue = paramNode.getValue();
-            if (paramValue.isObject() || paramValue.isArray())
+            if (paramValue.isObject() || paramValue.isArray()) {
                 map.put(paramField, MAPPER.writeValueAsString(paramValue));
-            else if (paramValue.isNull())
+            } else if (paramValue.isNull()) {
                 map.put(paramField, "null");
-            else
+            } else {
                 map.put(paramField, paramValue.asText());
+            }
         }
         return map;
     }

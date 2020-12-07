@@ -63,15 +63,18 @@ public class Attribute {
     }
 
     private void validateName(String value) throws ValidationException {
-        if (Patterns.EMPTY_STRING.matcher(value).matches())
+        if (Patterns.EMPTY_STRING.matcher(value).matches()) {
             throw new ValidationException("'attributes' has an attribute with empty name.");
+        }
     }
 
     private void validateScore(JsonNode value) throws ValidationException {
-        if (!value.isNull() && !value.isFloatingPointNumber())
+        if (!value.isNull() && !value.isFloatingPointNumber()) {
             throw new ValidationException("'attributes." + this.name + ".score' must be a floating point number.");
-        if (value.isFloatingPointNumber() && (value.floatValue() < 0.0 || value.floatValue() > 1.0))
+        }
+        if (value.isFloatingPointNumber() && (value.floatValue() < 0.0 || value.floatValue() > 1.0)) {
             throw new ValidationException("'attributes." + this.name + ".score' must be in the range of 0.0 - 1.0.");
+        }
     }
 
     /**
@@ -82,12 +85,15 @@ public class Attribute {
      * @throws ValidationException
      */
     private void validateType(JsonNode value) throws ValidationException {
-        if (!value.isTextual())
+        if (!value.isTextual()) {
             throw new ValidationException("'attributes." + this.name + ".type' must be a string.");
-        if (Patterns.EMPTY_STRING.matcher(value.textValue()).matches())
+        }
+        if (Patterns.EMPTY_STRING.matcher(value.textValue()).matches()) {
             throw new ValidationException("'attributes." + this.name + ".type'' must not be empty.");
-        if (!VALID_TYPES.contains(value.textValue()))
+        }
+        if (!VALID_TYPES.contains(value.textValue())) {
             throw new ValidationException("'attributes." + this.name + ".type' has an unrecognized type '" + value.textValue() + "'.");
+        }
     }
 
     /**
@@ -98,8 +104,9 @@ public class Attribute {
      * @throws ValidationException
      */
     private void validateParams(JsonNode value) throws ValidationException {
-        if (!value.isObject())
+        if (!value.isObject()) {
             throw new ValidationException("'attributes." + this.name + ".params' must be an object.");
+        }
     }
 
     /**
@@ -110,8 +117,9 @@ public class Attribute {
      * @throws ValidationException
      */
     private void validateObject(JsonNode object) throws ValidationException {
-        if (!object.isObject())
+        if (!object.isObject()) {
             throw new ValidationException("'attributes." + this.name + "' must be an object.");
+        }
     }
 
     /**

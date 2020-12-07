@@ -46,8 +46,9 @@ public class Resolver {
     public void attributes(JsonNode value) throws ValidationException {
         validateAttributes(value);
         Set<String> attributes = new TreeSet<>();
-        for (JsonNode attribute : value)
+        for (JsonNode attribute : value) {
             attributes.add(attribute.textValue());
+        }
         this.attributes = attributes;
     }
 
@@ -57,34 +58,42 @@ public class Resolver {
     }
 
     private void validateName(String value) throws ValidationException {
-        if (Patterns.EMPTY_STRING.matcher(value).matches())
+        if (Patterns.EMPTY_STRING.matcher(value).matches()) {
             throw new ValidationException("'resolvers' has a resolver with an empty name.");
+        }
     }
 
     private void validateAttributes(JsonNode value) throws ValidationException {
-        if (!value.isArray())
+        if (!value.isArray()) {
             throw new ValidationException("'resolvers." + this.name + ".attributes' must be an array of strings.");
-        if (value.size() == 0)
+        }
+        if (value.size() == 0) {
             throw new ValidationException("'resolvers." + this.name + ".attributes' is empty.");
+        }
         for (JsonNode attribute : value) {
-            if (!attribute.isTextual())
+            if (!attribute.isTextual()) {
                 throw new ValidationException("'resolvers." + this.name + ".attributes' must be an array of strings.");
+            }
             String attributeName = attribute.textValue();
-            if (attributeName == null || Patterns.EMPTY_STRING.matcher(attributeName).matches())
+            if (attributeName == null || Patterns.EMPTY_STRING.matcher(attributeName).matches()) {
                 throw new ValidationException("'resolvers." + this.name + ".attributes' must be an array of non-empty strings.");
+            }
         }
     }
 
     private void validateWeight(JsonNode value) throws ValidationException {
-        if (!value.isInt())
+        if (!value.isInt()) {
             throw new ValidationException("'resolvers." + this.name + ".weight' must be an integer.");
+        }
     }
 
     private void validateObject(JsonNode object) throws ValidationException {
-        if (!object.isObject())
+        if (!object.isObject()) {
             throw new ValidationException("'resolvers." + this.name + "' must be an object.");
-        if (object.size() == 0)
+        }
+        if (object.size() == 0) {
             throw new ValidationException("'resolvers." + this.name + "' is empty.");
+        }
     }
 
     /**
@@ -107,9 +116,11 @@ public class Resolver {
         validateObject(json);
 
         // Validate the existence of required fields.
-        for (String field : REQUIRED_FIELDS)
-            if (!json.has(field))
+        for (String field : REQUIRED_FIELDS) {
+            if (!json.has(field)) {
                 throw new ValidationException("'resolvers." + this.name + "' is missing required field '" + field + "'.");
+            }
+        }
 
         // Validate and hold the state of fields.
         Iterator<Map.Entry<String, JsonNode>> fields = json.fields();
