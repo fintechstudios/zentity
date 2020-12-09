@@ -12,12 +12,18 @@ import org.elasticsearch.client.Response;
 import org.elasticsearch.client.ResponseException;
 import org.elasticsearch.plugin.zentity.ZentityPlugin;
 import org.junit.Assert;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class JobIT extends AbstractITCase {
 
@@ -709,15 +715,16 @@ public class JobIT extends AbstractITCase {
             JsonPointer pathNull = JsonPointer.compile("/_attributes/attribute_type_string_null");
             JsonPointer pathUnused = JsonPointer.compile("/_attributes/attribute_type_string_unused");
             for (JsonNode doc : json.get("hits").get("hits")) {
-                assertEquals(doc.at(pathAttributes).isMissingNode(), false);
-                assertEquals(doc.at(pathNull).isMissingNode(), true);
-                assertEquals(doc.at(pathUnused).isMissingNode(), true);
+                assertFalse(doc.at(pathAttributes).isMissingNode());
+                assertTrue(doc.at(pathNull).isMissingNode());
+                assertTrue(doc.at(pathUnused).isMissingNode());
             }
         } finally {
             destroyTestResources(testResourceSet);
         }
     }
 
+    @Test
     public void testJobAttributes() throws Exception {
         int testResourceSet = TEST_RESOURCES_A;
         prepareTestResources(testResourceSet);
@@ -741,6 +748,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobTerms() throws Exception {
         int testResourceSet = TEST_RESOURCES_A;
         prepareTestResources(testResourceSet);
@@ -764,6 +772,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobExplanation() throws Exception {
         int testResourceSet = TEST_RESOURCES_A;
         prepareTestResources(testResourceSet);
@@ -804,6 +813,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobExplanationTerms() throws Exception {
         int testResourceSet = TEST_RESOURCES_A;
         prepareTestResources(testResourceSet);
@@ -844,6 +854,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobIds() throws Exception {
         int testResourceSet = TEST_RESOURCES_A;
         prepareTestResources(testResourceSet);
@@ -867,6 +878,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobAttributesIds() throws Exception {
         int testResourceSet = TEST_RESOURCES_A;
         prepareTestResources(testResourceSet);
@@ -914,6 +926,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobTermsIds() throws Exception {
         int testResourceSet = TEST_RESOURCES_A;
         prepareTestResources(testResourceSet);
@@ -961,6 +974,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobMaxHopsAndDocs() throws Exception {
         int testResourceSet = TEST_RESOURCES_A;
         prepareTestResources(testResourceSet);
@@ -1000,6 +1014,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobDataTypes() throws Exception {
         int testResourceSet = TEST_RESOURCES_A;
         prepareTestResources(testResourceSet);
@@ -1217,6 +1232,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobDataTypesDate() throws Exception {
         int testResourceSet = TEST_RESOURCES_A;
         prepareTestResources(testResourceSet);
@@ -1298,6 +1314,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobDataTypesDateTerm() throws Exception {
         int testResourceSet = TEST_RESOURCES_A;
         prepareTestResources(testResourceSet);
@@ -1379,6 +1396,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobObject() throws Exception {
         int testResourceSet = TEST_RESOURCES_A;
         prepareTestResources(testResourceSet);
@@ -1404,6 +1422,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobScopeExcludeAttributes() throws Exception {
         int testResourceSet = TEST_RESOURCES_A;
         prepareTestResources(testResourceSet);
@@ -1437,6 +1456,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobScopeExcludeAttributesTerms() throws Exception {
         int testResourceSet = TEST_RESOURCES_A;
         prepareTestResources(testResourceSet);
@@ -1470,6 +1490,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobScopeIncludeAttributes() throws Exception {
         int testResourceSet = TEST_RESOURCES_A;
         prepareTestResources(testResourceSet);
@@ -1495,6 +1516,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobScopeIncludeAttributesTerms() throws Exception {
         int testResourceSet = TEST_RESOURCES_A;
         prepareTestResources(testResourceSet);
@@ -1520,6 +1542,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobScopeExcludeAndIncludeAttributes() throws Exception {
         int testResourceSet = TEST_RESOURCES_A;
         prepareTestResources(testResourceSet);
@@ -1541,6 +1564,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobScopeExcludeAndIncludeAttributesTerms() throws Exception {
         int testResourceSet = TEST_RESOURCES_A;
         prepareTestResources(testResourceSet);
@@ -1562,6 +1586,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobResolverWeight() throws Exception {
         int testResourceSet = TEST_RESOURCES_B;
         prepareTestResources(testResourceSet);
@@ -1583,6 +1608,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobElasticsearchError() throws Exception {
         int testResourceSet = TEST_RESOURCES_ELASTICSEARCH_ERROR;
         prepareTestResources(testResourceSet);
@@ -1622,8 +1648,8 @@ public class JobIT extends AbstractITCase {
                 assertEquals(json.get("error").get("by").asText(), "elasticsearch");
                 assertEquals(json.get("error").get("type").asText(), "org.elasticsearch.common.ParsingException");
                 assertEquals(json.get("error").get("reason").asText(), "no [query] registered for [example_malformed_query]");
-                assertEquals(json.get("error").get("stack_trace"), null);
-                assertEquals(json.get("queries").isMissingNode(), false);
+                assertNull(json.get("error").get("stack_trace"));
+                assertFalse(json.get("queries").isMissingNode());
                 assertEquals(json.get("hits").get("total").asInt(), 2);
                 Set<String> docsExpected = new TreeSet<>();
                 docsExpected.add("a2,0");
@@ -1635,6 +1661,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobZentityError() throws Exception {
         int testResourceSet = TEST_RESOURCES_ZENTITY_ERROR;
         prepareTestResources(testResourceSet);
@@ -1679,6 +1706,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobArrays() throws Exception {
         int testResourceSet = TEST_RESOURCES_ARRAYS;
         prepareTestResources(testResourceSet);
@@ -1718,6 +1746,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobSearchParams() throws Exception {
         int testResourceSet = TEST_RESOURCES_A;
         prepareTestResources(testResourceSet);
@@ -1776,6 +1805,7 @@ public class JobIT extends AbstractITCase {
         }
     }
 
+    @Test
     public void testJobScore() throws Exception {
         int testResourceSet = TEST_RESOURCES_A;
         prepareTestResources(testResourceSet);
@@ -1794,33 +1824,33 @@ public class JobIT extends AbstractITCase {
                 switch (doc.get("_id").textValue()) {
                     case "a0":
                     case "b0":
-                        Assert.assertEquals(doc.get("_score").doubleValue(), 0.794, 0.0000000001);
+                        assertEquals(doc.get("_score").doubleValue(), 0.794, 0.0000000001);
                         break;
                     case "a1":
                     case "b1":
-                        Assert.assertEquals(doc.get("_score").doubleValue(), 0.5, 0.0000000001);
+                        assertEquals(doc.get("_score").doubleValue(), 0.5, 0.0000000001);
                         break;
                     case "c0":
                     case "d0":
                     case "c2":
                     case "d2":
-                        Assert.assertEquals(doc.get("_score").doubleValue(), 0.0, 0.0000000001);
+                        assertEquals(doc.get("_score").doubleValue(), 0.0, 0.0000000001);
                         break;
                     case "a2":
                     case "b2":
-                        Assert.assertEquals(doc.get("_score").doubleValue(), 0.8426393720609059, 0.0000000001);
+                        assertEquals(doc.get("_score").doubleValue(), 0.8426393720609059, 0.0000000001);
                         break;
                     case "c1":
-                        Assert.assertEquals(doc.get("_score").doubleValue(), 0.9356979368877253, 0.0000000001);
+                        assertEquals(doc.get("_score").doubleValue(), 0.9356979368877253, 0.0000000001);
                         break;
                     case "d1":
-                        Assert.assertEquals(doc.get("_score").doubleValue(), 0.9262128928820453, 0.0000000001);
+                        assertEquals(doc.get("_score").doubleValue(), 0.9262128928820453, 0.0000000001);
                         break;
                     case "a3":
-                        Assert.assertEquals(doc.get("_score").doubleValue(), 0.9684567702655289, 0.0000000001);
+                        assertEquals(doc.get("_score").doubleValue(), 0.9684567702655289, 0.0000000001);
                         break;
                     case "b3":
-                        Assert.assertEquals(doc.get("_score").doubleValue(), 0.9680814702469515, 0.0000000001);
+                        assertEquals(doc.get("_score").doubleValue(), 0.9680814702469515, 0.0000000001);
                         break;
                     default:
                         Assert.fail();
