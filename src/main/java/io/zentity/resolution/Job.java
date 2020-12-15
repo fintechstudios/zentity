@@ -77,14 +77,6 @@ public class Job {
     public static final boolean DEFAULT_PRETTY = false;
     public static final boolean DEFAULT_PROFILE = false;
 
-    // Constants (optional search parameters)
-    public static Boolean DEFAULT_SEARCH_ALLOW_PARTIAL_SEARCH_RESULTS = null;
-    public static Integer DEFAULT_SEARCH_BATCHED_REDUCE_SIZE = null;
-    public static Integer DEFAULT_SEARCH_MAX_CONCURRENT_SHARD_REQUESTS = null;
-    public static Integer DEFAULT_SEARCH_PRE_FILTER_SHARD_SIZE = null;
-    public static String DEFAULT_SEARCH_PREFERENCE = null;
-    public static Boolean DEFAULT_SEARCH_REQUEST_CACHE = null;
-
     // Job configuration
     private final NodeClient client;
     private final JobConfig config;
@@ -1696,13 +1688,13 @@ public class Job {
         private boolean pretty = DEFAULT_PRETTY;
         private boolean profile = DEFAULT_PROFILE;
 
-        // optional search parameters
-        private Boolean searchAllowPartialSearchResults = DEFAULT_SEARCH_ALLOW_PARTIAL_SEARCH_RESULTS;
-        private Integer searchBatchedReduceSize = DEFAULT_SEARCH_BATCHED_REDUCE_SIZE;
-        private Integer searchMaxConcurrentShardRequests = DEFAULT_SEARCH_MAX_CONCURRENT_SHARD_REQUESTS;
-        private Integer searchPreFilterShardSize = DEFAULT_SEARCH_PRE_FILTER_SHARD_SIZE;
-        private String searchPreference = DEFAULT_SEARCH_PREFERENCE;
-        private Boolean searchRequestCache = DEFAULT_SEARCH_REQUEST_CACHE;
+        // optional, nullable search parameters
+        private Boolean searchAllowPartialSearchResults = null;
+        private Integer searchBatchedReduceSize = null;
+        private Integer searchMaxConcurrentShardRequests = null;
+        private Integer searchPreFilterShardSize = null;
+        private String searchPreference = null;
+        private Boolean searchRequestCache = null;
     }
 
     /**
