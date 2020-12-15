@@ -50,10 +50,12 @@ public class PluggableElasticsearchContainer extends ElasticsearchContainer {
     }
 
     /**
-     * @param pluginDir The plugins directory.
-     * @return The container.
+     * Load all the plugins from a directory on the host.
+     *
      * @see <a href="https://github.com/dadoonet/testcontainers-java-module-elasticsearch/blob/780eec66c2999a1e4814f039b2a4559d6a5da408/src/main/java/fr/pilato/elasticsearch/containers/ElasticsearchContainer.java#L113-L142"></a>
      * @see <a href="https://github.com/testcontainers/testcontainers-java/issues/1921"></a>
+     * @param pluginDir The plugins directory.
+     * @return The container.
      */
     public PluggableElasticsearchContainer withPluginDir(Path pluginDir) {
         Objects.requireNonNull(pluginDir, "Must define plugin directory");
@@ -69,6 +71,22 @@ public class PluggableElasticsearchContainer extends ElasticsearchContainer {
         } catch (IOException e) {
             logger().error("Error listing local plugins", e);
         }
+        return this;
+    }
+
+    /**
+     * Expose a java debugger.
+     *
+     * @see <a href="https://bsideup.github.io/posts/debugging_containers/"></a>
+     * @param port The port to run the debugger on.
+     * @return The container.
+     */
+    public PluggableElasticsearchContainer withDebugger(int port) {
+        withExposedPorts(port);
+
+        String currentJavaOpts = getEnvMap().getOrDefault("JAVA_OPTS", "");
+        String javaOpts = currentJavaOpts + " -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:" + port;
+        withEnv("ES_JAVA_OPTS", javaOpts);
         return this;
     }
 

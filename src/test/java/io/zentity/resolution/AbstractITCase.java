@@ -1,6 +1,8 @@
 package io.zentity.resolution;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.github.terma.javaniotcpproxy.StaticTcpProxyConfig;
+import com.github.terma.javaniotcpproxy.TcpProxy;
 import io.zentity.common.Json;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.Request;
@@ -16,8 +18,10 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -36,12 +40,65 @@ public abstract class AbstractITCase {
 
     private static final String PLUGIN_DIR = Objects.requireNonNull(System.getenv("PLUGIN_BUILD_DIR"), "Must specify PLUGIN_BUILD_DIR");
 
+    private static final Boolean DEBUGGER_ENABLED = Optional.ofNullable(System.getenv("DEBUGGER_ENABLED"))
+        .map(Boolean::valueOf)
+        .orElse(false);
+
+    private static final Integer DEBUGGER_PORT = Optional.ofNullable(System.getenv("DEBUGGER_PORT"))
+        .map(Integer::valueOf)
+        .orElseGet(AbstractITCase::getRandomPort);
+
+    private static final Duration DEBUGGER_SLEEP = Optional.ofNullable(System.getenv("DEBUGGER_SLEEP"))
+        .map(Long::valueOf)
+        .map(Duration::ofMillis)
+        .orElseGet(() -> Duration.ofSeconds(5));
+
     protected static RestClient client;
 
+    private static TcpProxy debuggerProxy;
+
     @ClassRule
-    public static final PluggableElasticsearchContainer ES_CONTAINER = (PluggableElasticsearchContainer) new PluggableElasticsearchContainer(DEFAULT_IMAGE)
-        .withPluginDir(Paths.get(PLUGIN_DIR))
-        .withLogConsumer(new Slf4jLogConsumer(LOG));
+    public static final PluggableElasticsearchContainer ES_CONTAINER = getEsContainer();
+
+    private static Integer getRandomPort() {
+        Random rand = new Random();
+        return rand.ints(20_000, 60_000)
+            .findFirst()
+            .getAsInt();
+    }
+
+    public static PluggableElasticsearchContainer getEsContainer() {
+        PluggableElasticsearchContainer container = (PluggableElasticsearchContainer) new PluggableElasticsearchContainer(DEFAULT_IMAGE)
+            .withPluginDir(Paths.get(PLUGIN_DIR))
+            .withLogConsumer(new Slf4jLogConsumer(LOG));
+
+        if (DEBUGGER_ENABLED) {
+            LOG.info("Starting remote ES debugger on port {}", DEBUGGER_PORT);
+            container.withDebugger(DEBUGGER_PORT);
+        }
+
+        return container;
+    }
+
+    @BeforeClass
+    public static void startDebuggerProxy() throws InterruptedException {
+        if (!DEBUGGER_ENABLED) {
+            return;
+        }
+
+        final StaticTcpProxyConfig config = new StaticTcpProxyConfig(
+            DEBUGGER_PORT,
+            ES_CONTAINER.getContainerIpAddress(),
+            ES_CONTAINER.getMappedPort(DEBUGGER_PORT)
+        );
+        config.setWorkerCount(1);
+
+        debuggerProxy = new TcpProxy(config);
+        debuggerProxy.start();
+        // Sleep so the debugger can be attached
+        LOG.info("Sleeping {}ms to allow debugger attaching.", DEBUGGER_SLEEP.toMillis());
+        Thread.sleep(DEBUGGER_SLEEP.toMillis());
+    }
 
     @BeforeClass
     public static void startRestClient() throws IOException {
@@ -63,6 +120,13 @@ public abstract class AbstractITCase {
         if (client != null) {
             client.close();
             client = null;
+        }
+    }
+
+    @AfterClass
+    public static void stopDebugger() {
+        if (debuggerProxy != null) {
+            debuggerProxy.shutdown();
         }
     }
 }
