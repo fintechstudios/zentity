@@ -44,6 +44,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -102,12 +103,12 @@ public class Job {
         } else {
             errorParts.add("\"by\":\"zentity\"");
         }
-        errorParts.add("\"type\":\"" + e.getClass().getCanonicalName() + "\"");
-        errorParts.add("\"reason\":\"" + e.getMessage() + "\"");
+        errorParts.add("\"type\":" + Json.quoteString(e.getClass().getCanonicalName()));
+        errorParts.add("\"reason\":" + Json.quoteString(e.getMessage()));
         if (includeErrorTrace) {
             StringWriter traceWriter = new StringWriter();
             e.printStackTrace(new PrintWriter(traceWriter));
-            errorParts.add("\"stack_trace\":" + Json.quoteString(traceWriter.toString()) + "");
+            errorParts.add("\"stack_trace\":" + Json.quoteString(traceWriter.toString()));
         }
         return String.join(",", errorParts);
     }
@@ -139,7 +140,7 @@ public class Job {
         String request,
         String response,
         List<String> resolvers,
-        TreeMap<Integer, FilterTree> resolversFilterTreeGrouped,
+        Map<Integer, FilterTree> resolversFilterTreeGrouped,
         List<String> termResolvers,
         FilterTree termResolversFilterTree) throws JsonProcessingException {
         List<String> filtersLoggedList = new ArrayList<>();
@@ -212,8 +213,9 @@ public class Job {
                     break;
             }
         }
-        if (scriptFieldClauses.isEmpty())
+        if (scriptFieldClauses.isEmpty()) {
             return null;
+        }
         return "\"script_fields\":{" + String.join(",", scriptFieldClauses) + "}";
     }
 
@@ -227,8 +229,9 @@ public class Job {
      */
     private static boolean indexFieldHasMatcher(Model model, String indexName, String indexFieldName) {
         String matcherName = model.indices().get(indexName).fields().get(indexFieldName).matcher();
-        if (matcherName == null)
+        if (matcherName == null) {
             return false;
+        }
         return model.matchers().get(matcherName) != null;
     }
 
@@ -243,23 +246,27 @@ public class Job {
      * @return Boolean decision.
      */
     private static boolean canQueryResolver(Model model, String indexName, String resolverName, Map<String, Attribute> attributes) {
-
         // Each attribute of the resolver must pass these conditions:
         for (String attributeName : model.resolvers().get(resolverName).attributes()) {
 
             // The input must have the attribute.
-            if (!attributes.containsKey(attributeName))
+            if (!attributes.containsKey(attributeName)) {
                 return false;
+            }
 
             // The input must have at least one value for the attribute.
-            if (attributes.get(attributeName).values().isEmpty())
+            if (attributes.get(attributeName).values().isEmpty()) {
                 return false;
+            }
 
             // The index must have at least one index field mapped to the attribute.
-            if (!model.indices().get(indexName).attributeIndexFieldsMap().containsKey(attributeName))
+            if (!model.indices().get(indexName).attributeIndexFieldsMap().containsKey(attributeName)) {
                 return false;
-            if (model.indices().get(indexName).attributeIndexFieldsMap().get(attributeName).isEmpty())
+            }
+
+            if (model.indices().get(indexName).attributeIndexFieldsMap().get(attributeName).isEmpty()) {
                 return false;
+            }
 
             // The index field must have a matcher defined for it.
             boolean hasMatcher = false;
@@ -269,8 +276,9 @@ public class Job {
                     break;
                 }
             }
-            if (!hasMatcher)
+            if (!hasMatcher) {
                 return false;
+            }
         }
         return true;
     }
@@ -775,7 +783,7 @@ public class Job {
         List<String> resolvers,
         AtomicInteger nameIdCounter,
         boolean namedFilters,
-        TreeMap<Integer, FilterTree> resolversFilterTreeGrouped,
+        Map<Integer, FilterTree> resolversFilterTreeGrouped,
         List<String> termResolvers,
         FilterTree termResolversFilterTree
     ) throws ValidationException, IOException {
@@ -1380,8 +1388,8 @@ public class Job {
     /**
      * Given a set of attribute values, determine which queries to submit to which indices then submit them and recurse.
      *
-     * @throws IOException
-     * @throws ValidationException
+     * @throws IOException If there is an error parsing content.
+     * @throws ValidationException If an input is invalid.
      */
     private JobResult traverse() throws IOException, ValidationException {
         // Prepare to collect attributes from the results of these queries as the inputs to subsequent queries.
@@ -1392,7 +1400,7 @@ public class Job {
         Set<String> missingIndices = new TreeSet<>();
         // Stop traversing if there are no more attributes to query.
         // or we've reached the max depth
-        while (newAttributeHits && !(hop >= maxHops)) {
+        while (newAttributeHits && !(hop > maxHops)) {
             Map<String, Attribute> nextInputAttributes = new TreeMap<>();
             int queryCounter = 0;
 
@@ -1415,7 +1423,8 @@ public class Job {
              */
 
             // Construct a query for each index that maps to a resolver.
-            for (String indexName : this.config.input.model().indices().keySet()) {
+            Set<String> indices = this.config.input.model().indices().keySet();
+            for (String indexName : indices) {
 
                 // Skip this index if a prior hop determined the index to be missing.
                 if (missingIndices.contains(indexName)) {
@@ -1424,7 +1433,7 @@ public class Job {
 
                 // Track _ids for this index.
                 if (!this.docIds.containsKey(indexName)) {
-                    this.docIds.put(indexName, new TreeSet<>());
+                    this.docIds.put(indexName, new HashSet<>());
                 }
 
                 // "_explanation" uses named queries, and each value of the "_name" fields must be unique.
@@ -1433,7 +1442,8 @@ public class Job {
 
                 // Determine which resolvers can be queried for this index.
                 List<String> resolvers = new ArrayList<>();
-                for (String resolverName : this.config.input.model().resolvers().keySet()) {
+                Set<String> resolverNames = this.config.input.model().resolvers().keySet();
+                for (String resolverName : resolverNames) {
                     if (canQueryResolver(this.config.input.model(), indexName, resolverName, this.attributes)) {
                         resolvers.add(resolverName);
                     }
@@ -1451,7 +1461,7 @@ public class Job {
                     continue;
                 }
 
-                TreeMap<Integer, FilterTree> resolversFilterTreeGrouped = new TreeMap<>(Collections.reverseOrder());
+                Map<Integer, FilterTree> resolversFilterTreeGrouped = new TreeMap<>(Collections.reverseOrder());
                 // Construct query for this index.
                 List<String> termResolvers = new ArrayList<>();
                 FilterTree termResolversFilterTree = new FilterTree();
@@ -1613,12 +1623,6 @@ public class Job {
     }
 
     /**
-     * A recursive {@link TreeMap} for filtering resolvers.
-     */
-    static class FilterTree extends TreeMap<String, FilterTree> {
-    }
-
-    /**
      * A map to cache confidence scores of attribute identities.
      */
     static class AttributeIdConfidenceScoreMap extends HashMap<String, Double> {
@@ -1663,6 +1667,9 @@ public class Job {
             return failed;
         }
 
+        /**
+         * @return The JSON response string.
+         */
         public String getResponse() {
             return response;
         }

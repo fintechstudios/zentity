@@ -3,7 +3,6 @@ package io.zentity.resolution;
 import io.zentity.model.Matcher;
 import io.zentity.model.Model;
 import io.zentity.model.ValidationException;
-import io.zentity.resolution.Job.FilterTree;
 import io.zentity.resolution.input.Input;
 import org.junit.Test;
 
