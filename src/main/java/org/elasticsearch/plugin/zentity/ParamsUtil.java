@@ -5,7 +5,7 @@ import org.elasticsearch.rest.RestRequest;
 import java.util.Optional;
 
 public class ParamsUtil {
-    public static Optional<String> opt(RestRequest req, String key) {
+    private static Optional<String> opt(RestRequest req, String key) {
         return Optional.ofNullable(req.param(key));
     }
 
