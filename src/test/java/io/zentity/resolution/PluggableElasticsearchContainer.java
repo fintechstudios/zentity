@@ -10,12 +10,12 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Predicate;
 
 /**
  * An {@link ElasticsearchContainer} that allows installing plugins, either official ones or from a local host directory.
  */
 public class PluggableElasticsearchContainer extends ElasticsearchContainer {
-    private final String PLUGINS_CONTAINER_PATH = "/plugins/";
     private final List<String> plugins = new ArrayList<>();
 
     public PluggableElasticsearchContainer(DockerImageName imageName) {
@@ -35,22 +35,52 @@ public class PluggableElasticsearchContainer extends ElasticsearchContainer {
     }
 
     /**
+     * Load a plugin from a host path with a custom predicate for filtering files.
      *
      * @param pluginHostPath The path to the plugin zip file on the host machine.
      * @return The container.
      */
     public PluggableElasticsearchContainer withLocalPlugin(Path pluginHostPath) {
         Path plugin = pluginHostPath.getFileName();
+        String pluginsContainerPath = "/plugins/";
+
         withCopyFileToContainer(
             MountableFile.forHostPath(pluginHostPath),
-            PLUGINS_CONTAINER_PATH + plugin
+            pluginsContainerPath + plugin
         );
-        withPlugin("file://" + PLUGINS_CONTAINER_PATH + plugin);
+        withPlugin("file://" + pluginsContainerPath + plugin);
         return this;
     }
 
     /**
-     * Load all the plugins from a directory on the host.
+     * Load all the plugins from a directory on the host with a custom predicate for filtering files.
+     *
+     * @see <a href="https://github.com/dadoonet/testcontainers-java-module-elasticsearch/blob/780eec66c2999a1e4814f039b2a4559d6a5da408/src/main/java/fr/pilato/elasticsearch/containers/ElasticsearchContainer.java#L113-L142"></a>
+     * @see <a href="https://github.com/testcontainers/testcontainers-java/issues/1921"></a>
+     * @param pluginDir The plugins directory.
+     * @param pluginFilePredicate The predicate to determine which files to include.
+     * @return The container.
+     */
+    public PluggableElasticsearchContainer withPluginDir(Path pluginDir, Predicate<Path> pluginFilePredicate) {
+        Objects.requireNonNull(pluginDir, "Must define plugin directory");
+        Objects.requireNonNull(pluginFilePredicate, "Must define plugin directory");
+
+        logger().debug("Installing plugins from [{}]", pluginDir);
+        try {
+            Files.list(pluginDir)
+                .filter(pluginFilePredicate)
+                .forEach(path -> {
+                    logger().trace("Loading plugin found in [{}]: [{}]", pluginDir, path);
+                    withLocalPlugin(path);
+            });
+        } catch (IOException e) {
+            logger().error("Error listing local plugins", e);
+        }
+        return this;
+    }
+
+    /**
+     * Load all the ZIP plugins from a directory on the host.
      *
      * @see <a href="https://github.com/dadoonet/testcontainers-java-module-elasticsearch/blob/780eec66c2999a1e4814f039b2a4559d6a5da408/src/main/java/fr/pilato/elasticsearch/containers/ElasticsearchContainer.java#L113-L142"></a>
      * @see <a href="https://github.com/testcontainers/testcontainers-java/issues/1921"></a>
@@ -58,20 +88,7 @@ public class PluggableElasticsearchContainer extends ElasticsearchContainer {
      * @return The container.
      */
     public PluggableElasticsearchContainer withPluginDir(Path pluginDir) {
-        Objects.requireNonNull(pluginDir, "Must define plugin directory");
-
-        logger().debug("Installing plugins from [{}]", pluginDir);
-        try {
-            Files.list(pluginDir).forEach(path -> {
-                logger().trace("File found in [{}]: [{}]", pluginDir, path);
-                if (path.toString().endsWith(".zip")) {
-                    withLocalPlugin(path);
-                }
-            });
-        } catch (IOException e) {
-            logger().error("Error listing local plugins", e);
-        }
-        return this;
+        return withPluginDir(pluginDir, (path) -> path.toString().endsWith(".zip"));
     }
 
     /**
@@ -84,7 +101,7 @@ public class PluggableElasticsearchContainer extends ElasticsearchContainer {
     public PluggableElasticsearchContainer withDebugger(int port) {
         withExposedPorts(port);
 
-        String currentJavaOpts = getEnvMap().getOrDefault("JAVA_OPTS", "");
+        String currentJavaOpts = getEnvMap().getOrDefault("ES_JAVA_OPTS", "");
         String javaOpts = currentJavaOpts + " -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:" + port;
         withEnv("ES_JAVA_OPTS", javaOpts);
         return this;
