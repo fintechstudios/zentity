@@ -13,6 +13,7 @@ import io.zentity.model.Matcher;
 import io.zentity.model.Model;
 import io.zentity.model.Resolver;
 import io.zentity.model.ValidationException;
+import io.zentity.resolution.BoolQueryUtils.BoolQueryCombiner;
 import io.zentity.resolution.input.Attribute;
 import io.zentity.resolution.input.Input;
 import io.zentity.resolution.input.Term;
@@ -23,12 +24,10 @@ import org.elasticsearch.action.search.SearchAction;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.node.NodeClient;
-import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.DeprecationHandler;
 import org.elasticsearch.common.xcontent.NamedXContentRegistry;
-import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentType;
@@ -42,7 +41,6 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
 import org.elasticsearch.search.SearchModule;
-import org.elasticsearch.search.builder.SearchSourceBuilder;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -64,7 +62,8 @@ import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 import static io.zentity.common.Patterns.COLON;
-import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
+import static io.zentity.resolution.BoolQueryUtils.BoolQueryCombiner.FILTER;
+import static io.zentity.resolution.BoolQueryUtils.BoolQueryCombiner.SHOULD;
 
 /**
  * A {@link Job} runs the resolution work.
@@ -263,62 +262,6 @@ public class Job {
         return scriptMap;
     }
 
-    public static String makeScriptFieldsClause(Input input, String indexName) throws ValidationException {
-        List<String> scriptFieldClauses = new ArrayList<>();
-
-        // Find any index fields that need to be included in the "script_fields" clause.
-        // Currently this includes any index field that is associated with a "date" attribute,
-        // which requires the "_source" value to be reformatted to a normalized format.
-        Index index = input.model().indices().get(indexName);
-        for (String attributeName : index.attributeIndexFieldsMap().keySet()) {
-            switch (input.model().attributes().get(attributeName).type()) {
-                case "date":
-
-                    // Required params
-                    String format;
-
-                    // Make a "script" clause for each index field associated with this attribute.
-                    for (String indexFieldName : index.attributeIndexFieldsMap().get(attributeName).keySet()) {
-                        // Check if the required params are defined in the input attribute.
-                        if (input.attributes().containsKey(attributeName) && input.attributes().get(attributeName).params().containsKey("format") && !input.attributes().get(attributeName).params().get("format").equals("null") && !Patterns.EMPTY_STRING.matcher(input.attributes().get(attributeName).params().get("format")).matches()) {
-                            format = input.attributes().get(attributeName).params().get("format");
-                        } else {
-                            // Otherwise check if the required params are defined in the model attribute.
-                            Map<String, String> params = input.model().attributes().get(attributeName).params();
-                            if (params.containsKey("format") && !params.get("format").equals("null") && !Patterns.EMPTY_STRING.matcher(params.get("format")).matches()) {
-                                format = params.get("format");
-                            } else {
-                                // Otherwise check if the required params are defined in the matcher associated with the index field.
-                                String matcherName = index.attributeIndexFieldsMap().get(attributeName).get(indexFieldName).matcher();
-                                params = input.model().matchers().get(matcherName).params();
-                                if (params.containsKey("format") && !params.get("format").equals("null") && !Patterns.EMPTY_STRING.matcher(params.get("format")).matches()) {
-                                    format = params.get("format");
-                                } else {
-                                    // If we've gotten this far, that means that the required params for this attribute type
-                                    // haven't been specified in any valid places.
-                                    throw new ValidationException("'attributes." + attributeName + "' is a 'date' which required a 'format' to be specified in the params.");
-                                }
-                            }
-                        }
-
-                        // Make the "script" clause
-                        String scriptSource = "DateFormat df = new SimpleDateFormat(params.format); df.setTimeZone(TimeZone.getTimeZone('UTC')); return df.format(doc[params.field].value.toInstant().toEpochMilli())";
-                        String scriptParams = "\"field\":\"" + indexFieldName + "\",\"format\":\"" + format + "\"";
-                        String scriptFieldClause = "\"" + indexFieldName + "\":{\"script\":{\"lang\":\"painless\",\"source\":\"" + scriptSource + "\",\"params\":{" + scriptParams + "}}}";
-                        scriptFieldClauses.add(scriptFieldClause);
-                    }
-                    break;
-
-                default:
-                    break;
-            }
-        }
-        if (scriptFieldClauses.isEmpty()) {
-            return null;
-        }
-        return "\"script_fields\":{" + String.join(",", scriptFieldClauses) + "}";
-    }
-
     /**
      * Determine if a field of an index has a matcher associated with that field.
      *
@@ -420,135 +363,9 @@ public class Job {
             }
         }
 
-        try (XContentParser parser = buildSearchParser(matcherClause)) {
+        try (XContentParser parser = buildXContentParser(matcherClause)) {
             return AbstractQueryBuilder.parseInnerQueryBuilder(parser);
         }
-    }
-
-    /**
-     * Given a clause from the "matchers" field of an entity model, replace the {{ field }} and {{ value }} variables
-     * and arbitrary parameters. If a parameter exists, the value
-     *
-     * @param matcher        The matcher object.
-     * @param indexFieldName The name of the index field to populate in the clause.
-     * @param value          The value of the attribute to populate in the clause.
-     * @param params         The values of the parameters (if any) to pass to the matcher.
-     * @return A "bool" clause that references the desired field and value.
-     */
-    static String populateMatcherClause(Matcher matcher, String indexFieldName, String value, Map<String, String> params) throws ValidationException {
-        String matcherClause = matcher.clause();
-        for (String variable : matcher.variables().keySet()) {
-            Pattern pattern = matcher.variables().get(variable);
-            switch (variable) {
-                case "field":
-                    matcherClause = pattern.matcher(matcherClause).replaceAll(indexFieldName);
-                    break;
-                case "value":
-                    matcherClause = pattern.matcher(matcherClause).replaceAll(value);
-                    break;
-                default:
-                    java.util.regex.Matcher m = Patterns.VARIABLE_PARAMS.matcher(variable);
-                    if (m.find()) {
-                        String var = m.group(1);
-                        if (!params.containsKey(var)) {
-                            throw new ValidationException("'matchers." + matcher.name() + "' was given no value for '{{ " + variable + " }}'");
-                        }
-                        String paramValue = params.get(var);
-                        matcherClause = pattern.matcher(matcherClause).replaceAll(paramValue);
-                    }
-                    break;
-            }
-        }
-
-        return matcherClause;
-    }
-
-    /**
-     * Ensure a combiner clause is supported by "bool" queries.
-     *
-     * @param combiner The combiner clause.
-     * @throws ValidationException If the clause is invalid.
-     */
-    private static void validateCombiner(String combiner) throws ValidationException {
-        if (!combiner.equals("should") && !combiner.equals("filter")) {
-            throw new ValidationException("'" + combiner + "' is not a supported clause combiner.");
-        }
-    }
-
-    /**
-     * Given an entity model, an index name, a set of attribute values, and an attribute name,
-     * find all index field names that are mapped to the attribute name and populate their matcher clauses.
-     *
-     * @param model         The entity model.
-     * @param indexName     The name of the index to reference in the entity model.
-     * @param attributes    The names and values of the input attributes.
-     * @param attributeName The name of the attribute to reference in the attributeSet.
-     * @param combiner      Combine clauses with "should" or "filter".
-     * @return
-     */
-    private static List<String> makeIndexFieldClauses(
-        Model model,
-        String indexName,
-        Map<String, Attribute> attributes,
-        String attributeName,
-        String combiner,
-        boolean namedFilters,
-        AtomicInteger nameIdCounter
-    ) throws ValidationException {
-        validateCombiner(combiner);
-        List<String> indexFieldClauses = new ArrayList<>();
-        for (String indexFieldName : model.indices().get(indexName).attributeIndexFieldsMap().get(attributeName).keySet()) {
-            // Can we use this index field?
-            if (!indexFieldHasMatcher(model, indexName, indexFieldName)) {
-                continue;
-            }
-
-            // Construct a clause for each input value for this attribute.
-            String matcherName = model.indices().get(indexName).fields().get(indexFieldName).matcher();
-            Matcher matcher = model.matchers().get(matcherName);
-            List<String> valueClauses = new ArrayList<>();
-
-            // Determine which values to pass to the matcher parameters.
-            // Order of precedence:
-            //  - Input attribute params override model attribute params
-            //  - Model attribute params override matcher attribute params
-            Map<String, String> params = new TreeMap<>();
-            params.putAll(matcher.params());
-            params.putAll(model.attributes().get(attributeName).params());
-            params.putAll(attributes.get(attributeName).params());
-
-            Attribute attribute = attributes.get(attributeName);
-            for (Value value : attribute.values()) {
-
-                // Skip value if it's blank.
-                if (value.serialized() == null || value.serialized().equals("")) {
-                    continue;
-                }
-
-                // Populate the {{ field }}, {{ value }}, and {{ param.* }} variables of the matcher template.
-                String valueClause = populateMatcherClause(matcher, indexFieldName, value.serialized(), params);
-                if (namedFilters) {
-                    // Name the clause to determine why any matching document matched
-                    String valueBase64 = Base64.getEncoder().encodeToString(value.serialized().getBytes());
-                    String name = attributeName + ":" + indexFieldName + ":" + matcherName + ":" + valueBase64 + ":" + nameIdCounter.getAndIncrement();
-                    valueClause = "{\"bool\":{\"_name\":\"" + name + "\",\"filter\":" + valueClause + "}}";
-                }
-                valueClauses.add(valueClause);
-            }
-            if (valueClauses.size() == 0) {
-                continue;
-            }
-
-            // Combine each value clause into a single "should" or "filter" clause.
-            String valuesClause;
-            if (valueClauses.size() > 1) {
-                valuesClause = "{\"bool\":{\"" + combiner + "\":[" + String.join(",", valueClauses) + "]}}";
-            } else {
-                valuesClause = valueClauses.get(0);
-            }
-            indexFieldClauses.add(valuesClause);
-        }
-        return indexFieldClauses;
     }
 
     static List<QueryBuilder> buildIndexFieldQueries(
@@ -556,11 +373,10 @@ public class Job {
         String indexName,
         Map<String, Attribute> attributes,
         String attributeName,
-        String combiner,
+        BoolQueryCombiner combiner,
         boolean namedFilters,
         AtomicInteger nameIdCounter
     ) throws ValidationException, IOException {
-        validateCombiner(combiner);
         List<QueryBuilder> indexFieldQueries = new ArrayList<>();
 
         for (String indexFieldName : model.indices().get(indexName).attributeIndexFieldsMap().get(attributeName).keySet()) {
@@ -611,12 +427,7 @@ public class Job {
             QueryBuilder valuesClause;
             if (valueClauses.size() > 1) {
                 // build the combined bool query
-                BoolQueryBuilder clause = new BoolQueryBuilder();
-                Consumer<QueryBuilder> action = "should".equals(combiner)
-                    ? clause::should
-                    : clause::filter;
-                valueClauses.forEach(action);
-                valuesClause = clause;
+                valuesClause = BoolQueryUtils.fromQueries(combiner, valueClauses);
             } else {
                 valuesClause = valueClauses.get(0);
             }
@@ -640,16 +451,23 @@ public class Job {
         Model model,
         String indexName,
         Map<String, Attribute> attributes,
-        String combiner,
+        BoolQueryCombiner combiner,
         boolean namedFilters,
         AtomicInteger nameIdCounter
     ) throws ValidationException, IOException {
-        validateCombiner(combiner);
         List<QueryBuilder> attributeClauses = new ArrayList<>();
         for (String attributeName : attributes.keySet()) {
 
             // Construct a "should" or "filter" clause for each index field mapped to this attribute.
-            List<QueryBuilder> indexFieldClauses = buildIndexFieldQueries(model, indexName, attributes, attributeName, combiner, namedFilters, nameIdCounter);
+            List<QueryBuilder> indexFieldClauses = buildIndexFieldQueries(
+                model,
+                indexName,
+                attributes,
+                attributeName,
+                combiner,
+                namedFilters,
+                nameIdCounter
+            );
             if (indexFieldClauses.size() == 0) {
                 continue;
             }
@@ -657,54 +475,7 @@ public class Job {
             // Combine each matcher clause into a single "should" or "filter" clause.
             QueryBuilder indexFieldsClause;
             if (indexFieldClauses.size() > 1) {
-                BoolQueryBuilder clause = new BoolQueryBuilder();
-                Consumer<QueryBuilder> action = "should".equals(combiner)
-                    ? clause::should
-                    : clause::filter;
-                indexFieldClauses.forEach(action);
-
-                indexFieldsClause = clause;
-            } else {
-                indexFieldsClause = indexFieldClauses.get(0);
-            }
-            attributeClauses.add(indexFieldsClause);
-        }
-        return attributeClauses;
-    }
-
-    /**
-     * Given an entity model, an index name, and a set of attribute values,
-     * for each attribute name in the set of attributes, find all index field names that are mapped to the attribute
-     * name and populate their matcher clauses.
-     *
-     * @param model      The entity model.
-     * @param indexName  The name of the index to reference in the entity model.
-     * @param attributes The names and values of the input attributes.
-     * @param combiner   Combine clauses with "should" or "filter".
-     * @return The list of attribute clauses.
-     */
-    static List<String> makeAttributeClauses(
-        Model model,
-        String indexName,
-        Map<String, Attribute> attributes,
-        String combiner,
-        boolean namedFilters,
-        AtomicInteger nameIdCounter
-    ) throws ValidationException {
-        validateCombiner(combiner);
-        List<String> attributeClauses = new ArrayList<>();
-        for (String attributeName : attributes.keySet()) {
-
-            // Construct a "should" or "filter" clause for each index field mapped to this attribute.
-            List<String> indexFieldClauses = makeIndexFieldClauses(model, indexName, attributes, attributeName, combiner, namedFilters, nameIdCounter);
-            if (indexFieldClauses.size() == 0) {
-                continue;
-            }
-
-            // Combine each matcher clause into a single "should" or "filter" clause.
-            String indexFieldsClause;
-            if (indexFieldClauses.size() > 1) {
-                indexFieldsClause = "{\"bool\":{\"" + combiner + "\":[" + String.join(",", indexFieldClauses) + "]}}";
+                indexFieldsClause = BoolQueryUtils.fromQueries(combiner, indexFieldClauses);
             } else {
                 indexFieldsClause = indexFieldClauses.get(0);
             }
@@ -729,7 +500,7 @@ public class Job {
                 indexName,
                 attributes,
                 attributeName,
-                "should",
+                SHOULD,
                 namedFilters,
                 nameIdCounter
             );
@@ -740,9 +511,7 @@ public class Job {
             // Combine multiple matcher clauses into a single "should" clause.
             QueryBuilder indexFieldsClause;
             if (indexFieldClauses.size() > 1) {
-                BoolQueryBuilder combo = new BoolQueryBuilder();
-                indexFieldClauses.forEach(combo::should);
-                indexFieldsClause = combo;
+                indexFieldsClause = BoolQueryUtils.fromQueries(SHOULD, indexFieldClauses);
             } else {
                 indexFieldsClause = indexFieldClauses.get(0);
             }
@@ -757,9 +526,7 @@ public class Job {
                 nameIdCounter
             );
             if (filter != null) {
-                BoolQueryBuilder combo = new BoolQueryBuilder();
-                combo.filter(indexFieldsClause);
-                combo.filter(filter);
+                BoolQueryBuilder combo = BoolQueryUtils.fromQueries(FILTER, indexFieldsClause, filter);
                 clauses.add(combo);
             } else {
                 clauses.add(indexFieldsClause);
@@ -769,62 +536,11 @@ public class Job {
         // Combine each attribute clause into a single "should" clause.
         int size = clauses.size();
         if (size > 1) {
-            BoolQueryBuilder combo = new BoolQueryBuilder();
-            clauses.forEach(combo::should);
-            return combo;
+            return BoolQueryUtils.fromQueries(SHOULD, clauses);
         } else if (size == 1) {
             return clauses.get(0);
         }
         return null;
-    }
-
-    /**
-     * Populate the field names and values of the resolver clause of a query.
-     *
-     * @param model               The entity model.
-     * @param indexName           The name of the index to reference in the entity model.
-     * @param resolversFilterTree The filter tree for the resolvers to be queried.
-     * @param attributes          The names and values for the input attributes.
-     * @return A "bool" clause for all applicable resolvers.
-     */
-    static String buildResolversClause(Model model, String indexName, FilterTree resolversFilterTree, Map<String, Attribute> attributes, boolean namedFilters, AtomicInteger nameIdCounter) throws ValidationException {
-
-        // Construct a "filter" clause for each attribute at this level of the filter tree.
-        List<String> attributeClauses = new ArrayList<>();
-        for (String attributeName : resolversFilterTree.keySet()) {
-
-            // Construct a "should" clause for each index field mapped to this attribute.
-            List<String> indexFieldClauses = makeIndexFieldClauses(model, indexName, attributes, attributeName, "should", namedFilters, nameIdCounter);
-            if (indexFieldClauses.size() == 0) {
-                continue;
-            }
-
-            // Combine multiple matcher clauses into a single "should" clause.
-            String indexFieldsClause;
-            if (indexFieldClauses.size() > 1) {
-                indexFieldsClause = "{\"bool\":{\"should\":[" + String.join(",", indexFieldClauses) + "]}}";
-            } else {
-                indexFieldsClause = indexFieldClauses.get(0);
-            }
-
-            // Populate any child filters.
-            String filter = buildResolversClause(model, indexName, resolversFilterTree.get(attributeName), attributes, namedFilters, nameIdCounter);
-            if (!filter.isEmpty()) {
-                attributeClauses.add("{\"bool\":{\"filter\":[" + indexFieldsClause + "," + filter + "]}}");
-            } else {
-                attributeClauses.add(indexFieldsClause);
-            }
-
-        }
-
-        // Combine each attribute clause into a single "should" clause.
-        int size = attributeClauses.size();
-        if (size > 1) {
-            return "{\"bool\":{\"should\":[" + String.join(",", attributeClauses) + "]}}";
-        } else if (size == 1) {
-            return attributeClauses.get(0);
-        }
-        return "";
     }
 
     /**
@@ -835,6 +551,7 @@ public class Job {
      * @return The attributes of all applicable resolvers nested in a tree.
      */
     static FilterTree makeResolversFilterTree(List<List<String>> resolversSorted, FilterTree root) {
+        // TODO: this can be simplified by removing "wrapper" tree
         FilterTree filterTree = new FilterTree();
         filterTree.put("root", root);
         for (List<String> resolverSorted : resolversSorted) {
@@ -872,7 +589,7 @@ public class Job {
         List<List<String>> resolversSorted = new ArrayList<>();
         for (String resolverName : resolvers) {
             List<String> resolverSorted = new ArrayList<>();
-            Map<Integer, TreeSet<String>> attributeGroups = new TreeMap<>();
+            Map<Integer, Set<String>> attributeGroups = new TreeMap<>();
             for (String attributeName : model.resolvers().get(resolverName).attributes()) {
                 int count = counts.get(attributeName);
                 if (!attributeGroups.containsKey(count)) {
@@ -880,7 +597,7 @@ public class Job {
                 }
                 attributeGroups.get(count).add(attributeName);
             }
-            TreeSet<Integer> countsKeys = new TreeSet<>(Collections.reverseOrder());
+            Set<Integer> countsKeys = new TreeSet<>(Collections.reverseOrder());
             countsKeys.addAll(attributeGroups.keySet());
             for (int count : countsKeys) {
                 resolverSorted.addAll(attributeGroups.get(count));
@@ -915,8 +632,8 @@ public class Job {
      * @param resolvers The names of the resolvers to reference in the entity model.
      * @return For each weight level, the names of the resolvers in that weight level.
      */
-    public static TreeMap<Integer, List<String>> groupResolversByWeight(Model model, List<String> resolvers) {
-        TreeMap<Integer, List<String>> resolverGroups = new TreeMap<>();
+    public static Map<Integer, List<String>> groupResolversByWeight(Model model, List<String> resolvers) {
+        Map<Integer, List<String>> resolverGroups = new TreeMap<>();
         for (String resolverName : resolvers) {
             Integer weight = model.resolvers().get(resolverName).weight();
             if (!resolverGroups.containsKey(weight)) {
@@ -937,10 +654,6 @@ public class Job {
         this.hits = new ArrayList<>();
         this.queries = new ArrayList<>();
         this.ran = false;
-    }
-
-    public void input(Input input) {
-        this.config.input = input;
     }
 
     /**
@@ -1036,7 +749,7 @@ public class Job {
         return this.attributeIdConfidenceScores.setScore(attributeName, matcherName, indexName, indexFieldName, score);
     }
 
-    private static XContentParser buildSearchParser(String query) throws IOException {
+    private static XContentParser buildXContentParser(String query) throws IOException {
         SearchModule searchModule = new SearchModule(Settings.EMPTY, false, Collections.emptyList());
         NamedXContentRegistry registry = new NamedXContentRegistry(searchModule.getNamedXContents());
         return XContentFactory.xContent(XContentType.JSON)
@@ -1059,46 +772,6 @@ public class Job {
             }
         }
         return newHits;
-    }
-
-    /**
-     * Submit a search query to Elasticsearch.
-     *
-     * @param indexName The name of the index to search.
-     * @param query     The query to search.
-     * @return The search response returned by Elasticsearch.
-     * @throws IOException
-     */
-    private SearchResponse search(String indexName, String query) throws IOException {
-        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-        try (XContentParser parser = buildSearchParser(query)) {
-            searchSourceBuilder.parseXContent(parser);
-        }
-        SearchRequestBuilder searchRequestBuilder = new SearchRequestBuilder(client, SearchAction.INSTANCE);
-        searchRequestBuilder.setIndices(indexName).setSource(searchSourceBuilder);
-        if (this.config.searchAllowPartialSearchResults != null) {
-            searchRequestBuilder.setAllowPartialSearchResults(this.config.searchAllowPartialSearchResults);
-        }
-        if (this.config.searchBatchedReduceSize != null) {
-            searchRequestBuilder.setBatchedReduceSize(this.config.searchBatchedReduceSize);
-        }
-        if (this.config.searchMaxConcurrentShardRequests != null) {
-            searchRequestBuilder.setMaxConcurrentShardRequests(this.config.searchMaxConcurrentShardRequests);
-        }
-        if (this.config.searchPreFilterShardSize != null) {
-            searchRequestBuilder.setPreFilterShardSize(this.config.searchPreFilterShardSize);
-        }
-        if (this.config.searchPreference != null) {
-            searchRequestBuilder.setPreference(this.config.searchPreference);
-        }
-        if (this.config.searchRequestCache != null) {
-            searchRequestBuilder.setRequestCache(this.config.searchRequestCache);
-        }
-        if (this.config.maxTimePerQuery != null) {
-            searchRequestBuilder.setTimeout(TimeValue.parseTimeValue(this.config.maxTimePerQuery, "timeout"));
-        }
-        // TODO: better future handling
-        return searchRequestBuilder.execute().actionGet();
     }
 
     private QueryBuilder buildSearchQuery(
@@ -1128,15 +801,14 @@ public class Job {
                 this.config.input.model(),
                 indexName,
                 this.config.input.scope().exclude().attributes(),
-                "should",
+                SHOULD,
                 namedFilters,
                 nameIdCounter
             );
 
             int size = attributeClauses.size();
             if (size > 1) {
-                BoolQueryBuilder combo = new BoolQueryBuilder();
-                attributeClauses.forEach(combo::should);
+                BoolQueryBuilder combo = BoolQueryUtils.fromQueries(SHOULD, attributeClauses);
                 queryMustNotClauses.add(combo);
             } else if (size == 1) {
                 queryMustNotClauses.add(attributeClauses.get(0));
@@ -1152,14 +824,13 @@ public class Job {
                 this.config.input.model(),
                 indexName,
                 this.config.input.scope().include().attributes(),
-                "filter",
+                FILTER,
                 namedFilters,
                 nameIdCounter
             );
             int size = attributeClauses.size();
             if (size > 1) {
-                BoolQueryBuilder combo = new BoolQueryBuilder();
-                attributeClauses.forEach(combo::filter);
+                BoolQueryBuilder combo = BoolQueryUtils.fromQueries(FILTER, attributeClauses);
                 queryFilterClauses.add(combo);
             } else if (size == 1) {
                 queryFilterClauses.add(attributeClauses.get(0));
@@ -1224,9 +895,7 @@ public class Job {
                             }
                             QueryBuilder attributesExistsClause = null;
                             if (attributeExistsClauses.size() > 1) {
-                                BoolQueryBuilder combo = new BoolQueryBuilder();
-                                attributeExistsClauses.forEach(combo::should);
-                                attributesExistsClause = combo;
+                                attributesExistsClause = BoolQueryUtils.fromQueries(SHOULD, attributeExistsClauses);
                             } else if (attributeExistsClauses.size() == 1) {
                                 attributesExistsClause = attributeExistsClauses.get(0);
                             }
@@ -1246,20 +915,17 @@ public class Job {
                             );
 
                             // Construct a "should" clause for the above two clauses.
-                            BoolQueryBuilder combo = new BoolQueryBuilder();
-                            if (attributesExistsClause != null) {
-                                combo.should(attributesExistsClause);
-                            }
-                            if (parentResolverClause != null) {
-                                combo.should(parentResolverClause);
-                            }
+                            BoolQueryBuilder combo = BoolQueryUtils.fromQueries(
+                                SHOULD,
+                                attributesExistsClause,
+                                parentResolverClause
+                            );
 
                             parentResolverClauses.add(combo);
                         }
 
                         if (parentResolverClauses.size() > 1) {
-                            BoolQueryBuilder combo = new BoolQueryBuilder();
-                            parentResolverClauses.forEach(combo::filter);
+                            BoolQueryBuilder combo = BoolQueryUtils.fromQueries(FILTER, parentResolverClauses);
                             parentResolversClauses.add(combo);
                         } else if (parentResolverClauses.size() == 1) {
                             parentResolversClauses.add(parentResolverClauses.get(0));
@@ -1269,8 +935,7 @@ public class Job {
 
                 // Combine the resolvers clause and parent resolvers clause in a "filter" query if necessary.
                 if (parentResolversClauses.size() > 0) {
-                    BoolQueryBuilder combo = new BoolQueryBuilder();
-                    parentResolversClauses.forEach(combo::filter);
+                    BoolQueryBuilder combo = BoolQueryUtils.fromQueries(FILTER, parentResolversClauses);
 
                     if (resolversClause != null) {
                         combo.filter(resolversClause);
@@ -1436,9 +1101,7 @@ public class Job {
             // If only the termResolversClause exists, set resolversClause to termResolversClause.
             // If neither clause exists, do nothing because resolversClause already does not exist.
             if (resolversClause != null && termResolversClause != null) {
-                BoolQueryBuilder combo = new BoolQueryBuilder();
-                combo.filter(resolversClause);
-                combo.filter(termResolversClause);
+                BoolQueryBuilder combo = BoolQueryUtils.fromQueries(FILTER, resolversClause, termResolversClause);
                 queryFilterClauses.add(combo);
             } else if (termResolversClause != null) {
                 resolversClause = termResolversClause;
@@ -1447,9 +1110,7 @@ public class Job {
 
         // Combine the ids clause and resolvers clause in a "should" clause if necessary.
         if (idsQuery != null && resolversClause != null) {
-            BoolQueryBuilder combo = QueryBuilders.boolQuery()
-                .filter(idsQuery)
-                .filter(resolversClause);
+            BoolQueryBuilder combo = BoolQueryUtils.fromQueries(FILTER, idsQuery, resolversClause);
             queryFilterClauses.add(combo);
         } else if (idsQuery != null) {
             queryFilterClauses.add(idsQuery);
@@ -1462,398 +1123,6 @@ public class Job {
             queryFilterClauses.forEach(queryBuilder::filter);
         }
         return queryBuilder;
-    }
-
-    private String buildSearchQueryClause(
-        String indexName,
-        boolean canQueryIds,
-        boolean canQueryTerms,
-        List<String> resolvers,
-        AtomicInteger nameIdCounter,
-        boolean namedFilters,
-        Map<Integer, FilterTree> resolversFilterTreeGrouped,
-        List<String> termResolvers,
-        FilterTree termResolversFilterTree
-    ) throws ValidationException, IOException {
-        String queryClause;
-        List<String> queryMustNotClauses = new ArrayList<>();
-        String queryMustNotClause = "";
-        List<String> queryFilterClauses = new ArrayList<>();
-        String queryFilterClause;
-
-        // Exclude docs by _id
-        Set<String> docIds = this.docIds.get(indexName);
-        if (!docIds.isEmpty()) {
-            queryMustNotClauses.add("{\"ids\":{\"values\":[" + String.join(",", docIds) + "]}}");
-        }
-
-        // Create "scope.exclude.attributes" clauses. Combine them into a single "should" clause.
-        if (!this.config.input.scope().exclude().attributes().isEmpty()) {
-            List<String> attributeClauses = makeAttributeClauses(this.config.input.model(), indexName, this.config.input.scope().exclude().attributes(), "should", namedFilters, nameIdCounter);
-            int size = attributeClauses.size();
-            if (size > 1) {
-                queryMustNotClauses.add("{\"bool\":{\"should\":[" + String.join(",", attributeClauses) + "]}}");
-            } else if (size == 1) {
-                queryMustNotClauses.add(attributeClauses.get(0));
-            }
-        }
-
-        // Construct the top-level "must_not" clause.
-        if (queryMustNotClauses.size() > 1) {
-            queryMustNotClause = "\"must_not\":[" + String.join(",", queryMustNotClauses) + "]";
-        } else if (queryMustNotClauses.size() == 1) {
-            queryMustNotClause = "\"must_not\":" + queryMustNotClauses.get(0);
-        }
-
-        // Construct "scope.include.attributes" clauses. Combine them into a single "filter" clause.
-        if (!this.config.input.scope().include().attributes().isEmpty()) {
-            List<String> attributeClauses = makeAttributeClauses(this.config.input.model(), indexName, this.config.input.scope().include().attributes(), "filter", namedFilters, nameIdCounter);
-            int size = attributeClauses.size();
-            if (size > 1) {
-                queryFilterClauses.add("{\"bool\":{\"filter\":[" + String.join(",", attributeClauses) + "]}}");
-            } else if (size == 1) {
-                queryFilterClauses.add(attributeClauses.get(0));
-            }
-        }
-
-        // Construct the "ids" clause if this is the first hop and if any ids are specified for this index.
-        String idsClause = "";
-        if (canQueryIds) {
-            Set<String> ids = this.config.input.ids().get(indexName);
-            idsClause = "{\"bool\":{\"filter\":[{\"ids\":{\"values\":[" + String.join(",", ids) + "]}}]}}";
-        }
-
-        // Construct the resolvers clause for attribute values.
-        String resolversClause = "";
-        FilterTree resolversFilterTree;
-
-        if (!this.attributes.isEmpty()) {
-            // Group the resolvers by their weight level.
-            TreeMap<Integer, List<String>> resolverGroups = groupResolversByWeight(this.config.input.model(), resolvers);
-
-            // Construct a clause for each weight level in descending order of weight.
-            List<Integer> weights = new ArrayList<>(resolverGroups.keySet());
-            Collections.reverse(weights);
-            int numWeightLevels = weights.size();
-            for (int level = 0; level < numWeightLevels; level++) {
-                Integer weight = weights.get(level);
-                List<String> resolversGroup = resolverGroups.get(weight);
-                Map<String, Integer> counts = countAttributesAcrossResolvers(this.config.input.model(), resolversGroup);
-                List<List<String>> resolversSorted = sortResolverAttributes(this.config.input.model(), resolversGroup, counts);
-                resolversFilterTree = makeResolversFilterTree(resolversSorted);
-                resolversFilterTreeGrouped.put(numWeightLevels - level - 1, resolversFilterTree);
-                resolversClause = buildResolversClause(this.config.input.model(), indexName, resolversFilterTree, this.attributes, namedFilters, nameIdCounter);
-
-                // If there are multiple levels of weight, then each lower weight group of resolvers must ensure
-                // that every higher weight resolver either matches or does not exist.
-                List<String> parentResolversClauses = new ArrayList<>();
-                if (level > 0) {
-
-                    // This is a lower weight group of resolvers.
-                    // Every higher weight resolver either must match or must not exist.
-                    for (int parentLevel = 0; parentLevel < level; parentLevel++) {
-                        Integer parentWeight = weights.get(parentLevel);
-                        List<String> parentResolversGroup = resolverGroups.get(parentWeight);
-                        List<String> parentResolverClauses = new ArrayList<>();
-                        for (String parentResolverName : parentResolversGroup) {
-
-                            // Construct a clause that checks if any attribute of the resolver does not exist.
-                            List<String> attributeExistsClauses = new ArrayList<>();
-                            for (String attributeName : this.config.input.model().resolvers().get(parentResolverName).attributes()) {
-                                attributeExistsClauses.add("{\"bool\":{\"must_not\":{\"exists\":{\"field\":\"" + attributeName + "\"}}}}");
-                            }
-                            String attributesExistsClause = "";
-                            if (attributeExistsClauses.size() > 1) {
-                                attributesExistsClause = "{\"bool\":{\"should\":[" + String.join(",", attributeExistsClauses) + "]}}";
-                            } else if (attributeExistsClauses.size() == 1) {
-                                attributesExistsClause = attributeExistsClauses.get(0);
-                            }
-
-                            // Construct a clause for the resolver.
-                            List<String> parentResolverGroup = new ArrayList<>(Collections.singletonList(parentResolverName));
-                            Map<String, Integer> parentCounts = countAttributesAcrossResolvers(this.config.input.model(), parentResolverGroup);
-                            List<List<String>> parentResolverSorted = sortResolverAttributes(this.config.input.model(), parentResolverGroup, parentCounts);
-                            FilterTree parentResolverFilterTree = makeResolversFilterTree(parentResolverSorted);
-                            String parentResolverClause = buildResolversClause(this.config.input.model(), indexName, parentResolverFilterTree, this.attributes, namedFilters, nameIdCounter);
-
-                            // Construct a "should" clause for the above two clauses.
-                            parentResolverClauses.add("{\"bool\":{\"should\":[" + attributesExistsClause + "," + parentResolverClause + "]}}");
-                        }
-                        if (parentResolverClauses.size() > 1) {
-                            parentResolversClauses.add("{\"bool\":{\"filter\":[" + String.join(",", parentResolverClauses) + "]}}");
-                        } else if (parentResolverClauses.size() == 1) {
-                            parentResolversClauses.add(parentResolverClauses.get(0));
-                        }
-                    }
-                }
-
-                // Combine the resolvers clause and parent resolvers clause in a "filter" query if necessary.
-                if (parentResolversClauses.size() > 0) {
-                    resolversClause = "{\"bool\":{\"filter\":[" + resolversClause + "," + String.join(",", parentResolversClauses) + "]}}";
-                }
-            }
-        }
-
-        // Construct the resolvers clause for any terms in the first hop.
-        // Convert each term into each attribute value that matches its type.
-        // Don't tier the resolvers by weights. Weights should be used only when the attribute values are certain.
-        // In this case, terms are not certain to be attribute values of the entity until they match,
-        // unlike structured attribute search where the attributes are assumed be known.
-        if (canQueryTerms) {
-            String termResolversClause = "";
-
-            // Get the names of each attribute of each in-scope resolver.
-            TreeSet<String> resolverAttributes = new TreeSet<>();
-            for (String resolverName : this.config.input.model().resolvers().keySet()) {
-                resolverAttributes.addAll(this.config.input.model().resolvers().get(resolverName).attributes());
-            }
-
-            // For each attribute, attempt to convert each term to a value of that attribute.
-            // If the term does not match the attribute type, or if the term cannot be converted to a value
-            // of that attribute, then skip the term and move on.
-            //
-            // Date attributes will require a format, but the format could be declared in the input attributes,
-            // the model attributes, or the model matchers in descending order of precedence. If the pa
-            Map<String, TreeSet<Value>> termValues = new TreeMap<>();
-            for (String attributeName : resolverAttributes) {
-                String attributeType = this.config.input.model().attributes().get(attributeName).type();
-                for (Term term : this.config.input.terms()) {
-                    try {
-                        switch (attributeType) {
-                            case "boolean":
-                                if (term.isBoolean()) {
-                                    termValues.putIfAbsent(attributeName, new TreeSet<>());
-                                    termValues.get(attributeName).add(term.booleanValue());
-                                }
-                                break;
-                            case "date":
-                                // Determine which date format to use to parse the term.
-                                Index index = this.config.input.model().indices().get(indexName);
-                                // Check if the "format" param is defined in the input attribute.
-                                if (this.config.input.attributes().containsKey(attributeName) && this.config.input.attributes().get(attributeName).params().containsKey("format") && !this.config.input.attributes().get(attributeName).params().get("format").equals("null") && !Patterns.EMPTY_STRING.matcher(this.config.input.attributes().get(attributeName).params().get("format")).matches()) {
-                                    String format = this.config.input.attributes().get(attributeName).params().get("format");
-                                    if (term.isDate(format)) {
-                                        termValues.putIfAbsent(attributeName, new TreeSet<>());
-                                        termValues.get(attributeName).add(term.dateValue());
-                                    }
-                                } else {
-                                    // Otherwise check if the "format" param is defined in the model attribute.
-                                    Map<String, String> params = this.config.input.model().attributes().get(attributeName).params();
-                                    if (params.containsKey("format") && !params.get("format").equals("null") && !Patterns.EMPTY_STRING.matcher(params.get("format")).matches()) {
-                                        String format = params.get("format");
-                                        if (term.isDate(format)) {
-                                            termValues.putIfAbsent(attributeName, new TreeSet<>());
-                                            termValues.get(attributeName).add(term.dateValue());
-                                        }
-                                    } else {
-                                        // Otherwise check if the "format" param is defined in the matcher
-                                        // associated with any index field associated with the attribute.
-                                        // Add any date values that successfully parse.
-                                        for (String indexFieldName : index.attributeIndexFieldsMap().get(attributeName).keySet()) {
-                                            String matcherName = index.attributeIndexFieldsMap().get(attributeName).get(indexFieldName).matcher();
-                                            params = this.config.input.model().matchers().get(matcherName).params();
-                                            if (params.containsKey("format") && !params.get("format").equals("null") && !Patterns.EMPTY_STRING.matcher(params.get("format")).matches()) {
-                                                String format = params.get("format");
-                                                if (term.isDate(format)) {
-                                                    termValues.putIfAbsent(attributeName, new TreeSet<>());
-                                                    termValues.get(attributeName).add(term.dateValue());
-                                                }
-                                            }
-                                            // else:
-                                            // If we've gotten this far, then this term can't be converted
-                                            // to a date value. Skip it and move on.
-                                        }
-                                    }
-                                }
-                                break;
-                            case "number":
-                                if (term.isNumber()) {
-                                    termValues.putIfAbsent(attributeName, new TreeSet<>());
-                                    termValues.get(attributeName).add(term.numberValue());
-                                }
-                                break;
-                            case "string":
-                                termValues.putIfAbsent(attributeName, new TreeSet<>());
-                                termValues.get(attributeName).add(term.stringValue());
-                                break;
-                            default:
-                                break;
-                        }
-                    } catch (ValidationException | IOException e) {
-                        // continue;
-                    }
-                }
-            }
-
-            // Include any known attribute values in this clause.
-            // This is necessary if a request has both "attributes" and "terms".
-            if (!this.attributes.isEmpty()) {
-                for (String attributeName : this.attributes.keySet()) {
-                    for (Value value : this.attributes.get(attributeName).values()) {
-                        termValues.putIfAbsent(attributeName, new TreeSet<>());
-                        termValues.get(attributeName).add(value);
-                    }
-                }
-            }
-
-            // Convert the values as if it was an input Attribute.
-            Map<String, Attribute> termAttributes = new TreeMap<>();
-            for (String attributeName : termValues.keySet()) {
-                String attributeType = this.config.input.model().attributes().get(attributeName).type();
-                List<String> jsonValues = new ArrayList<>();
-                for (Value value : termValues.get(attributeName)) {
-                    if (value instanceof StringValue) {
-                        jsonValues.add(Json.quoteString(value.serialized()));
-                    } else {
-                        jsonValues.add(value.serialized());
-                    }
-                }
-                // Pass params from the input "attributes" if any were defined.
-                String attributesJson;
-                if (this.config.input.attributes().containsKey(attributeName) && !this.config.input.attributes().get(attributeName).params().isEmpty()) {
-                    Set<String> params = new TreeSet<>();
-                    for (String paramName : this.config.input.attributes().get(attributeName).params().keySet()) {
-                        String paramValue = this.config.input.attributes().get(attributeName).params().get(paramName);
-                        params.add("\"" + paramName + "\":" + "\"" + paramValue + "\"");
-                    }
-                    String paramsJson = "{" + String.join(",", params) + "}";
-                    attributesJson = "{\"values\":[" + String.join(",", jsonValues) + "],\"params\":" + paramsJson + "}";
-                } else {
-                    attributesJson = "{\"values\":[" + String.join(",", jsonValues) + "]}";
-                }
-                termAttributes.put(attributeName, new Attribute(attributeName, attributeType, attributesJson));
-            }
-
-            // Determine which resolvers can be queried for this index using these attributes.
-            for (String resolverName : this.config.input.model().resolvers().keySet()) {
-                if (canQueryResolver(this.config.input.model(), indexName, resolverName, termAttributes)) {
-                    termResolvers.add(resolverName);
-                }
-            }
-
-            // Construct the resolvers clause for term attribute values.
-            if (termResolvers.size() > 0) {
-                Map<String, Integer> counts = countAttributesAcrossResolvers(this.config.input.model(), termResolvers);
-                List<List<String>> termResolversSorted = sortResolverAttributes(this.config.input.model(), termResolvers, counts);
-                termResolversFilterTree = makeResolversFilterTree(termResolversSorted, termResolversFilterTree);
-                termResolversClause = buildResolversClause(this.config.input.model(), indexName, termResolversFilterTree, termAttributes, namedFilters, nameIdCounter);
-            }
-
-            // Combine the two resolvers clauses in a "filter" clause if both exist.
-            // If only the termResolversClause exists, set resolversClause to termResolversClause.
-            // If neither clause exists, do nothing because resolversClause already does not exist.
-            if (!resolversClause.isEmpty() && !termResolversClause.isEmpty()) {
-                queryFilterClauses.add("{\"bool\":{\"filter\":[" + resolversClause + "," + termResolversClause + "]}}");
-            } else if (!termResolversClause.isEmpty()) {
-                resolversClause = termResolversClause;
-            }
-        }
-
-        // Combine the ids clause and resolvers clause in a "should" clause if necessary.
-        if (!idsClause.isEmpty() && !resolversClause.isEmpty()) {
-            queryFilterClauses.add("{\"bool\":{\"should\":[" + idsClause + "," + resolversClause + "]}}");
-        } else if (!idsClause.isEmpty()) {
-            queryFilterClauses.add(idsClause);
-        } else if (!resolversClause.isEmpty()) {
-            queryFilterClauses.add(resolversClause);
-        }
-
-        // Construct the "query" clause.
-        if (!queryMustNotClause.isEmpty() && queryFilterClauses.size() > 0) {
-
-            // Construct the top-level "filter" clause. Combine this clause and the top-level "must_not" clause
-            // in a "bool" clause and add it to the "query" field.
-            if (queryFilterClauses.size() > 1) {
-                queryFilterClause = "\"filter\":[" + String.join(",", queryFilterClauses) + "]";
-            } else {
-                queryFilterClause = "\"filter\":" + queryFilterClauses.get(0);
-            }
-            queryClause = "\"query\":{\"bool\":{" + queryMustNotClause + "," + queryFilterClause + "}}";
-
-        } else if (!queryMustNotClause.isEmpty()) {
-
-            // Wrap only the top-level "must_not" clause in a "bool" clause and add it to the "query" field.
-            queryClause = "\"query\":{\"bool\":{" + queryMustNotClause + "}}";
-
-        } else if (queryFilterClauses.size() > 0) {
-
-            // Construct the top-level "filter" clause and add only this clause to the "query" field.
-            // This prevents a redundant "bool"."filter" wrapper clause when the top-level "must_not" clause
-            // does not exist.
-            if (queryFilterClauses.size() > 1) {
-                queryFilterClause = "{\"bool\":{\"filter\":[" + String.join(",", queryFilterClauses) + "]}}";
-            } else {
-                queryFilterClause = queryFilterClauses.get(0);
-            }
-            queryClause = "\"query\":" + queryFilterClause;
-
-        } else {
-
-            // This should never be reached, and if somehow it did, Elasticsearch would return an error.
-            queryClause = "\"query\":{}";
-        }
-        return queryClause;
-    }
-
-    /**
-     * Build a raw search query for an index resolution search.
-     *
-     * @return The ES search query.
-     * @throws ValidationException
-     * @throws IOException
-     */
-    private String buildSearchQuery(
-        String queryClause,
-        String scriptFieldsClause
-    ) {
-        List<String> topLevelClauses = new ArrayList<>();
-        topLevelClauses.add("\"_source\":true");
-        // Construct the "size" clause.
-        topLevelClauses.add("\"size\":" + this.config.maxDocsPerQuery);
-
-        topLevelClauses.add(queryClause);
-
-        if (scriptFieldsClause != null) {
-            topLevelClauses.add(scriptFieldsClause);
-        }
-
-        // Construct the "profile" clause.
-        if (this.config.profile) {
-            topLevelClauses.add("\"profile\":true");
-        }
-        if (this.config.includeSeqNoPrimaryTerm) {
-            topLevelClauses.add("\"seq_no_primary_term\":true");
-        }
-        if (this.config.includeVersion) {
-            topLevelClauses.add("\"version\":true");
-        }
-
-        // Construct the final query.
-        return "{" + String.join(",", topLevelClauses) + "}";
-    }
-
-    private String buildResponseLogJsonString(JsonNode responseData, Exception responseError) throws IOException {
-        if (responseData != null) {
-            JsonNode responseDataCopy = responseData.deepCopy();
-            ObjectNode responseDataCopyObj = (ObjectNode) responseDataCopy;
-            if (responseDataCopyObj.has("hits")) {
-                ObjectNode responseDataCopyObjHits = (ObjectNode) responseDataCopyObj.get("hits");
-                if (responseDataCopyObjHits.has("hits")) {
-                    responseDataCopyObjHits.remove("hits");
-                }
-            }
-            return responseDataCopyObj.toString();
-        } else if (responseError instanceof ElasticsearchException) {
-            ElasticsearchException e = (ElasticsearchException) responseError;
-            String cause = Strings.toString(
-                e.toXContent(jsonBuilder().startObject(), ToXContent.EMPTY_PARAMS)
-                    .endObject()
-            );
-            return "{\"error\":{\"root_cause\":[" + cause + "],\"type\":\"" + ElasticsearchException.getExceptionName(e) + "\",\"reason\":\"" + e.getMessage() + "\"},\"status\":" + e.status().getStatus() + "}";
-        }
-
-        // should never get here
-        return "{\"error\":{\"root_cause\":[\"unknown\"],\"type\":\"" + ElasticsearchException.getExceptionName(responseError) + "\",\"reason\":\"" + responseError.getMessage() + "\"},\"status\":" + 500 + "}";
     }
 
     private void parseDocHitValue(
@@ -1891,66 +1160,6 @@ public class Job {
         }
     }
 
-//    private void parseDocHit(
-//        SearchHit doc,
-//        String indexName,
-//        Map<String, Attribute> nextInputAttributes,
-//        Map<String, Set<Value>> docAttributes,
-//        Map<String, JsonNode> docIndexFields
-//    ) throws ValidationException {
-//        for (String indexFieldName : this.config.input.model().indices().get(indexName).fields().keySet()) {
-//            String attributeName = this.config.input.model().indices().get(indexName).fields().get(indexFieldName).attribute();
-//            if (this.config.input.model().attributes().get(attributeName) == null)
-//                continue;
-//            String attributeType = this.config.input.model().attributes().get(attributeName).type();
-//
-//            // Get the attribute values from the doc.
-//            if (doc.getFields() != null && doc.getFields().containsKey(indexFieldName)) {
-//                // Get the attribute value from the "fields" field if it exists there.
-//                // This would include 'date' attribute types, for example.
-//                DocumentField field = doc.getFields().get(indexFieldName);
-//                if (field == null) {
-//                    continue;
-//                } else if (field.isArray()) {
-//                    parseDocHitArrayValue(nextInputAttributes, docAttributes, attributeName, attributeType, field);
-//                    if (field.size() == 1) {
-//                        docIndexFields.put(indexFieldName, field.elements().next());
-//                    } else {
-//                        docIndexFields.put(indexFieldName, field);
-//                    }
-//                } else {
-//                    parseDocHitValue(nextInputAttributes, docAttributes, attributeName, attributeType, field);
-//                    docIndexFields.put(indexFieldName, field);
-//                }
-//            } else {
-//                // Get the attribute value from the "_source" field.
-//                // The index field name might not refer to the _source property.
-//                // If it's not in the _source, remove the last part of the index field name from the dot notation.
-//                // Index field names can reference multi-fields, which are not returned in the _source.
-//                // If the document does not contain a given index field, skip that field.
-//                JsonPointer path = this.config.input.model().indices().get(indexName).fields().get(indexFieldName).path();
-//                JsonPointer pathParent = this.config.input.model().indices().get(indexName).fields().get(indexFieldName).pathParent();
-//                JsonNode valueNode = doc.get("_source").at(path);
-//                if (valueNode.isMissingNode()) {
-//                    if (pathParent != null) {
-//                        valueNode = doc.get("_source").at(pathParent);
-//                    } else {
-//                        continue;
-//                    }
-//                }
-//                if (valueNode.isNull() || valueNode.isMissingNode()) {
-//                    continue;
-//                }
-//                docIndexFields.put(indexFieldName, valueNode);
-//                if (valueNode.isArray()) {
-//                    parseDocHitArrayValue(nextInputAttributes, docAttributes, attributeName, attributeType, valueNode);
-//                } else {
-//                    parseDocHitValue(nextInputAttributes, docAttributes, attributeName, attributeType, valueNode);
-//                }
-//            }
-//        }
-//    }
-
     private void parseDocHit(
         JsonNode doc,
         String indexName,
@@ -1983,6 +1192,8 @@ public class Job {
                     docIndexFields.put(indexFieldName, valueNode);
                 }
             } else {
+                // TODO: these JsonPointers are the only thing holding us back from removing the manual JsonNode handling
+                //       and just using SearchHits.
                 // Get the attribute value from the "_source" field.
                 // The index field name might not refer to the _source property.
                 // If it's not in the _source, remove the last part of the index field name from the dot notation.
@@ -2012,7 +1223,7 @@ public class Job {
     }
 
     private void modifyDocMetadata(
-        JsonNode doc,
+        ObjectNode docObjNode,
         String indexName,
         int hop,
         int queryCount,
@@ -2020,7 +1231,6 @@ public class Job {
         Map<String, Set<Value>> docAttributes,
         Map<String, JsonNode> docIndexFields
     ) throws IOException {
-        ObjectNode docObjNode = (ObjectNode) doc;
         docObjNode.remove("_score");
         docObjNode.remove("fields");
         docObjNode.put("_hop", hop);
@@ -2149,12 +1359,48 @@ public class Job {
         }
 
         // Store doc in response.
-        this.hits.add(doc);
+        this.hits.add(docObjNode);
+    }
+
+    private SearchRequestBuilder buildSearchRequest(String indexName) throws ValidationException {
+        final SearchRequestBuilder searchReqBuilder = new SearchRequestBuilder(client, SearchAction.INSTANCE);
+        searchReqBuilder
+            .setFetchSource(true)
+            .setIndices(indexName)
+            .setFetchSource(true)
+            .setSize(this.config.maxDocsPerQuery)
+            .setProfile(this.config.profile)
+            .seqNoAndPrimaryTerm(this.config.includeSeqNoPrimaryTerm)
+            .setVersion(this.config.includeVersion);
+
+        if (this.config.searchAllowPartialSearchResults != null) {
+            searchReqBuilder.setAllowPartialSearchResults(this.config.searchAllowPartialSearchResults);
+        }
+        if (this.config.searchBatchedReduceSize != null) {
+            searchReqBuilder.setBatchedReduceSize(this.config.searchBatchedReduceSize);
+        }
+        if (this.config.searchMaxConcurrentShardRequests != null) {
+            searchReqBuilder.setMaxConcurrentShardRequests(this.config.searchMaxConcurrentShardRequests);
+        }
+        if (this.config.searchPreFilterShardSize != null) {
+            searchReqBuilder.setPreFilterShardSize(this.config.searchPreFilterShardSize);
+        }
+        if (this.config.searchPreference != null) {
+            searchReqBuilder.setPreference(this.config.searchPreference);
+        }
+        if (this.config.searchRequestCache != null) {
+            searchReqBuilder.setRequestCache(this.config.searchRequestCache);
+        }
+        if (this.config.maxTimePerQuery != null) {
+            searchReqBuilder.setTimeout(TimeValue.parseTimeValue(this.config.maxTimePerQuery, "timeout"));
+        }
+
+        return searchReqBuilder;
     }
 
     /**
      * Given a set of attribute values, determine which queries to submit to which indices then submit them and recurse.
-     *
+     * <p>
      * TODO: this should probably return a {@link ResolutionResponse} instead of a JobResult.
      *
      * @throws IOException         If there is an error parsing content.
@@ -2230,38 +1476,7 @@ public class Job {
                     continue;
                 }
 
-                final SearchRequestBuilder searchReqBuilder = new SearchRequestBuilder(client, SearchAction.INSTANCE);
-                searchReqBuilder
-                    .setFetchSource(true)
-                    .setIndices(indexName)
-                    .setFetchSource(true)
-                    .setSize(this.config.maxDocsPerQuery)
-                    .setProfile(this.config.profile)
-                    .seqNoAndPrimaryTerm(this.config.includeSeqNoPrimaryTerm)
-                    .setVersion(this.config.includeVersion);
-
-                if (this.config.searchAllowPartialSearchResults != null) {
-                    searchReqBuilder.setAllowPartialSearchResults(this.config.searchAllowPartialSearchResults);
-                }
-                if (this.config.searchBatchedReduceSize != null) {
-                    searchReqBuilder.setBatchedReduceSize(this.config.searchBatchedReduceSize);
-                }
-                if (this.config.searchMaxConcurrentShardRequests != null) {
-                    searchReqBuilder.setMaxConcurrentShardRequests(this.config.searchMaxConcurrentShardRequests);
-                }
-                if (this.config.searchPreFilterShardSize != null) {
-                    searchReqBuilder.setPreFilterShardSize(this.config.searchPreFilterShardSize);
-                }
-                if (this.config.searchPreference != null) {
-                    searchReqBuilder.setPreference(this.config.searchPreference);
-                }
-                if (this.config.searchRequestCache != null) {
-                    searchReqBuilder.setRequestCache(this.config.searchRequestCache);
-                }
-                if (this.config.maxTimePerQuery != null) {
-                    searchReqBuilder.setTimeout(TimeValue.parseTimeValue(this.config.maxTimePerQuery, "timeout"));
-                }
-
+                final SearchRequestBuilder searchReqBuilder = buildSearchRequest(indexName);
                 Map<String, Script> scripts = buildScriptFields(indexName, this.config.input);
                 scripts.forEach(searchReqBuilder::addScriptField);
 
@@ -2282,23 +1497,6 @@ public class Job {
                     termResolversFilterTree
                 );
                 searchReqBuilder.setQuery(searchQuery);
-
-//                Map<Integer, FilterTree> resolversFilterTreeGrouped2 = new TreeMap<>(Collections.reverseOrder());
-//                // Construct query for this index.
-//                List<String> termResolvers2 = new ArrayList<>();
-//                FilterTree termResolversFilterTree2 = new FilterTree();
-//
-//                String searchQuery2 = buildSearchQueryClause(
-//                    indexName,
-//                    canQueryIds,
-//                    canQueryTerms,
-//                    resolvers,
-//                    nameIdCounter,
-//                    namedFilters,
-//                    resolversFilterTreeGrouped,
-//                    termResolvers,
-//                    termResolversFilterTree
-//                );
 
                 // Submit query to Elasticsearch.
                 SearchResponse response = null;
@@ -2376,7 +1574,7 @@ public class Job {
 
                     // Modify doc metadata.
                     if (this.config.includeHits) {
-                        modifyDocMetadata(doc, indexName, hop, queryCounter, namedFilters, docAttributes, docIndexFields);
+                        modifyDocMetadata((ObjectNode) doc, indexName, hop, queryCounter, namedFilters, docAttributes, docIndexFields);
                     }
                 }
                 queryCounter++;

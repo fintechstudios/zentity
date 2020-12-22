@@ -4,15 +4,18 @@ import io.zentity.model.Matcher;
 import io.zentity.model.Model;
 import io.zentity.model.ValidationException;
 import io.zentity.resolution.input.Input;
+import org.elasticsearch.index.query.QueryBuilder;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static io.zentity.resolution.BoolQueryUtils.BoolQueryCombiner.FILTER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
@@ -44,10 +47,12 @@ public class JobTest {
         resolversList.add("d");
         Map<String, Integer> counts = Job.countAttributesAcrossResolvers(model, resolversList);
         List<List<String>> resolversSorted = Job.sortResolverAttributes(model, resolversList, counts);
-//        FilterTree resolversFilterTree = Job.makeResolversFilterTree(resolversSorted);
-//        String resolversClause = Job.buildResolversClause(model, "index", resolversFilterTree, input.attributes(), false, new AtomicInteger());
-//        String expected = "{\"bool\":{\"should\":[{\"match\":{\"id\":\"1234567890\",\"fuzziness\":\"auto\"}},{\"bool\":{\"filter\":[{\"bool\":{\"should\":[{\"term\":{\"name\":\"Alice Jones\"}},{\"term\":{\"name\":\"Alice Jones-Smith\"}}]}},{\"bool\":{\"should\":[{\"match\":{\"phone\":\"555-123-4567\",\"fuzziness\":\"2\"}},{\"bool\":{\"filter\":[{\"term\":{\"street\":\"123 Main St\"}},{\"bool\":{\"should\":[{\"bool\":{\"filter\":[{\"term\":{\"city\":\"Beverly Hills\"}},{\"term\":{\"state\":\"CA\"}}]}},{\"term\":{\"zip\":\"90210\"}}]}}]}}]}}]}}]}}";
-//        assertEquals(resolversClause, expected);
+        FilterTree resolversFilterTree = Job.makeResolversFilterTree(resolversSorted);
+        String resolversClause = Job.buildResolversQuery(
+            model, "index", resolversFilterTree, input.attributes(), false, new AtomicInteger()
+        ).toString();
+        String expected = "{\"bool\":{\"should\":[{\"match\":{\"id\":\"1234567890\",\"fuzziness\":\"auto\"}},{\"bool\":{\"filter\":[{\"bool\":{\"should\":[{\"term\":{\"name\":\"Alice Jones\"}},{\"term\":{\"name\":\"Alice Jones-Smith\"}}]}},{\"bool\":{\"should\":[{\"match\":{\"phone\":\"555-123-4567\",\"fuzziness\":\"2\"}},{\"bool\":{\"filter\":[{\"term\":{\"street\":\"123 Main St\"}},{\"bool\":{\"should\":[{\"bool\":{\"filter\":[{\"term\":{\"city\":\"Beverly Hills\"}},{\"term\":{\"state\":\"CA\"}}]}},{\"term\":{\"zip\":\"90210\"}}]}}]}}]}}]}}]}}";
+        assertEquals(resolversClause, expected);
     }
 
     /**
@@ -66,7 +71,7 @@ public class JobTest {
                 "}";
         Matcher matcher = new Matcher("matcher_phone", matcherJson);
         TreeMap<String, String> params = new TreeMap<>();
-        String matcherClause = Job.populateMatcherClause(matcher, "field_phone", "555-123-4567", params);
+        String matcherClause = Job.buildMatcherClause(matcher, "field_phone", "555-123-4567", params).toString();
         String expected = "{\"match\":{\"field_phone\":\"555-123-4567\"}}";
         assertEquals(matcherClause, expected);
     }
@@ -89,7 +94,7 @@ public class JobTest {
         Matcher matcher = new Matcher("matcher_phone", matcherJson);
         TreeMap<String, String> params = new TreeMap<>();
         params.put("foo", "bar");
-        String matcherClause = Job.populateMatcherClause(matcher, "field_phone", "555-123-4567", params);
+        String matcherClause = Job.buildMatcherClause(matcher, "field_phone", "555-123-4567", params).toString();
         String expected = "{\"match\":{\"field_phone\":\"555-123-4567\"}}";
         assertEquals(matcherClause, expected);
     }
@@ -113,8 +118,9 @@ public class JobTest {
                 "  }\n" +
                 "}";
         Matcher matcher = new Matcher("matcher_phone", matcherJson);
-        TreeMap<String, String> params = new TreeMap<>();
-        Job.populateMatcherClause(matcher, "field_phone", "555-123-4567", params);
+        Map<String, String> params = new HashMap<>();
+        // Should throw
+        Job.buildMatcherClause(matcher, "field_phone", "555-123-4567", params);
     }
 
     /**
@@ -136,8 +142,9 @@ public class JobTest {
                 "  }\n" +
                 "}";
         Matcher matcher = new Matcher("matcher_phone", matcherJson);
-        TreeMap<String, String> params = new TreeMap<>();
-        Job.populateMatcherClause(matcher, "field_phone", "555-123-4567", params);
+        Map<String, String> params = new HashMap<>();
+        // should throw
+        Job.buildMatcherClause(matcher, "field_phone", "555-123-4567", params);
     }
 
     /**
@@ -162,8 +169,8 @@ public class JobTest {
                 "  }\n" +
                 "}";
         Matcher matcher = new Matcher("matcher_phone", matcherJson);
-        TreeMap<String, String> params = new TreeMap<>();
-        String matcherClause = Job.populateMatcherClause(matcher, "field_phone", "555-123-4567", params);
+        Map<String, String> params = new HashMap<>();
+        String matcherClause = Job.buildMatcherClause(matcher, "field_phone", "555-123-4567", params).toString();
         String expected = "{\"match\":{\"field_phone\":{\"query\":\"555-123-4567\",\"fuzziness\":\"2\"}}}";
         assertEquals(matcherClause, expected);
     }
@@ -209,9 +216,11 @@ public class JobTest {
                 "  }\n" +
                 "}";
         Input input = new Input(json, model);
-        List<String> attributeClauses = Job.makeAttributeClauses(input.model(), "index", input.attributes(), "filter", false, new AtomicInteger());
+        List<QueryBuilder> attributeQueries = Job.buildAttributeQueries(
+            input.model(), "index", input.attributes(), FILTER, false, new AtomicInteger()
+        );
         String expected = "{\"match\":{\"field_phone\":{\"query\":\"555-123-4567\",\"fuzziness\":\"1\"}}}";
-        String actual = attributeClauses.get(0);
+        String actual = attributeQueries.get(0).toString();
         assertEquals(expected, actual);
     }
 
@@ -259,9 +268,11 @@ public class JobTest {
                 "  }\n" +
                 "}";
         Input input = new Input(json, model);
-        List<String> attributeClauses = Job.makeAttributeClauses(input.model(), "index", input.attributes(), "filter", false, new AtomicInteger());
+        List<QueryBuilder> attributeClauses = Job.buildAttributeQueries(
+            input.model(), "index", input.attributes(), FILTER, false, new AtomicInteger()
+        );
         String expected = "{\"match\":{\"field_phone\":{\"query\":\"555-123-4567\",\"fuzziness\":\"1\"}}}";
-        String actual = attributeClauses.get(0);
+        String actual = attributeClauses.get(0).toString();
         assertEquals(expected, actual);
     }
 
@@ -308,9 +319,11 @@ public class JobTest {
                 "  }\n" +
                 "}";
         Input input = new Input(json, model);
-        List<String> attributeClauses = Job.makeAttributeClauses(input.model(), "index", input.attributes(), "filter", false, new AtomicInteger());
+        List<QueryBuilder> attributeClauses = Job.buildAttributeQueries(
+            input.model(), "index", input.attributes(), FILTER, false, new AtomicInteger()
+        );
         String expected = "{\"match\":{\"field_phone\":{\"query\":\"555-123-4567\",\"fuzziness\":\"2\"}}}";
-        String actual = attributeClauses.get(0);
+        String actual = attributeClauses.get(0).toString();
         assertEquals(expected, actual);
     }
 
@@ -363,9 +376,11 @@ public class JobTest {
                 "  }\n" +
                 "}";
         Input input = new Input(json, model);
-        List<String> attributeClauses = Job.makeAttributeClauses(input.model(), "index", input.attributes(), "filter", false, new AtomicInteger());
+        List<QueryBuilder> attributeClauses = Job.buildAttributeQueries(
+            input.model(), "index", input.attributes(), FILTER, false, new AtomicInteger()
+        );
         String expected = "{\"range\":{\"field_timestamp\":{\"gte\":\"123 Main St||-30m\",\"lte\":\"123 Main St||+30m\",\"format\":\"yyyy-MM-dd'T'HH:mm:ss\"}}}";
-        String actual = attributeClauses.get(0);
+        String actual = attributeClauses.get(0).toString();
         assertEquals(expected, actual);
     }
 
@@ -422,9 +437,11 @@ public class JobTest {
                 "  }\n" +
                 "}";
         Input input = new Input(json, model);
-        List<String> attributeClauses = Job.makeAttributeClauses(input.model(), "index", input.attributes(), "filter", false, new AtomicInteger());
+        List<QueryBuilder> attributeClauses = Job.buildAttributeQueries(
+            input.model(), "index", input.attributes(), FILTER, false, new AtomicInteger()
+        );
         String expected = "{\"range\":{\"field_timestamp\":{\"gte\":\"123 Main St||-30m\",\"lte\":\"123 Main St||+30m\",\"format\":\"yyyy-MM-dd'T'HH:mm:ss\"}}}";
-        String actual = attributeClauses.get(0);
+        String actual = attributeClauses.get(0).toString();
         assertEquals(expected, actual);
     }
 
@@ -486,9 +503,11 @@ public class JobTest {
                 "  }\n" +
                 "}";
         Input input = new Input(json, model);
-        List<String> attributeClauses = Job.makeAttributeClauses(input.model(), "index", input.attributes(), "filter", false, new AtomicInteger());
+        List<QueryBuilder> attributeClauses = Job.buildAttributeQueries(
+            input.model(), "index", input.attributes(), FILTER, false, new AtomicInteger()
+        );
         String expected = "{\"range\":{\"field_timestamp\":{\"gte\":\"123 Main St||-15m\",\"lte\":\"123 Main St||+15m\",\"format\":\"yyyy-MM-dd\"}}}";
-        String actual = attributeClauses.get(0);
+        String actual = attributeClauses.get(0).toString();
         assertEquals(expected, actual);
     }
 
@@ -532,7 +551,10 @@ public class JobTest {
                 "  }\n" +
                 "}";
         Input input = new Input(json, model);
-        List<String> attributeClauses = Job.makeAttributeClauses(input.model(), "index", input.attributes(), "filter", false, new AtomicInteger());
+        // should throw
+        List<QueryBuilder> attributeClauses = Job.buildAttributeQueries(
+            input.model(), "index", input.attributes(), FILTER, false, new AtomicInteger()
+        );
     }
 
     /**
@@ -576,7 +598,10 @@ public class JobTest {
                 "  }\n" +
                 "}";
         Input input = new Input(json, model);
-        List<String> attributeClauses = Job.makeAttributeClauses(input.model(), "index", input.attributes(), "filter", false, new AtomicInteger());
+        // should throw
+        List<QueryBuilder> attributeClauses = Job.buildAttributeQueries(
+            input.model(), "index", input.attributes(), FILTER, false, new AtomicInteger()
+        );
     }
 
     /**
@@ -637,7 +662,7 @@ public class JobTest {
                 "  }\n" +
                 "}";
         Input input = new Input(json, model);
-        String scriptFieldsClause = Job.makeScriptFieldsClause(input, "index");
+        String scriptFieldsClause = Job.buildScriptFields("index", input).get("field_timestamp").toString();
         String expected = "\"script_fields\":{\"field_timestamp\":{\"script\":{\"lang\":\"painless\",\"source\":\"DateFormat df = new SimpleDateFormat(params.format); df.setTimeZone(TimeZone.getTimeZone('UTC')); return df.format(doc[params.field].value.toInstant().toEpochMilli())\",\"params\":{\"field\":\"field_timestamp\",\"format\":\"yyyy-MM-dd\"}}}}";
         assertEquals(scriptFieldsClause, expected);
     }
@@ -703,7 +728,7 @@ public class JobTest {
                 "  }\n" +
                 "}";
         Input input = new Input(json, model);
-        String scriptFieldsClause = Job.makeScriptFieldsClause(input, "index");
+        String scriptFieldsClause = Job.buildScriptFields("index", input).get("field_timestamp").toString();
         String expected = "\"script_fields\":{\"field_timestamp\":{\"script\":{\"lang\":\"painless\",\"source\":\"DateFormat df = new SimpleDateFormat(params.format); df.setTimeZone(TimeZone.getTimeZone('UTC')); return df.format(doc[params.field].value.toInstant().toEpochMilli())\",\"params\":{\"field\":\"field_timestamp\",\"format\":\"yyyy-MM-dd\"}}}}";
         assertEquals(scriptFieldsClause, expected);
     }
@@ -765,7 +790,7 @@ public class JobTest {
                 "  }\n" +
                 "}";
         Input input = new Input(json, model);
-        String scriptFieldsClause = Job.makeScriptFieldsClause(input, "index");
+        String scriptFieldsClause = Job.buildScriptFields("index", input).get("field_timestamp").toString();
         String expected = "\"script_fields\":{\"field_timestamp\":{\"script\":{\"lang\":\"painless\",\"source\":\"DateFormat df = new SimpleDateFormat(params.format); df.setTimeZone(TimeZone.getTimeZone('UTC')); return df.format(doc[params.field].value.toInstant().toEpochMilli())\",\"params\":{\"field\":\"field_timestamp\",\"format\":\"yyyy-MM-dd\"}}}}";
         assertEquals(scriptFieldsClause, expected);
     }
@@ -830,7 +855,7 @@ public class JobTest {
                 "  }\n" +
                 "}";
         Input input = new Input(json, model);
-        String scriptFieldsClause = Job.makeScriptFieldsClause(input, "index");
+        String scriptFieldsClause = Job.buildScriptFields("index", input).get("field_timestamp").toString();
         String expected = "\"script_fields\":{\"field_timestamp\":{\"script\":{\"lang\":\"painless\",\"source\":\"DateFormat df = new SimpleDateFormat(params.format); df.setTimeZone(TimeZone.getTimeZone('UTC')); return df.format(doc[params.field].value.toInstant().toEpochMilli())\",\"params\":{\"field\":\"field_timestamp\",\"format\":\"yyyy-MM-dd'T'HH:mm:ss\"}}}}";
         assertEquals(scriptFieldsClause, expected);
     }
@@ -897,7 +922,7 @@ public class JobTest {
                 "  }\n" +
                 "}";
         Input input = new Input(json, model);
-        String scriptFieldsClause = Job.makeScriptFieldsClause(input, "index");
+        String scriptFieldsClause = Job.buildScriptFields("index", input).get("field_timestamp").toString();
         String expected = "\"script_fields\":{\"field_timestamp\":{\"script\":{\"lang\":\"painless\",\"source\":\"DateFormat df = new SimpleDateFormat(params.format); df.setTimeZone(TimeZone.getTimeZone('UTC')); return df.format(doc[params.field].value.toInstant().toEpochMilli())\",\"params\":{\"field\":\"field_timestamp\",\"format\":\"yyyy-MM-dd'T'HH:mm:ss.SSS\"}}}}";
         assertEquals(scriptFieldsClause, expected);
     }
@@ -964,7 +989,7 @@ public class JobTest {
                 "  }\n" +
                 "}";
         Input input = new Input(json, model);
-        String scriptFieldsClause = Job.makeScriptFieldsClause(input, "index");
+        String scriptFieldsClause = Job.buildScriptFields("index", input).get("field_timestamp").toString();
         String expected = "\"script_fields\":{\"field_timestamp\":{\"script\":{\"lang\":\"painless\",\"source\":\"DateFormat df = new SimpleDateFormat(params.format); df.setTimeZone(TimeZone.getTimeZone('UTC')); return df.format(doc[params.field].value.toInstant().toEpochMilli())\",\"params\":{\"field\":\"field_timestamp\",\"format\":\"yyyy-MM-dd'T'HH:mm:ss\"}}}}";
         assertEquals(scriptFieldsClause, expected);
     }
@@ -1026,7 +1051,8 @@ public class JobTest {
                 "  }\n" +
                 "}";
         Input input = new Input(json, model);
-        Job.makeScriptFieldsClause(input, "index");
+        // should throw
+        Job.buildScriptFields("index", input).get("field_timestamp");
     }
 
     /**
@@ -1086,7 +1112,8 @@ public class JobTest {
                 "  }\n" +
                 "}";
         Input input = new Input(json, model);
-        Job.makeScriptFieldsClause(input, "index");
+        // should throw
+        Job.buildScriptFields("index", input).get("field_timestamp");
     }
 
     /**

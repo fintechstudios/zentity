@@ -26,6 +26,26 @@ public class LoggedSearch {
     // response
     ElasticsearchException responseError;
 
+    // perhaps this belongs better as a global custom StdSerializer<ElasticsearchException> than a class
+    @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
+    public static class SerializedElasticsearchException {
+        @JsonRawValue
+        public String rootCause;
+
+        public String type;
+
+        public String reason;
+
+        public int status;
+
+        public SerializedElasticsearchException(ElasticsearchException ex) throws IOException {
+            rootCause = "[" + Strings.toString(ex.toXContent(jsonBuilder().startObject(), ToXContent.EMPTY_PARAMS).endObject()) + "]";
+            type = ElasticsearchException.getExceptionName(ex);
+            reason = ex.getMessage();
+            status = ex.status().getStatus();
+        }
+    }
+
     // need to output { "request": {}, "response": {}}
     // where response is either the response or an error
     // where error is { "error": { root_cause: esRawJson, type:ElasticsearchException.getExceptionName(e), reason: e.message, status: e.status().getStatus()
@@ -56,26 +76,6 @@ public class LoggedSearch {
                 gen.writeRawValue(value.response.toString());
             }
             gen.writeEndObject();
-        }
-
-        // perhaps this belongs better as a custom StdSerializer<ElasticsearchException> than a class
-        @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
-        public static class SerializedElasticsearchException {
-            @JsonRawValue
-            public String rootCause;
-
-            public String type;
-
-            public String reason;
-
-            public int status;
-
-            public SerializedElasticsearchException(ElasticsearchException ex) throws IOException {
-                rootCause = "[" + Strings.toString(ex.toXContent(jsonBuilder().startObject(), ToXContent.EMPTY_PARAMS).endObject()) + "]";
-                type = ElasticsearchException.getExceptionName(ex);
-                reason = ex.getMessage();
-                status = ex.status().getStatus();
-            }
         }
     }
 }

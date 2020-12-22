@@ -33,6 +33,26 @@ public class ResolutionResponse {
     // TODO: move to where the response is needed
     public boolean includeStackTrace = true;
 
+    public static class SerializedException {
+        public String by;
+        public String type;
+        public String reason;
+
+        @JsonInclude(Include.NON_NULL)
+        public String stackTrace = null;
+
+        public SerializedException(Exception ex, boolean includeStackTrace) {
+            by = (ex instanceof ElasticsearchException) ? "elasticsearch": "zentity";
+            type = ex.getClass().getCanonicalName();
+            reason = ex.getMessage();
+            if (includeStackTrace) {
+                StringWriter traceWriter = new StringWriter();
+                ex.printStackTrace(new PrintWriter(traceWriter));
+                stackTrace = traceWriter.toString();
+            }
+        }
+    }
+
     public static class Serializer extends StdSerializer<ResolutionResponse> {
         public Serializer() {
             this(null);
@@ -71,26 +91,6 @@ public class ResolutionResponse {
             }
 
             gen.writeEndObject();
-        }
-
-        public static class SerializedException {
-            public String by;
-            public String type;
-            public String reason;
-
-            @JsonInclude(Include.NON_NULL)
-            public String stackTrace = null;
-
-            public SerializedException(Exception ex, boolean includeStackTrace) {
-                by = (ex instanceof ElasticsearchException) ? "elasticsearch": "zentity";
-                type = ex.getClass().getCanonicalName();
-                reason = ex.getMessage();
-                if (includeStackTrace) {
-                    StringWriter traceWriter = new StringWriter();
-                    ex.printStackTrace(new PrintWriter(traceWriter));
-                    stackTrace = traceWriter.toString();
-                }
-            }
         }
     }
 }
