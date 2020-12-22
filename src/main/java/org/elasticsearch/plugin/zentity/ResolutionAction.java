@@ -14,8 +14,6 @@ import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
 
-import java.util.Optional;
-
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 
 public class ResolutionAction extends BaseAction {
@@ -110,9 +108,9 @@ public class ResolutionAction extends BaseAction {
             // Run the entity resolution job.
             JobResult result = job.run();
             if (result.failed()) {
-                channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, "application/json", result.getResponse()));
+                channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, "application/json", result.getResponseJSON()));
             } else {
-                channel.sendResponse(new BytesRestResponse(RestStatus.OK, "application/json", result.getResponse()));
+                channel.sendResponse(new BytesRestResponse(RestStatus.OK, "application/json", result.getResponseJSON()));
             }
         });
     }
