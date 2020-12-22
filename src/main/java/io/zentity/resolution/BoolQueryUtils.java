@@ -14,6 +14,9 @@ import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 public class BoolQueryUtils {
+    /**
+     * All the possible ways a {@link BoolQueryBuilder} can combine queries.
+     */
     public enum BoolQueryCombiner {
         FILTER,
         SHOULD,
@@ -31,20 +34,34 @@ public class BoolQueryUtils {
         COMBINER_BI_FUNCTION_MAP.put(BoolQueryCombiner.MUST_NOT, BoolQueryBuilder::mustNot);
     }
 
-    private static BoolQueryBuilder addClauses(BoolQueryBuilder bool1, BoolQueryBuilder bool2) {
-        bool2.filter().forEach(bool1::filter);
-        bool2.should().forEach(bool1::should);
-        bool2.must().forEach(bool1::must);
-        bool2.mustNot().forEach(bool1::mustNot);
-        return bool1;
+    /**
+     * Add all of one {@link BoolQueryBuilder}'s clauses into another.
+     *
+     * @param base The base query to add into.
+     * @param toAdd The query to add from.
+     * @return The base bool query with all of the second's clauses added.
+     */
+    private static BoolQueryBuilder addClauses(BoolQueryBuilder base, BoolQueryBuilder toAdd) {
+        toAdd.filter().forEach(base::filter);
+        toAdd.should().forEach(base::should);
+        toAdd.must().forEach(base::must);
+        toAdd.mustNot().forEach(base::mustNot);
+        return base;
     }
 
-    public static BoolQueryBuilder fromQueries(BoolQueryCombiner combiner, Stream<QueryBuilder> builders) {
+    /**
+     * Combine a stream of queries into one {@link BoolQueryBuilder}.
+     *
+     * @param combiner How the queries should be combined.
+     * @param queries The queries to combine. Null items will be filtered out.
+     * @return The combined query.
+     */
+    public static BoolQueryBuilder combineQueries(BoolQueryCombiner combiner, Stream<QueryBuilder> queries) {
         BiFunction<BoolQueryBuilder, QueryBuilder, BoolQueryBuilder> combineFunc = Optional
             .ofNullable(COMBINER_BI_FUNCTION_MAP.get(combiner))
             .orElseThrow(() -> new IllegalArgumentException("Invalid combiner: " + combiner));
 
-        return builders
+        return queries
             .filter(Objects::nonNull)
             .reduce(
                 QueryBuilders.boolQuery(),
@@ -53,11 +70,25 @@ public class BoolQueryUtils {
             );
     }
 
-    public static BoolQueryBuilder fromQueries(BoolQueryCombiner combiner, QueryBuilder... builders) {
-        return fromQueries(combiner, Arrays.stream(builders));
+    /**
+     * Combine an array of queries into one {@link BoolQueryBuilder}.
+     *
+     * @param combiner How the queries should be combined.
+     * @param queries The queries to combine. Null items will be filtered out.
+     * @return The combined query.
+     */
+    public static BoolQueryBuilder combineQueries(BoolQueryCombiner combiner, QueryBuilder... queries) {
+        return combineQueries(combiner, Arrays.stream(queries));
     }
 
-    public static BoolQueryBuilder fromQueries(BoolQueryCombiner combiner, Collection<QueryBuilder> builders) {
-        return fromQueries(combiner, builders.stream());
+    /**
+     * Combine a collection of queries into one {@link BoolQueryBuilder}.
+     *
+     * @param combiner How the queries should be combined.
+     * @param queries The queries to combine. Null items will be filtered out.
+     * @return The combined query.
+     */
+    public static BoolQueryBuilder combineQueries(BoolQueryCombiner combiner, Collection<QueryBuilder> queries) {
+        return combineQueries(combiner, queries.stream());
     }
 }

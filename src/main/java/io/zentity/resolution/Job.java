@@ -37,7 +37,6 @@ import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.ExistsQueryBuilder;
 import org.elasticsearch.index.query.IdsQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
 import org.elasticsearch.search.SearchModule;
@@ -58,7 +57,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 import static io.zentity.common.Patterns.COLON;
@@ -427,7 +425,7 @@ public class Job {
             QueryBuilder valuesClause;
             if (valueClauses.size() > 1) {
                 // build the combined bool query
-                valuesClause = BoolQueryUtils.fromQueries(combiner, valueClauses);
+                valuesClause = BoolQueryUtils.combineQueries(combiner, valueClauses);
             } else {
                 valuesClause = valueClauses.get(0);
             }
@@ -475,7 +473,7 @@ public class Job {
             // Combine each matcher clause into a single "should" or "filter" clause.
             QueryBuilder indexFieldsClause;
             if (indexFieldClauses.size() > 1) {
-                indexFieldsClause = BoolQueryUtils.fromQueries(combiner, indexFieldClauses);
+                indexFieldsClause = BoolQueryUtils.combineQueries(combiner, indexFieldClauses);
             } else {
                 indexFieldsClause = indexFieldClauses.get(0);
             }
@@ -511,7 +509,7 @@ public class Job {
             // Combine multiple matcher clauses into a single "should" clause.
             QueryBuilder indexFieldsClause;
             if (indexFieldClauses.size() > 1) {
-                indexFieldsClause = BoolQueryUtils.fromQueries(SHOULD, indexFieldClauses);
+                indexFieldsClause = BoolQueryUtils.combineQueries(SHOULD, indexFieldClauses);
             } else {
                 indexFieldsClause = indexFieldClauses.get(0);
             }
@@ -526,7 +524,7 @@ public class Job {
                 nameIdCounter
             );
             if (filter != null) {
-                BoolQueryBuilder combo = BoolQueryUtils.fromQueries(FILTER, indexFieldsClause, filter);
+                BoolQueryBuilder combo = BoolQueryUtils.combineQueries(FILTER, indexFieldsClause, filter);
                 clauses.add(combo);
             } else {
                 clauses.add(indexFieldsClause);
@@ -536,7 +534,7 @@ public class Job {
         // Combine each attribute clause into a single "should" clause.
         int size = clauses.size();
         if (size > 1) {
-            return BoolQueryUtils.fromQueries(SHOULD, clauses);
+            return BoolQueryUtils.combineQueries(SHOULD, clauses);
         } else if (size == 1) {
             return clauses.get(0);
         }
@@ -683,8 +681,9 @@ public class Job {
             Double productScores = scores.stream().reduce(1.0, (a, b) -> a * b);
             Double productScoresInverse = scoresInverse.stream().reduce(1.0, (a, b) -> a * b);
             compositeIdentityConfidenceScore = productScores / (productScores + productScoresInverse);
-            if (compositeIdentityConfidenceScore.isNaN())
+            if (compositeIdentityConfidenceScore.isNaN()) {
                 compositeIdentityConfidenceScore = 0.5;
+            }
         }
         return compositeIdentityConfidenceScore;
     }
@@ -808,7 +807,7 @@ public class Job {
 
             int size = attributeClauses.size();
             if (size > 1) {
-                BoolQueryBuilder combo = BoolQueryUtils.fromQueries(SHOULD, attributeClauses);
+                BoolQueryBuilder combo = BoolQueryUtils.combineQueries(SHOULD, attributeClauses);
                 queryMustNotClauses.add(combo);
             } else if (size == 1) {
                 queryMustNotClauses.add(attributeClauses.get(0));
@@ -830,7 +829,7 @@ public class Job {
             );
             int size = attributeClauses.size();
             if (size > 1) {
-                BoolQueryBuilder combo = BoolQueryUtils.fromQueries(FILTER, attributeClauses);
+                BoolQueryBuilder combo = BoolQueryUtils.combineQueries(FILTER, attributeClauses);
                 queryFilterClauses.add(combo);
             } else if (size == 1) {
                 queryFilterClauses.add(attributeClauses.get(0));
@@ -895,7 +894,7 @@ public class Job {
                             }
                             QueryBuilder attributesExistsClause = null;
                             if (attributeExistsClauses.size() > 1) {
-                                attributesExistsClause = BoolQueryUtils.fromQueries(SHOULD, attributeExistsClauses);
+                                attributesExistsClause = BoolQueryUtils.combineQueries(SHOULD, attributeExistsClauses);
                             } else if (attributeExistsClauses.size() == 1) {
                                 attributesExistsClause = attributeExistsClauses.get(0);
                             }
@@ -915,7 +914,7 @@ public class Job {
                             );
 
                             // Construct a "should" clause for the above two clauses.
-                            BoolQueryBuilder combo = BoolQueryUtils.fromQueries(
+                            BoolQueryBuilder combo = BoolQueryUtils.combineQueries(
                                 SHOULD,
                                 attributesExistsClause,
                                 parentResolverClause
@@ -925,7 +924,7 @@ public class Job {
                         }
 
                         if (parentResolverClauses.size() > 1) {
-                            BoolQueryBuilder combo = BoolQueryUtils.fromQueries(FILTER, parentResolverClauses);
+                            BoolQueryBuilder combo = BoolQueryUtils.combineQueries(FILTER, parentResolverClauses);
                             parentResolversClauses.add(combo);
                         } else if (parentResolverClauses.size() == 1) {
                             parentResolversClauses.add(parentResolverClauses.get(0));
@@ -935,7 +934,7 @@ public class Job {
 
                 // Combine the resolvers clause and parent resolvers clause in a "filter" query if necessary.
                 if (parentResolversClauses.size() > 0) {
-                    BoolQueryBuilder combo = BoolQueryUtils.fromQueries(FILTER, parentResolversClauses);
+                    BoolQueryBuilder combo = BoolQueryUtils.combineQueries(FILTER, parentResolversClauses);
 
                     if (resolversClause != null) {
                         combo.filter(resolversClause);
@@ -1101,7 +1100,7 @@ public class Job {
             // If only the termResolversClause exists, set resolversClause to termResolversClause.
             // If neither clause exists, do nothing because resolversClause already does not exist.
             if (resolversClause != null && termResolversClause != null) {
-                BoolQueryBuilder combo = BoolQueryUtils.fromQueries(FILTER, resolversClause, termResolversClause);
+                BoolQueryBuilder combo = BoolQueryUtils.combineQueries(FILTER, resolversClause, termResolversClause);
                 queryFilterClauses.add(combo);
             } else if (termResolversClause != null) {
                 resolversClause = termResolversClause;
@@ -1110,7 +1109,7 @@ public class Job {
 
         // Combine the ids clause and resolvers clause in a "should" clause if necessary.
         if (idsQuery != null && resolversClause != null) {
-            BoolQueryBuilder combo = BoolQueryUtils.fromQueries(FILTER, idsQuery, resolversClause);
+            BoolQueryBuilder combo = BoolQueryUtils.combineQueries(FILTER, idsQuery, resolversClause);
             queryFilterClauses.add(combo);
         } else if (idsQuery != null) {
             queryFilterClauses.add(idsQuery);

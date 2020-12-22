@@ -39,6 +39,7 @@ public class LoggedSearch {
         public int status;
 
         public SerializedElasticsearchException(ElasticsearchException ex) throws IOException {
+            // TODO: no json string building
             rootCause = "[" + Strings.toString(ex.toXContent(jsonBuilder().startObject(), ToXContent.EMPTY_PARAMS).endObject()) + "]";
             type = ElasticsearchException.getExceptionName(ex);
             reason = ex.getMessage();
@@ -62,7 +63,7 @@ public class LoggedSearch {
         public void serialize(LoggedSearch value, JsonGenerator gen, SerializerProvider provider) throws IOException {
             gen.writeStartObject();
             gen.writeFieldName("request");
-            gen.writeRawValue(value.searchRequest.toString());
+            gen.writeRawValue(XContentUtils.serializeAsJSON(value.searchRequest));
             // write the response, either the error or the real response
             gen.writeFieldName("response");
             if (value.response == null) {
