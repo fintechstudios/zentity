@@ -1,4 +1,4 @@
-package io.zentity.resolution;
+package io.zentity.devtools;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.terma.javaniotcpproxy.StaticTcpProxyConfig;

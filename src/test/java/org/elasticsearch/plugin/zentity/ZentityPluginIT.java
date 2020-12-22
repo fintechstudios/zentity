@@ -2,7 +2,7 @@ package org.elasticsearch.plugin.zentity;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.zentity.common.Json;
-import io.zentity.resolution.AbstractITCase;
+import io.zentity.devtools.AbstractITCase;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
 import org.junit.Test;

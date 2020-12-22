@@ -1,4 +1,4 @@
-package io.zentity.resolution;
+package io.zentity.devtools;
 
 import org.testcontainers.elasticsearch.ElasticsearchContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -99,7 +99,7 @@ public class PluggableElasticsearchContainer extends ElasticsearchContainer {
      * @return The container.
      */
     public PluggableElasticsearchContainer withDebugger(int port) {
-        withExposedPorts(port);
+        addExposedPort(port);
 
         String currentJavaOpts = getEnvMap().getOrDefault("ES_JAVA_OPTS", "");
         String javaOpts = currentJavaOpts + " -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:" + port;

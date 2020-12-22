@@ -3,6 +3,7 @@ package io.zentity.resolution;
 import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.zentity.common.Json;
+import io.zentity.devtools.AbstractITCase;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.ContentType;
@@ -987,6 +988,7 @@ public class JobIT extends AbstractITCase {
             docsExpected.add("c1,0");
             docsExpected.add("d0,0");
             docsExpected.add("d1,0");
+            // STOPS HERE, no new attribute hits
             docsExpected.add("a2,1");
             docsExpected.add("b2,1");
             docsExpected.add("c2,1");
