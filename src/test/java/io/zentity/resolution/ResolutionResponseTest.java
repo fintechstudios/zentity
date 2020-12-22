@@ -91,44 +91,9 @@ public class ResolutionResponseTest {
             .stream(hitsArr.spliterator(), false)
             .collect(Collectors.toList());
 
-        String json = MAPPER.writeValueAsString(response);
-        assertEquals(json, "{\"took\":120000,\"hits\":{\"total\":2,\"hits\":[{\"_index\":\".zentity-test-index\",\"_id\":101,\"_hop\":7,\"_query\":4,\"_score\":0.6,\"_attributes\":{\"city_name_attributes\":[\"name\",\"city\"]},\"_explanation\":{\"resolvers\":{\"city_name_resolver\":{\"attributes\":[\"name\",\"city\"]}},\"matches\":[{\"attribute\":\"name\",\"target_field\":\"name_target\",\"target_value\":\"Alice\",\"input_value\":\"Alice\",\"input_matcher\":\"name_exact_matcher\",\"input_matcher_params\":{},\"score\":0.5},{\"attribute\":\"city\",\"target_field\":\"city_target\",\"target_value\":\"New York\",\"input_value\":\"New York\",\"input_matcher\":\"city_exact_matcher\",\"input_matcher_params\":{},\"score\":0.7}]},\"_source\":{\"name\":\"Alice\",\"city\":\"New York\"}},{\"_index\":\".zentity-test-index\",\"_id\":102,\"_hop\":6,\"_query\":3,\"_score\":0.5,\"_attributes\":{\"city_name_attributes\":[\"name\",\"city\"]},\"_explanation\":{\"resolvers\":{\"city_name_resolver\":{\"attributes\":[\"name\",\"city\"]}},\"matches\":[{\"attribute\":\"name\",\"target_field\":\"name_target\",\"target_value\":\"Alic\",\"input_value\":\"Alice\",\"input_matcher\":\"name_exact_matcher\",\"input_matcher_params\":{},\"score\":0.3},{\"attribute\":\"city\",\"target_field\":\"city_target\",\"target_value\":\"New York\",\"input_value\":\"New York\",\"input_matcher\":\"city_exact_matcher\",\"input_matcher_params\":{},\"score\":0.7}]},\"_source\":{\"name\":\"Alic\",\"city\":\"New York\"}}]},\"queries\":[[{\"search\":{\"request\":{\n" +
-            "  \"bool\" : {\n" +
-            "    \"must_not\" : [\n" +
-            "      {\n" +
-            "        \"match_all\" : {\n" +
-            "          \"boost\" : 1.0\n" +
-            "        }\n" +
-            "      }\n" +
-            "    ],\n" +
-            "    \"adjust_pure_negative\" : true,\n" +
-            "    \"boost\" : 1.0\n" +
-            "  }\n" +
-            "},\"response\":{\"error\":{\"root_cause\":[{\"type\":\"status_exception\",\"reason\":\"This was not found\"}],\"type\":\"status_exception\",\"reason\":\"This was not found\",\"status\":404}}},\"filters\":{\"attributes\":{\"resolvers\":{\"name\":{\"attributes\":[\"Alice Jones\",\"Alice\"]}},\"tree\":{\"0\":{\"name_dob\":{}}}},\"terms\":{\"resolvers\":{\"name\":{\"attributes\":[\"Alice Jones\",\"Alice\"]}},\"tree\":{\"0\":{\"name_dob\":{}}}}},\"_index\":\".zentity-test-index\",\"_hop\":3,\"_query\":0},{\"search\":{\"request\":{\n" +
-            "  \"bool\" : {\n" +
-            "    \"must_not\" : [\n" +
-            "      {\n" +
-            "        \"match_all\" : {\n" +
-            "          \"boost\" : 1.0\n" +
-            "        }\n" +
-            "      }\n" +
-            "    ],\n" +
-            "    \"adjust_pure_negative\" : true,\n" +
-            "    \"boost\" : 1.0\n" +
-            "  }\n" +
-            "},\"response\":{\"error\":{\"root_cause\":[{\"type\":\"status_exception\",\"reason\":\"This was not found\"}],\"type\":\"status_exception\",\"reason\":\"This was not found\",\"status\":404}}},\"filters\":{\"attributes\":{\"resolvers\":{\"name\":{\"attributes\":[\"Alice Jones\",\"Alice\"]}},\"tree\":{\"0\":{\"name_dob\":{}}}},\"terms\":{\"resolvers\":{\"name\":{\"attributes\":[\"Alice Jones\",\"Alice\"]}},\"tree\":{\"0\":{\"name_dob\":{}}}}},\"_index\":\".zentity-test-index\",\"_hop\":5,\"_query\":2},{\"search\":{\"request\":{\n" +
-            "  \"bool\" : {\n" +
-            "    \"must_not\" : [\n" +
-            "      {\n" +
-            "        \"match_all\" : {\n" +
-            "          \"boost\" : 1.0\n" +
-            "        }\n" +
-            "      }\n" +
-            "    ],\n" +
-            "    \"adjust_pure_negative\" : true,\n" +
-            "    \"boost\" : 1.0\n" +
-            "  }\n" +
-            "},\"response\":{\"error\":{\"root_cause\":[{\"type\":\"status_exception\",\"reason\":\"This was not found\"}],\"type\":\"status_exception\",\"reason\":\"This was not found\",\"status\":404}}},\"filters\":{\"attributes\":{\"resolvers\":{\"name\":{\"attributes\":[\"Alice Jones\",\"Alice\"]}},\"tree\":{\"0\":{\"name_dob\":{}}}},\"terms\":{\"resolvers\":{\"name\":{\"attributes\":[\"Alice Jones\",\"Alice\"]}},\"tree\":{\"0\":{\"name_dob\":{}}}}},\"_index\":\".zentity-test-index\",\"_hop\":7,\"_query\":4}]]}");
+        String actual = MAPPER.writeValueAsString(response);
+        String expected = "{\"took\":120000,\"hits\":{\"total\":2,\"hits\":[{\"_index\":\".zentity-test-index\",\"_id\":101,\"_hop\":7,\"_query\":4,\"_score\":0.6,\"_attributes\":{\"city_name_attributes\":[\"name\",\"city\"]},\"_explanation\":{\"resolvers\":{\"city_name_resolver\":{\"attributes\":[\"name\",\"city\"]}},\"matches\":[{\"attribute\":\"name\",\"target_field\":\"name_target\",\"target_value\":\"Alice\",\"input_value\":\"Alice\",\"input_matcher\":\"name_exact_matcher\",\"input_matcher_params\":{},\"score\":0.5},{\"attribute\":\"city\",\"target_field\":\"city_target\",\"target_value\":\"New York\",\"input_value\":\"New York\",\"input_matcher\":\"city_exact_matcher\",\"input_matcher_params\":{},\"score\":0.7}]},\"_source\":{\"name\":\"Alice\",\"city\":\"New York\"}},{\"_index\":\".zentity-test-index\",\"_id\":102,\"_hop\":6,\"_query\":3,\"_score\":0.5,\"_attributes\":{\"city_name_attributes\":[\"name\",\"city\"]},\"_explanation\":{\"resolvers\":{\"city_name_resolver\":{\"attributes\":[\"name\",\"city\"]}},\"matches\":[{\"attribute\":\"name\",\"target_field\":\"name_target\",\"target_value\":\"Alic\",\"input_value\":\"Alice\",\"input_matcher\":\"name_exact_matcher\",\"input_matcher_params\":{},\"score\":0.3},{\"attribute\":\"city\",\"target_field\":\"city_target\",\"target_value\":\"New York\",\"input_value\":\"New York\",\"input_matcher\":\"city_exact_matcher\",\"input_matcher_params\":{},\"score\":0.7}]},\"_source\":{\"name\":\"Alic\",\"city\":\"New York\"}}]},\"queries\":[[{\"search\":{\"request\":{\"bool\":{\"must_not\":[{\"match_all\":{\"boost\":1.0}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"response\":{\"error\":{\"root_cause\":[{\"type\":\"status_exception\",\"reason\":\"This was not found\"}],\"type\":\"status_exception\",\"reason\":\"This was not found\",\"status\":404}}},\"filters\":{\"attributes\":{\"resolvers\":{\"name\":{\"attributes\":[\"Alice Jones\",\"Alice\"]}},\"tree\":{\"0\":{\"name_dob\":{}}}},\"terms\":{\"resolvers\":{\"name\":{\"attributes\":[\"Alice Jones\",\"Alice\"]}},\"tree\":{\"0\":{\"name_dob\":{}}}}},\"_index\":\".zentity-test-index\",\"_hop\":3,\"_query\":0},{\"search\":{\"request\":{\"bool\":{\"must_not\":[{\"match_all\":{\"boost\":1.0}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"response\":{\"error\":{\"root_cause\":[{\"type\":\"status_exception\",\"reason\":\"This was not found\"}],\"type\":\"status_exception\",\"reason\":\"This was not found\",\"status\":404}}},\"filters\":{\"attributes\":{\"resolvers\":{\"name\":{\"attributes\":[\"Alice Jones\",\"Alice\"]}},\"tree\":{\"0\":{\"name_dob\":{}}}},\"terms\":{\"resolvers\":{\"name\":{\"attributes\":[\"Alice Jones\",\"Alice\"]}},\"tree\":{\"0\":{\"name_dob\":{}}}}},\"_index\":\".zentity-test-index\",\"_hop\":5,\"_query\":2},{\"search\":{\"request\":{\"bool\":{\"must_not\":[{\"match_all\":{\"boost\":1.0}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"response\":{\"error\":{\"root_cause\":[{\"type\":\"status_exception\",\"reason\":\"This was not found\"}],\"type\":\"status_exception\",\"reason\":\"This was not found\",\"status\":404}}},\"filters\":{\"attributes\":{\"resolvers\":{\"name\":{\"attributes\":[\"Alice Jones\",\"Alice\"]}},\"tree\":{\"0\":{\"name_dob\":{}}}},\"terms\":{\"resolvers\":{\"name\":{\"attributes\":[\"Alice Jones\",\"Alice\"]}},\"tree\":{\"0\":{\"name_dob\":{}}}}},\"_index\":\".zentity-test-index\",\"_hop\":7,\"_query\":4}]]}";
+        assertEquals(expected, actual);
     }
 
     @Test
@@ -145,8 +110,9 @@ public class ResolutionResponseTest {
 
         response.includeHits = true;
 
-        String json = MAPPER.writeValueAsString(response);
-        assertEquals(json, "{\"took\":60000,\"hits\":{\"total\":0,\"hits\":[]},\"error\":{\"by\":\"zentity\",\"type\":\"java.lang.RuntimeException\",\"reason\":\"woops!\",\"stackTrace\":\"java.lang.RuntimeException: woops!\\n\\tat TotalBogus.bungledMethod(NotThisFile.java:3)\\n\"}}");
+        String actual = MAPPER.writeValueAsString(response);
+        String expected = "{\"took\":60000,\"hits\":{\"total\":0,\"hits\":[]},\"error\":{\"by\":\"zentity\",\"type\":\"java.lang.RuntimeException\",\"reason\":\"woops!\",\"stackTrace\":\"java.lang.RuntimeException: woops!\\n\\tat TotalBogus.bungledMethod(NotThisFile.java:3)\\n\"}}";
+        assertEquals(expected, actual);
     }
 
     @Test
@@ -161,7 +127,8 @@ public class ResolutionResponseTest {
 
         response.includeHits = true;
 
-        String json = MAPPER.writeValueAsString(response);
-        assertEquals(json, "{\"took\":60000,\"hits\":{\"total\":0,\"hits\":[]},\"error\":{\"by\":\"elasticsearch\",\"type\":\"org.elasticsearch.ElasticsearchStatusException\",\"reason\":\"This was not found\"}}");
+        String actual = MAPPER.writeValueAsString(response);
+        String expected = "{\"took\":60000,\"hits\":{\"total\":0,\"hits\":[]},\"error\":{\"by\":\"elasticsearch\",\"type\":\"org.elasticsearch.ElasticsearchStatusException\",\"reason\":\"This was not found\"}}";
+        assertEquals(expected, actual);
     }
 }

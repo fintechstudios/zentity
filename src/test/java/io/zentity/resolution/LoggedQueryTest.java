@@ -66,19 +66,8 @@ public class LoggedQueryTest {
         query.search = search;
         query.filters = filters;
 
-        String json = MAPPER.writeValueAsString(query);
-        assertEquals(json, "{\"search\":{\"request\":{\n" +
-            "  \"bool\" : {\n" +
-            "    \"must_not\" : [\n" +
-            "      {\n" +
-            "        \"match_all\" : {\n" +
-            "          \"boost\" : 1.0\n" +
-            "        }\n" +
-            "      }\n" +
-            "    ],\n" +
-            "    \"adjust_pure_negative\" : true,\n" +
-            "    \"boost\" : 1.0\n" +
-            "  }\n" +
-            "},\"response\":{\"error\":{\"root_cause\":[{\"type\":\"status_exception\",\"reason\":\"This was not found\"}],\"type\":\"status_exception\",\"reason\":\"This was not found\",\"status\":404}}},\"filters\":{\"attributes\":{\"resolvers\":{\"name\":{\"attributes\":[\"Alice Jones\",\"Alice\"]}},\"tree\":{\"0\":{\"name_dob\":{}}}},\"terms\":{\"resolvers\":{\"name\":{\"attributes\":[\"Alice Jones\",\"Alice\"]}},\"tree\":{\"0\":{\"name_dob\":{}}}}},\"_index\":\".zentity-test-index\",\"_hop\":3,\"_query\":4}");
+        String actual = MAPPER.writeValueAsString(query);
+        String expected = "{\"search\":{\"request\":{\"bool\":{\"must_not\":[{\"match_all\":{\"boost\":1.0}}],\"adjust_pure_negative\":true,\"boost\":1.0}},\"response\":{\"error\":{\"root_cause\":[{\"type\":\"status_exception\",\"reason\":\"This was not found\"}],\"type\":\"status_exception\",\"reason\":\"This was not found\",\"status\":404}}},\"filters\":{\"attributes\":{\"resolvers\":{\"name\":{\"attributes\":[\"Alice Jones\",\"Alice\"]}},\"tree\":{\"0\":{\"name_dob\":{}}}},\"terms\":{\"resolvers\":{\"name\":{\"attributes\":[\"Alice Jones\",\"Alice\"]}},\"tree\":{\"0\":{\"name_dob\":{}}}}},\"_index\":\".zentity-test-index\",\"_hop\":3,\"_query\":4}";
+        assertEquals(expected, actual);
     }
 }

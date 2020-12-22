@@ -36,12 +36,9 @@ public class LoggedSearchTest {
         search.searchRequest = QueryBuilders.matchAllQuery();
         search.responseError = new ElasticsearchStatusException("This was not found", RestStatus.NOT_FOUND);
 
-        String json = MAPPER.writeValueAsString(search);
-        assertEquals(json, "{\"request\":{\n" +
-            "  \"match_all\" : {\n" +
-            "    \"boost\" : 1.0\n" +
-            "  }\n" +
-            "},\"response\":{\"error\":{\"root_cause\":[{\"type\":\"status_exception\",\"reason\":\"This was not found\"}],\"type\":\"status_exception\",\"reason\":\"This was not found\",\"status\":404}}}");
+        String actual = MAPPER.writeValueAsString(search);
+        String expected = "{\"request\":{\"match_all\":{\"boost\":1.0}},\"response\":{\"error\":{\"root_cause\":[{\"type\":\"status_exception\",\"reason\":\"This was not found\"}],\"type\":\"status_exception\",\"reason\":\"This was not found\",\"status\":404}}}";
+        assertEquals(expected, actual);
     }
 
     @Test
@@ -69,11 +66,8 @@ public class LoggedSearchTest {
             SearchResponse.Clusters.EMPTY
         );
 
-        String json = MAPPER.writeValueAsString(search);
-        assertEquals(json, "{\"request\":{\n" +
-            "  \"match_all\" : {\n" +
-            "    \"boost\" : 1.0\n" +
-            "  }\n" +
-            "},\"response\":{\"_scroll_id\":\"some-scroll-id\",\"took\":300,\"timed_out\":false,\"_shards\":{\"total\":3,\"successful\":2,\"skipped\":1,\"failed\":0},\"hits\":{\"total\":{\"value\":0,\"relation\":\"eq\"},\"max_score\":0.0,\"hits\":[]},\"suggest\":{},\"profile\":{\"shards\":[]}}}");
+        String actual = MAPPER.writeValueAsString(search);
+        String expected = "{\"request\":{\"match_all\":{\"boost\":1.0}},\"response\":{\"_scroll_id\":\"some-scroll-id\",\"took\":300,\"timed_out\":false,\"_shards\":{\"total\":3,\"successful\":2,\"skipped\":1,\"failed\":0},\"hits\":{\"total\":{\"value\":0,\"relation\":\"eq\"},\"max_score\":0.0,\"hits\":[]},\"suggest\":{},\"profile\":{\"shards\":[]}}}";
+        assertEquals(expected, actual);
     }
 }
