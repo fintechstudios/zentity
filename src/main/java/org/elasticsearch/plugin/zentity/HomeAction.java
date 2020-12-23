@@ -4,7 +4,6 @@ import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
@@ -32,7 +31,7 @@ public class HomeAction extends BaseAction {
         Properties props = ZentityPlugin.properties();
         boolean pretty = restRequest.paramAsBoolean("pretty", false);
 
-        return wrappedConsumer(channel -> {
+        return errorHandlingConsumer(channel -> {
             XContentBuilder content = XContentFactory.jsonBuilder();
             if (pretty) {
                 content.prettyPrint();

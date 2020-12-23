@@ -106,7 +106,7 @@ public class SetupAction extends BaseAction {
         int numberOfReplicas = restRequest.paramAsInt("number_of_replicas", 1);
         Method method = restRequest.method();
 
-        return wrappedConsumer(channel -> {
+        return errorHandlingConsumer(channel -> {
             if (method == POST) {
                 createIndex(client, numberOfShards, numberOfReplicas);
                 XContentBuilder content = XContentFactory.jsonBuilder();

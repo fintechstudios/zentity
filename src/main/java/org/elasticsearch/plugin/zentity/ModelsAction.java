@@ -1,6 +1,7 @@
 package org.elasticsearch.plugin.zentity;
 
 import io.zentity.model.Model;
+import io.zentity.resolution.XContentUtils;
 import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.ActionRequestBuilder;
@@ -29,6 +30,9 @@ import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
+
+import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 import static org.elasticsearch.rest.RestRequest.Method;
 import static org.elasticsearch.rest.RestRequest.Method.DELETE;
@@ -169,7 +173,14 @@ public class ModelsAction extends BaseAction {
         Method method = restRequest.method();
         String requestBody = restRequest.content().utf8ToString();
 
-        return wrappedConsumer(channel -> {
+        UnaryOperator<XContentBuilder> prettyPrintModifier = (builder) -> {
+            if (pretty) {
+                return builder.prettyPrint();
+            }
+            return builder;
+        };
+
+        return errorHandlingConsumer(channel -> {
             // Validate input
             if (method == POST || method == PUT) {
 
@@ -186,52 +197,31 @@ public class ModelsAction extends BaseAction {
             if (method == GET && (entityType == null || entityType.equals(""))) {
                 // GET _zentity/models
                 SearchResponse response = getEntityModels(client);
-                XContentBuilder content = XContentFactory.jsonBuilder();
-                if (pretty) {
-                    content.prettyPrint();
-                }
-                content = response.toXContent(content, ToXContent.EMPTY_PARAMS);
-                channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
-
+                String responseBody = XContentUtils.serializeAsJson(prettyPrintModifier, response);
+                channel.sendResponse(new BytesRestResponse(RestStatus.OK, responseBody));
             } else if (method == GET) {
                 // GET _zentity/models/{entity_type}
                 GetResponse response = getEntityModel(entityType, client);
-                XContentBuilder content = XContentFactory.jsonBuilder();
-                if (pretty) {
-                    content.prettyPrint();
-                }
-                content = response.toXContent(content, ToXContent.EMPTY_PARAMS);
-                channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
+                String responseBody = XContentUtils.serializeAsJson(prettyPrintModifier, response);
+                channel.sendResponse(new BytesRestResponse(RestStatus.OK, responseBody));
 
             } else if (method == POST && !entityType.equals("")) {
                 // POST _zentity/models/{entity_type}
                 IndexResponse response = indexEntityModel(entityType, requestBody, client);
-                XContentBuilder content = XContentFactory.jsonBuilder();
-                if (pretty) {
-                    content.prettyPrint();
-                }
-                response.toXContent(content, ToXContent.EMPTY_PARAMS);
-                channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
+                String responseBody = XContentUtils.serializeAsJson(prettyPrintModifier, response);
+                channel.sendResponse(new BytesRestResponse(RestStatus.OK, responseBody));
 
             } else if (method == PUT && !entityType.equals("")) {
                 // PUT _zentity/models/{entity_type}
                 IndexResponse response = updateEntityModel(entityType, requestBody, client);
-                XContentBuilder content = XContentFactory.jsonBuilder();
-                if (pretty) {
-                    content.prettyPrint();
-                }
-                response.toXContent(content, ToXContent.EMPTY_PARAMS);
-                channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
+                String responseBody = XContentUtils.serializeAsJson(prettyPrintModifier, response);
+                channel.sendResponse(new BytesRestResponse(RestStatus.OK, responseBody));
 
             } else if (method == DELETE && !entityType.equals("")) {
                 // DELETE _zentity/models/{entity_type}
                 DeleteResponse response = deleteEntityModel(entityType, client);
-                XContentBuilder content = XContentFactory.jsonBuilder();
-                if (pretty) {
-                    content.prettyPrint();
-                }
-                response.toXContent(content, ToXContent.EMPTY_PARAMS);
-                channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
+                String responseBody = XContentUtils.serializeAsJson(prettyPrintModifier, response);
+                channel.sendResponse(new BytesRestResponse(RestStatus.OK, responseBody));
 
             } else {
                 throw new NotImplementedException("Method and endpoint not implemented.");

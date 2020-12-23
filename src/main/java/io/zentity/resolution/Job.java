@@ -1,9 +1,7 @@
 package io.zentity.resolution;
 
 import com.fasterxml.jackson.core.JsonPointer;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.zentity.common.Json;
@@ -81,7 +79,6 @@ public class Job {
     public static final int DEFAULT_MAX_DOCS_PER_QUERY = 1000;
     public static final int DEFAULT_MAX_HOPS = 100;
     public static final String DEFAULT_MAX_TIME_PER_QUERY = "10s";
-    public static final boolean DEFAULT_PRETTY = false;
     public static final boolean DEFAULT_PROFILE = false;
 
     // Job configuration
@@ -1550,7 +1547,7 @@ public class Job {
                 // TODO: don't parse response as JSON, use SearchHit from response.getHits().getHits()
                 for (JsonNode doc : responseData.get("hits").get("hits")) {
                     // Skip doc if already fetched. Otherwise mark doc as fetched and then proceed.
-                    String id = Json.quoteString(doc.get("_id").textValue());
+                    String id = doc.get("_id").textValue();
                     Set<String> indexDocIds = this.docIds.get(indexName);
                     if (indexDocIds.contains(id)) {
                         continue;
@@ -1604,8 +1601,6 @@ public class Job {
             response.error = result.error;
             response.includeStackTrace = this.config.includeErrorTrace;
             result.response = response;
-
-            result.pretty = this.config.pretty;
         }
         return result;
     }
@@ -1638,8 +1633,6 @@ public class Job {
         boolean failed;
         ResolutionResponse response;
         Exception error;
-        // TODO: move to where the response is needed
-        boolean pretty;
 
         JobResult() {
             this(null);
@@ -1654,15 +1647,8 @@ public class Job {
             return failed;
         }
 
-        /**
-         * @return The JSON response string.
-         */
-        public String getResponseJSON() throws JsonProcessingException {
-            ObjectWriter writer = pretty
-                ? Json.ORDERED_MAPPER.writerWithDefaultPrettyPrinter()
-                : Json.MAPPER.writer();
-
-            return writer.writeValueAsString(response);
+        public ResolutionResponse getResponse() {
+            return response;
         }
     }
 
@@ -1683,7 +1669,6 @@ public class Job {
         private int maxDocsPerQuery = DEFAULT_MAX_DOCS_PER_QUERY;
         private int maxHops = DEFAULT_MAX_HOPS;
         private String maxTimePerQuery = DEFAULT_MAX_TIME_PER_QUERY;
-        private boolean pretty = DEFAULT_PRETTY;
         private boolean profile = DEFAULT_PROFILE;
 
         // optional, nullable search parameters
@@ -1759,11 +1744,6 @@ public class Job {
 
         public Builder maxTimePerQuery(String maxTimePerQuery) {
             this.config.maxTimePerQuery = maxTimePerQuery;
-            return this;
-        }
-
-        public Builder pretty(boolean pretty) {
-            this.config.pretty = pretty;
             return this;
         }
 

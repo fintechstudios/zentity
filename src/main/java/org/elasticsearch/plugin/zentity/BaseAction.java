@@ -16,7 +16,7 @@ public abstract class BaseAction extends BaseRestHandler {
      * @param consumer The consumer to wrap.
      * @return The wrapped consumer.
      */
-    public static RestChannelConsumer wrappedConsumer(RestChannelConsumer consumer) {
+    public static RestChannelConsumer errorHandlingConsumer(RestChannelConsumer consumer) {
         return channel -> {
           try {
               consumer.accept(channel);

@@ -1,5 +1,7 @@
 package org.elasticsearch.plugin.zentity;
 
+import com.fasterxml.jackson.databind.ObjectWriter;
+import io.zentity.common.Json;
 import io.zentity.model.Model;
 import io.zentity.resolution.Job;
 import io.zentity.resolution.Job.JobResult;
@@ -48,7 +50,7 @@ public class ResolutionAction extends BaseAction {
         final int maxDocsPerQuery = restRequest.paramAsInt("max_docs_per_query", Job.DEFAULT_MAX_DOCS_PER_QUERY);
         final int maxHops = restRequest.paramAsInt("max_hops", Job.DEFAULT_MAX_HOPS);
         final String maxTimePerQuery = restRequest.param("max_time_per_query", Job.DEFAULT_MAX_TIME_PER_QUERY);
-        final boolean pretty = restRequest.paramAsBoolean("pretty", Job.DEFAULT_PRETTY);
+        final boolean pretty = restRequest.paramAsBoolean("pretty", false);
         final boolean profile = restRequest.paramAsBoolean("profile", Job.DEFAULT_PROFILE);
 
         // Parse any optional search parameters that will be passed to the job configuration.
@@ -61,7 +63,7 @@ public class ResolutionAction extends BaseAction {
         final Boolean searchRequestCache = ParamsUtil.optBoolean(restRequest, "search.request_cache");
         final String searchPreference = restRequest.param("search.preference");
 
-        return wrappedConsumer(channel -> {
+        return errorHandlingConsumer(channel -> {
             // Validate the request body.
             if (body == null || body.equals("")) {
                 throw new BadRequestException("Request body is missing.");
@@ -94,7 +96,6 @@ public class ResolutionAction extends BaseAction {
                 .maxDocsPerQuery(maxDocsPerQuery)
                 .maxHops(maxHops)
                 .maxTimePerQuery(maxTimePerQuery)
-                .pretty(pretty)
                 .profile(profile)
                 .input(input)
                 .searchAllowPartialSearchResults(searchAllowPartialSearchResults)
@@ -107,10 +108,14 @@ public class ResolutionAction extends BaseAction {
 
             // Run the entity resolution job.
             JobResult result = job.run();
+            ObjectWriter writer = pretty
+                ? Json.ORDERED_MAPPER.writerWithDefaultPrettyPrinter()
+                : Json.MAPPER.writer();
+            String responseJson = writer.writeValueAsString(result.getResponse());
             if (result.failed()) {
-                channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, "application/json", result.getResponseJSON()));
+                channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, "application/json", responseJson));
             } else {
-                channel.sendResponse(new BytesRestResponse(RestStatus.OK, "application/json", result.getResponseJSON()));
+                channel.sendResponse(new BytesRestResponse(RestStatus.OK, "application/json", responseJson));
             }
         });
     }
