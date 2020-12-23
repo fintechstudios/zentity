@@ -7,20 +7,20 @@ import io.zentity.common.Patterns;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
 
 public class Attribute {
 
-    public static final Set<String> VALID_TYPES = new TreeSet<>(
+    public static final Set<String> VALID_TYPES = new HashSet<>(
             Arrays.asList("boolean", "date", "number", "string")
     );
 
     private final String name;
-    private final Map<String, String> params = new TreeMap<>();
+    private final Map<String, String> params = new HashMap<>();
     private Double score;
     private String type = "string";
 

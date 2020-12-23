@@ -7,24 +7,24 @@ import io.zentity.common.Patterns;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 public class Matcher {
 
-    public static final Set<String> REQUIRED_FIELDS = new TreeSet<>(
+    private static final Set<String> REQUIRED_FIELDS = new HashSet<>(
         Collections.singletonList("clause")
     );
 
     private final String name;
     private String clause;
-    private final Map<String, String> params = new TreeMap<>();
+    private final Map<String, String> params = new HashMap<>();
     private Double quality;
-    private Map<String, Pattern> variables = new TreeMap<>();
+    private Map<String, Pattern> variables = new HashMap<>();
 
     public Matcher(String name, JsonNode json) throws ValidationException, JsonProcessingException {
         validateName(name);
@@ -47,7 +47,7 @@ public class Matcher {
      */
     public static Map<String, Pattern> parseVariables(String clause) {
         java.util.regex.Matcher m = Patterns.VARIABLE.matcher(clause);
-        Map<String, Pattern> variables = new TreeMap<>();
+        Map<String, Pattern> variables = new HashMap<>();
         while (m.find()) {
             String variable = m.group(1);
             Pattern pattern = Pattern.compile("\\{\\{\\s*(" + Pattern.quote(variable) + ")\\s*}}");

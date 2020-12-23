@@ -6,19 +6,19 @@ import io.zentity.common.Patterns;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 
 public class Resolver {
 
-    public static final Set<String> REQUIRED_FIELDS = new TreeSet<>(
+    private static final Set<String> REQUIRED_FIELDS = new HashSet<>(
         Collections.singletonList("attributes")
     );
 
     private final String name;
-    private Set<String> attributes = new TreeSet<>();
+    private Set<String> attributes = new HashSet<>();
     private int weight = 0;
 
     public Resolver(String name, JsonNode json) throws ValidationException {
@@ -45,7 +45,7 @@ public class Resolver {
 
     public void attributes(JsonNode value) throws ValidationException {
         validateAttributes(value);
-        Set<String> attributes = new TreeSet<>();
+        Set<String> attributes = new HashSet<>();
         for (JsonNode attribute : value) {
             attributes.add(attribute.textValue());
         }
