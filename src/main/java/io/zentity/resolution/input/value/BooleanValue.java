@@ -28,7 +28,7 @@ public class BooleanValue extends Value {
      * Validate the value.
      *
      * @param value Attribute value.
-     * @throws ValidationException
+     * @throws ValidationException If the value is not compatible with booleans.
      */
     @Override
     public void validate(JsonNode value) throws ValidationException {

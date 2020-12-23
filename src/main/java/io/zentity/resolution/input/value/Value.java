@@ -1,13 +1,15 @@
 package io.zentity.resolution.input.value;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.NullNode;
+import io.zentity.common.Json;
 import io.zentity.model.ValidationException;
 
 public abstract class Value implements ValueInterface {
 
     protected final String type = "value";
     protected final JsonNode value;
-    protected final String serialized;
+    private String serialized;
 
     /**
      * Validate and hold the object of a value.
@@ -16,8 +18,7 @@ public abstract class Value implements ValueInterface {
      */
     Value(JsonNode value) throws ValidationException {
         this.validate(value);
-        this.value = value.isNull() ? null : value;
-        this.serialized = this.serialize(value);
+        this.value = value;
     }
 
     /**
@@ -50,7 +51,7 @@ public abstract class Value implements ValueInterface {
     public abstract void validate(JsonNode value) throws ValidationException;
 
     @Override
-    public Object type() {
+    public String type() {
         return this.type;
     }
 
@@ -61,23 +62,27 @@ public abstract class Value implements ValueInterface {
 
     @Override
     public String serialized() {
+        // lazy instantiation
+        if (this.serialized == null) {
+            this.serialized = this.serialize(value);
+        }
         return this.serialized;
     }
 
     @Override
     public int compareTo(Value o) {
-        return this.serialized.compareTo(o.serialized);
+        return this.serialized().compareTo(o.serialized());
     }
 
     @Override
     public String toString() {
-        return this.serialized;
+        return this.serialized();
     }
 
     @Override
     public boolean equals(Object o) { return this.hashCode() == o.hashCode(); }
 
     @Override
-    public int hashCode() { return this.serialized.hashCode(); }
+    public int hashCode() { return this.serialized().hashCode(); }
 
 }

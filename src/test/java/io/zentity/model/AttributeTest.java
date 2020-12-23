@@ -1,12 +1,16 @@
 package io.zentity.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.NullNode;
 import io.zentity.common.Json;
 import io.zentity.resolution.input.value.Value;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 public class AttributeTest {
 
@@ -220,57 +224,57 @@ public class AttributeTest {
 
     @Test
     public void testValidSerializeTypeBooleanFalse() throws Exception {
-        Assert.assertEquals(Value.create("boolean", jsonValue("{\"value\":false}")).serialized(), "false");
+        assertEquals(Value.create("boolean", jsonValue("{\"value\":false}")).serialized(), "false");
     }
 
     @Test
     public void testValidSerializeTypeBooleanTrue() throws Exception {
-        Assert.assertEquals(Value.create("boolean", jsonValue("{\"value\":true}")).serialized(), "true");
+        assertEquals(Value.create("boolean", jsonValue("{\"value\":true}")).serialized(), "true");
     }
 
     @Test
     public void testValidSerializeTypeNumberIntegerLongNegative() throws Exception {
-        Assert.assertEquals(Value.create("number", jsonValue("{\"value\":-922337203685477}")).serialized(), "-922337203685477");
+        assertEquals(Value.create("number", jsonValue("{\"value\":-922337203685477}")).serialized(), "-922337203685477");
     }
 
     @Test
     public void testValidSerializeTypeNumberIntegerLongPositive() throws Exception {
-        Assert.assertEquals(Value.create("number", jsonValue("{\"value\":922337203685477}")).serialized(), "922337203685477");
+        assertEquals(Value.create("number", jsonValue("{\"value\":922337203685477}")).serialized(), "922337203685477");
     }
 
     @Test
     public void testValidSerializeTypeNumberIntegerShortNegative() throws Exception {
-        Assert.assertEquals(Value.create("number", jsonValue("{\"value\":-1}")).serialized(), "-1");
+        assertEquals(Value.create("number", jsonValue("{\"value\":-1}")).serialized(), "-1");
     }
 
     @Test
     public void testValidSerializeTypeNumberIntegerShortPositive() throws Exception {
-        Assert.assertEquals(Value.create("number", jsonValue("{\"value\":1}")).serialized(), "1");
+        assertEquals(Value.create("number", jsonValue("{\"value\":1}")).serialized(), "1");
     }
 
     @Test
     public void testValidSerializeTypeNumberFloatLongNegative() throws Exception {
-        Assert.assertEquals(Value.create("number", jsonValue("{\"value\":-3.141592653589793}")).serialized(), "-3.141592653589793");
+        assertEquals(Value.create("number", jsonValue("{\"value\":-3.141592653589793}")).serialized(), "-3.141592653589793");
     }
 
     @Test
     public void testValidSerializeTypeNumberFloatLongPositive() throws Exception {
-        Assert.assertEquals(Value.create("number", jsonValue("{\"value\":3.141592653589793}")).serialized(), "3.141592653589793");
+        assertEquals(Value.create("number", jsonValue("{\"value\":3.141592653589793}")).serialized(), "3.141592653589793");
     }
 
     @Test
     public void testValidSerializeTypeNumberFloatShortNegative() throws Exception {
-        Assert.assertEquals(Value.create("number", jsonValue("{\"value\":-1.0}")).serialized(), "-1.0");
+        assertEquals(Value.create("number", jsonValue("{\"value\":-1.0}")).serialized(), "-1.0");
     }
 
     @Test
     public void testValidSerializeTypeNumberFloatShortPositive() throws Exception {
-        Assert.assertEquals(Value.create("number", jsonValue("{\"value\":1.0}")).serialized(), "1.0");
+        assertEquals(Value.create("number", jsonValue("{\"value\":1.0}")).serialized(), "1.0");
     }
 
     @Test
     public void testValidSerializeTypeString() throws Exception {
-        Assert.assertEquals(Value.create("string", jsonValue("{\"value\":\"a\"}")).serialized(), "a");
+        assertEquals(Value.create("string", jsonValue("{\"value\":\"a\"}")).serialized(), "a");
     }
 
     ////  Nullable Input Data Type Conversion  /////////////////////////////////////////////////////////////////////////
@@ -278,21 +282,21 @@ public class AttributeTest {
     @Test
     public void testValidSerializeTypeBooleanNullable() throws Exception {
         Value value = Value.create("boolean", jsonValue("{\"value\":null}"));
-        Assert.assertEquals(value.value(), null);
-        Assert.assertEquals(value.serialized(), "null");
+        assertEquals(NullNode.getInstance(), value.value());
+        assertEquals(value.serialized(), "null");
     }
 
     @Test
     public void testValidSerializeTypeNumberNullable() throws Exception {
         Value value = Value.create("number", jsonValue("{\"value\":null}"));
-        Assert.assertEquals(value.value(), null);
-        Assert.assertEquals(value.serialized(), "null");
+        assertEquals(NullNode.getInstance(), value.value());
+        assertEquals(value.serialized(), "null");
     }
 
     @Test
     public void testValidSerializeTypeStringNullable() throws Exception {
         Value value = Value.create("string", jsonValue("{\"value\":null}"));
-        Assert.assertEquals(value.value(), null);
-        Assert.assertEquals(value.serialized(), "null");
+        assertEquals(NullNode.getInstance(), value.value());
+        assertEquals(value.serialized(), "null");
     }
 }

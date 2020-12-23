@@ -8,17 +8,17 @@ import io.zentity.model.ValidationException;
 import io.zentity.resolution.input.Attribute;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
 
 public abstract class ScopeField {
 
-    protected Map<String, Attribute> attributes = new TreeMap<>();
-    protected Set<String> indices = new TreeSet<>();
-    protected Set<String> resolvers = new TreeSet<>();
+    protected Map<String, Attribute> attributes = new HashMap<>();
+    protected Set<String> indices = new HashSet<>();
+    protected Set<String> resolvers = new HashSet<>();
 
     public ScopeField() {
     }
@@ -34,9 +34,9 @@ public abstract class ScopeField {
      * @throws JsonProcessingException
      */
     public static Map<String, Attribute> parseAttributes(String scopeType, Model model, JsonNode scopeAttributes) throws ValidationException, JsonProcessingException {
-        Map<String, Attribute> attributesObj = new TreeMap<>();
+        Map<String, Attribute> attributesMap = new HashMap<>();
         if (scopeAttributes.isNull()) {
-            return attributesObj;
+            return attributesMap;
         }
         if (!scopeAttributes.isObject()) {
             throw new ValidationException("'scope." + scopeType + ".attributes' must be an object.");
@@ -55,10 +55,10 @@ public abstract class ScopeField {
             String attributeType = model.attributes().get(attributeName).type();
             JsonNode valuesNode = scopeAttributes.get(attributeName);
             if (!valuesNode.isNull()) {
-                attributesObj.put(attributeName, new Attribute(attributeName, attributeType, valuesNode));
+                attributesMap.put(attributeName, new Attribute(attributeName, attributeType, valuesNode));
             }
         }
-        return attributesObj;
+        return attributesMap;
     }
 
     /**
@@ -70,7 +70,7 @@ public abstract class ScopeField {
      * @throws ValidationException
      */
     public static Set<String> parseIndices(String scopeType, JsonNode scopeIndices) throws ValidationException {
-        Set<String> indices = new TreeSet<>();
+        Set<String> indices = new HashSet<>();
         if (scopeIndices.isNull()) {
             return indices;
         }
@@ -106,7 +106,7 @@ public abstract class ScopeField {
      * @throws ValidationException
      */
     public static Set<String> parseResolvers(String scopeType, JsonNode scopeResolvers) throws ValidationException {
-        Set<String> resolvers = new TreeSet<>();
+        Set<String> resolvers = new HashSet<>();
         if (scopeResolvers.isNull()) {
             return resolvers;
         }
