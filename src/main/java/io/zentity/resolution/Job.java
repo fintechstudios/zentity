@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.zentity.common.Json;
 import io.zentity.common.Patterns;
 import io.zentity.model.Index;
+import io.zentity.model.IndexField;
 import io.zentity.model.Matcher;
 import io.zentity.model.Model;
 import io.zentity.model.Resolver;
@@ -17,7 +18,6 @@ import io.zentity.resolution.BoolQueryUtils.BoolQueryCombiner;
 import io.zentity.resolution.input.Attribute;
 import io.zentity.resolution.input.Input;
 import io.zentity.resolution.input.Term;
-import io.zentity.resolution.input.value.StringValue;
 import io.zentity.resolution.input.value.Value;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.search.SearchAction;
@@ -549,11 +549,8 @@ public class Job {
      * @return The attributes of all applicable resolvers nested in a tree.
      */
     static FilterTree makeResolversFilterTree(List<List<String>> resolversSorted, FilterTree root) {
-        // TODO: this can be simplified by removing "wrapper" tree
-        FilterTree filterTree = new FilterTree();
-        filterTree.put("root", root);
         for (List<String> resolverSorted : resolversSorted) {
-            FilterTree current = filterTree.get("root");
+            FilterTree current = root;
             for (String attributeName : resolverSorted) {
                 if (!current.containsKey(attributeName)) {
                     current.put(attributeName, new FilterTree());
@@ -561,7 +558,7 @@ public class Job {
                 current = current.get(attributeName);
             }
         }
-        return filterTree.get("root");
+        return root;
     }
 
     /**
@@ -614,7 +611,7 @@ public class Job {
      * @return For each attribute, the number of resolvers it appears in.
      */
     static Map<String, Integer> countAttributesAcrossResolvers(Model model, List<String> resolvers) {
-        Map<String, Integer> counts = new TreeMap<>();
+        Map<String, Integer> counts = new HashMap<>();
         for (String resolverName : resolvers) {
             for (String attributeName : model.resolvers().get(resolverName).attributes()) {
                 counts.put(attributeName, counts.getOrDefault(attributeName, 0) + 1);
@@ -771,6 +768,105 @@ public class Job {
             }
         }
         return newHits;
+    }
+
+    private Map<String, Set<Value>> buildTermValuesMap(String indexName, Set<String> resolverAttributes) {
+        Map<String, Set<Value>> termValues = new HashMap<>();
+        for (String attributeName : resolverAttributes) {
+            String attributeType = this.config.input.model().attributes().get(attributeName).type();
+            for (Term term : this.config.input.terms()) {
+                try {
+                    switch (attributeType) {
+                        case "boolean":
+                            if (term.isBoolean()) {
+                                termValues.putIfAbsent(attributeName, new HashSet<>());
+                                termValues.get(attributeName).add(term.booleanValue());
+                            }
+                            break;
+                        case "date":
+                            // Determine which date format to use to parse the term.
+                            Index index = this.config.input.model().indices().get(indexName);
+                            // Check if the "format" param is defined in the input attribute.
+                            if (this.config.input.attributes().containsKey(attributeName)
+                                && this.config.input.attributes().get(attributeName).params().containsKey("format")
+                                && !this.config.input.attributes().get(attributeName).params().get("format").equals("null") && !Patterns.EMPTY_STRING.matcher(this.config.input.attributes().get(attributeName).params().get("format")).matches()) {
+                                String format = this.config.input.attributes().get(attributeName).params().get("format");
+                                if (term.isDate(format)) {
+                                    termValues.putIfAbsent(attributeName, new HashSet<>());
+                                    termValues.get(attributeName).add(term.dateValue());
+                                }
+                            } else {
+                                // Otherwise check if the "format" param is defined in the model attribute.
+                                Map<String, String> params = this.config.input.model().attributes().get(attributeName).params();
+                                if (params.containsKey("format") && !params.get("format").equals("null") && !Patterns.EMPTY_STRING.matcher(params.get("format")).matches()) {
+                                    String format = params.get("format");
+                                    if (term.isDate(format)) {
+                                        termValues.putIfAbsent(attributeName, new HashSet<>());
+                                        termValues.get(attributeName).add(term.dateValue());
+                                    }
+                                } else {
+                                    // Otherwise check if the "format" param is defined in the matcher
+                                    // associated with any index field associated with the attribute.
+                                    // Add any date values that successfully parse.
+                                    for (String indexFieldName : index.attributeIndexFieldsMap().get(attributeName).keySet()) {
+                                        String matcherName = index.attributeIndexFieldsMap().get(attributeName).get(indexFieldName).matcher();
+                                        params = this.config.input.model().matchers().get(matcherName).params();
+                                        if (params.containsKey("format") && !params.get("format").equals("null") && !Patterns.EMPTY_STRING.matcher(params.get("format")).matches()) {
+                                            String format = params.get("format");
+                                            if (term.isDate(format)) {
+                                                termValues.putIfAbsent(attributeName, new HashSet<>());
+                                                termValues.get(attributeName).add(term.dateValue());
+                                            }
+                                        }
+                                        // else:
+                                        // If we've gotten this far, then this term can't be converted
+                                        // to a date value. Skip it and move on.
+                                    }
+                                }
+                            }
+                            break;
+                        case "number":
+                            if (term.isNumber()) {
+                                termValues.putIfAbsent(attributeName, new HashSet<>());
+                                termValues.get(attributeName).add(term.numberValue());
+                            }
+                            break;
+                        case "string":
+                            termValues.putIfAbsent(attributeName, new HashSet<>());
+                            termValues.get(attributeName).add(term.stringValue());
+                            break;
+                        default:
+                            break;
+                    }
+                } catch (ValidationException | IOException e) {
+                    continue;
+                }
+            }
+        }
+
+        // Include any known attribute values in this clause.
+        // This is necessary if a request has both "attributes" and "terms".
+        if (!this.attributes.isEmpty()) {
+            for (String attributeName : this.attributes.keySet()) {
+                for (Value value : this.attributes.get(attributeName).values()) {
+                    termValues.putIfAbsent(attributeName, new HashSet<>());
+                    termValues.get(attributeName).add(value);
+                }
+            }
+        }
+
+        return termValues;
+    }
+
+    private Map<String, Attribute> buildAttributeMap(Map<String, Set<Value>> termValues) throws IOException, ValidationException {
+        Map<String, Attribute> termAttributes = new HashMap<>();
+        for (String attributeName : termValues.keySet()) {
+            String attributeType = this.config.input.model().attributes().get(attributeName).type();
+            Set<Value> values = termValues.get(attributeName);
+            Map<String, String> params = this.config.input.attributes().get(attributeName).params();
+            termAttributes.put(attributeName, new Attribute(attributeName, attributeType, params, values));
+        }
+        return termAttributes;
     }
 
     private QueryBuilder buildSearchQuery(
@@ -952,7 +1048,7 @@ public class Job {
         // unlike structured attribute search where the attributes are assumed be known.
         if (canQueryTerms) {
             // Get the names of each attribute of each in-scope resolver.
-            Set<String> resolverAttributes = new TreeSet<>();
+            Set<String> resolverAttributes = new HashSet<>();
             for (String resolverName : this.config.input.model().resolvers().keySet()) {
                 resolverAttributes.addAll(this.config.input.model().resolvers().get(resolverName).attributes());
             }
@@ -963,115 +1059,10 @@ public class Job {
             //
             // Date attributes will require a format, but the format could be declared in the input attributes,
             // the model attributes, or the model matchers in descending order of precedence. If the pa
-            Map<String, Set<Value>> termValues = new TreeMap<>();
-            for (String attributeName : resolverAttributes) {
-                String attributeType = this.config.input.model().attributes().get(attributeName).type();
-                for (Term term : this.config.input.terms()) {
-                    try {
-                        switch (attributeType) {
-                            case "boolean":
-                                if (term.isBoolean()) {
-                                    termValues.putIfAbsent(attributeName, new TreeSet<>());
-                                    termValues.get(attributeName).add(term.booleanValue());
-                                }
-                                break;
-                            case "date":
-                                // Determine which date format to use to parse the term.
-                                Index index = this.config.input.model().indices().get(indexName);
-                                // Check if the "format" param is defined in the input attribute.
-                                if (this.config.input.attributes().containsKey(attributeName) && this.config.input.attributes().get(attributeName).params().containsKey("format") && !this.config.input.attributes().get(attributeName).params().get("format").equals("null") && !Patterns.EMPTY_STRING.matcher(this.config.input.attributes().get(attributeName).params().get("format")).matches()) {
-                                    String format = this.config.input.attributes().get(attributeName).params().get("format");
-                                    if (term.isDate(format)) {
-                                        termValues.putIfAbsent(attributeName, new TreeSet<>());
-                                        termValues.get(attributeName).add(term.dateValue());
-                                    }
-                                } else {
-                                    // Otherwise check if the "format" param is defined in the model attribute.
-                                    Map<String, String> params = this.config.input.model().attributes().get(attributeName).params();
-                                    if (params.containsKey("format") && !params.get("format").equals("null") && !Patterns.EMPTY_STRING.matcher(params.get("format")).matches()) {
-                                        String format = params.get("format");
-                                        if (term.isDate(format)) {
-                                            termValues.putIfAbsent(attributeName, new TreeSet<>());
-                                            termValues.get(attributeName).add(term.dateValue());
-                                        }
-                                    } else {
-                                        // Otherwise check if the "format" param is defined in the matcher
-                                        // associated with any index field associated with the attribute.
-                                        // Add any date values that successfully parse.
-                                        for (String indexFieldName : index.attributeIndexFieldsMap().get(attributeName).keySet()) {
-                                            String matcherName = index.attributeIndexFieldsMap().get(attributeName).get(indexFieldName).matcher();
-                                            params = this.config.input.model().matchers().get(matcherName).params();
-                                            if (params.containsKey("format") && !params.get("format").equals("null") && !Patterns.EMPTY_STRING.matcher(params.get("format")).matches()) {
-                                                String format = params.get("format");
-                                                if (term.isDate(format)) {
-                                                    termValues.putIfAbsent(attributeName, new TreeSet<>());
-                                                    termValues.get(attributeName).add(term.dateValue());
-                                                }
-                                            }
-                                            // else:
-                                            // If we've gotten this far, then this term can't be converted
-                                            // to a date value. Skip it and move on.
-                                        }
-                                    }
-                                }
-                                break;
-                            case "number":
-                                if (term.isNumber()) {
-                                    termValues.putIfAbsent(attributeName, new TreeSet<>());
-                                    termValues.get(attributeName).add(term.numberValue());
-                                }
-                                break;
-                            case "string":
-                                termValues.putIfAbsent(attributeName, new TreeSet<>());
-                                termValues.get(attributeName).add(term.stringValue());
-                                break;
-                            default:
-                                break;
-                        }
-                    } catch (ValidationException | IOException e) {
-                        continue;
-                    }
-                }
-            }
-
-            // Include any known attribute values in this clause.
-            // This is necessary if a request has both "attributes" and "terms".
-            if (!this.attributes.isEmpty()) {
-                for (String attributeName : this.attributes.keySet()) {
-                    for (Value value : this.attributes.get(attributeName).values()) {
-                        termValues.putIfAbsent(attributeName, new TreeSet<>());
-                        termValues.get(attributeName).add(value);
-                    }
-                }
-            }
+            Map<String, Set<Value>> termValues = buildTermValuesMap(indexName, resolverAttributes);
 
             // Convert the values as if it was an input Attribute.
-            Map<String, Attribute> termAttributes = new TreeMap<>();
-            for (String attributeName : termValues.keySet()) {
-                String attributeType = this.config.input.model().attributes().get(attributeName).type();
-                List<String> jsonValues = new ArrayList<>();
-                for (Value value : termValues.get(attributeName)) {
-                    if (value instanceof StringValue) {
-                        jsonValues.add(Json.quoteString(value.serialized()));
-                    } else {
-                        jsonValues.add(value.serialized());
-                    }
-                }
-                // Pass params from the input "attributes" if any were defined.
-                String attributesJson;
-                if (this.config.input.attributes().containsKey(attributeName) && !this.config.input.attributes().get(attributeName).params().isEmpty()) {
-                    Set<String> params = new TreeSet<>();
-                    for (String paramName : this.config.input.attributes().get(attributeName).params().keySet()) {
-                        String paramValue = this.config.input.attributes().get(attributeName).params().get(paramName);
-                        params.add("\"" + paramName + "\":" + "\"" + paramValue + "\"");
-                    }
-                    String paramsJson = "{" + String.join(",", params) + "}";
-                    attributesJson = "{\"values\":[" + String.join(",", jsonValues) + "],\"params\":" + paramsJson + "}";
-                } else {
-                    attributesJson = "{\"values\":[" + String.join(",", jsonValues) + "]}";
-                }
-                termAttributes.put(attributeName, new Attribute(attributeName, attributeType, attributesJson));
-            }
+            Map<String, Attribute> termAttributes = buildAttributeMap(termValues);
 
             // Determine which resolvers can be queried for this index using these attributes.
             for (String resolverName : this.config.input.model().resolvers().keySet()) {
@@ -1133,7 +1124,7 @@ public class Job {
     ) throws ValidationException {
         Value value = Value.create(attributeType, valueNode);
         if (!docAttributes.containsKey(attributeName)) {
-            docAttributes.put(attributeName, new TreeSet<>());
+            docAttributes.put(attributeName, new HashSet<>());
         }
         if (!nextInputAttributes.containsKey(attributeName)) {
             nextInputAttributes.put(attributeName, new Attribute(attributeName, attributeType));
@@ -1198,8 +1189,9 @@ public class Job {
                 // If it's not in the _source, remove the last part of the index field name from the dot notation.
                 // Index field names can reference multi-fields, which are not returned in the _source.
                 // If the document does not contain a given index field, skip that field.
-                JsonPointer path = this.config.input.model().indices().get(indexName).fields().get(indexFieldName).path();
-                JsonPointer pathParent = this.config.input.model().indices().get(indexName).fields().get(indexFieldName).pathParent();
+                IndexField indexField = this.config.input.model().indices().get(indexName).fields().get(indexFieldName);
+                JsonPointer path = indexField.path();
+                JsonPointer pathParent = indexField.pathParent();
                 JsonNode valueNode = doc.get("_source").at(path);
                 if (valueNode.isMissingNode()) {
                     if (pathParent != null) {
@@ -1253,8 +1245,8 @@ public class Job {
             ObjectNode docExpObjNode = docObjNode.putObject("_explanation");
             ObjectNode docExpResolversObjNode = docExpObjNode.putObject("resolvers");
             ArrayNode docExpMatchesArrNode = docExpObjNode.putArray("matches");
-            Set<String> expAttributes = new TreeSet<>();
-            Set<String> matchedQueries = new TreeSet<>();
+            Set<String> expAttributes = new HashSet<>();
+            Set<String> matchedQueries = new HashSet<>();
 
             // Remove the unique identifier from "_name" to remove duplicates.
             for (JsonNode mqNode : docObjNode.get("matched_queries")) {
@@ -1276,8 +1268,9 @@ public class Job {
                 if (attributeType.equals("string") || attributeType.equals("date")) {
                     attributeValueSerialized = "\"" + attributeValueSerialized + "\"";
                 }
-                // TODO: this must go
+                // TODO: manual json construction must go
                 JsonNode attributeValueNode = Json.MAPPER.readTree("{\"attribute_value\":" + attributeValueSerialized + "}").get("attribute_value");
+
                 String matcherParamsJson;
                 if (this.config.input.attributes().containsKey(attributeName)) {
                     matcherParamsJson = Json.ORDERED_MAPPER.writeValueAsString(this.config.input.attributes().get(attributeName).params());
@@ -1361,7 +1354,7 @@ public class Job {
         this.hits.add(docObjNode);
     }
 
-    private SearchRequestBuilder buildSearchRequest(String indexName) throws ValidationException {
+    private SearchRequestBuilder buildSearchRequest(String indexName) {
         final SearchRequestBuilder searchReqBuilder = new SearchRequestBuilder(client, SearchAction.INSTANCE);
         searchReqBuilder
             .setFetchSource(true)
@@ -1411,7 +1404,7 @@ public class Job {
         int hop = 0;
         int maxHops = this.config.maxHops <= -1 ? Integer.MAX_VALUE : this.config.maxHops;
         boolean namedFilters = this.config.includeExplanation || this.config.includeScore;
-        Set<String> missingIndices = new TreeSet<>();
+        Set<String> missingIndices = new HashSet<>();
         // Stop traversing if there are no more attributes to query.
         // or we've reached the max depth
         while (newAttributeHits && !(hop > maxHops)) {

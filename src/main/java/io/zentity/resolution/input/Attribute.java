@@ -18,24 +18,24 @@ import java.util.Set;
 public class Attribute {
 
     private final String name;
-    private final Map<String, String> params = new HashMap<>();
     private final String type;
+    private final Map<String, String> params = new HashMap<>();
     private final Set<Value> values = new HashSet<>();
 
     public Attribute(String name, String type, JsonNode json) throws ValidationException, JsonProcessingException {
-        validateName(name);
-        validateType(type);
-        this.name = name;
-        this.type = type;
+        this(name, type);
         this.deserialize(json);
     }
 
     public Attribute(String name, String type, String json) throws ValidationException, IOException {
-        validateName(name);
-        validateType(type);
-        this.name = name;
-        this.type = type;
+        this(name, type);
         this.deserialize(json);
+    }
+
+    public Attribute(String name, String type, Map<String, String> params, Set<Value> values) throws ValidationException {
+        this(name, type);
+        this.params.putAll(params);
+        this.values.addAll(values);
     }
 
     public Attribute(String name, String type) throws ValidationException {
@@ -129,7 +129,7 @@ public class Attribute {
      * @param json Attribute object of an entity model.
      * @throws ValidationException
      */
-    public void deserialize(JsonNode json) throws ValidationException, JsonProcessingException {
+    private void deserialize(JsonNode json) throws ValidationException, JsonProcessingException {
         if (json.isNull()) {
             return;
         }
@@ -174,7 +174,7 @@ public class Attribute {
         this.params().putAll(Json.toStringMap(paramsNode));
     }
 
-    public void deserialize(String json) throws ValidationException, IOException {
+    private void deserialize(String json) throws ValidationException, IOException {
         deserialize(Json.MAPPER.readTree(json));
     }
 }
