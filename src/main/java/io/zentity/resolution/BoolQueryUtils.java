@@ -6,7 +6,7 @@ import org.elasticsearch.index.query.QueryBuilders;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -27,7 +27,7 @@ public class BoolQueryUtils {
     private static final Map<BoolQueryCombiner, BiFunction<BoolQueryBuilder, QueryBuilder, BoolQueryBuilder>> COMBINER_BI_FUNCTION_MAP;
 
     static {
-        COMBINER_BI_FUNCTION_MAP = new HashMap<>();
+        COMBINER_BI_FUNCTION_MAP = new EnumMap<>(BoolQueryCombiner.class);
         COMBINER_BI_FUNCTION_MAP.put(BoolQueryCombiner.FILTER, BoolQueryBuilder::filter);
         COMBINER_BI_FUNCTION_MAP.put(BoolQueryCombiner.SHOULD, BoolQueryBuilder::should);
         COMBINER_BI_FUNCTION_MAP.put(BoolQueryCombiner.MUST, BoolQueryBuilder::must);
