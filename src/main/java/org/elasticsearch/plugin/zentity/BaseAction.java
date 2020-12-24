@@ -18,15 +18,16 @@ public abstract class BaseAction extends BaseRestHandler {
      */
     public static RestChannelConsumer errorHandlingConsumer(RestChannelConsumer consumer) {
         return channel -> {
-          try {
-              consumer.accept(channel);
-          } catch (ElasticsearchStatusException e) {
-              channel.sendResponse(new BytesRestResponse(channel, e.status(), e));
-          } catch (ValidationException e) { // TODO: move this to where the deserialization is done
-              channel.sendResponse(new BytesRestResponse(channel, RestStatus.BAD_REQUEST, e));
-          } catch (Exception e) {
-              channel.sendResponse(new BytesRestResponse(channel, RestStatus.INTERNAL_SERVER_ERROR, e));
-          }
+            // TODO: handle CompletionExceptions
+            try {
+                consumer.accept(channel);
+            } catch (ElasticsearchStatusException e) {
+                channel.sendResponse(new BytesRestResponse(channel, e.status(), e));
+            } catch (ValidationException e) { // TODO: move this to where the deserialization is done
+                channel.sendResponse(new BytesRestResponse(channel, RestStatus.BAD_REQUEST, e));
+            } catch (Exception e) {
+                channel.sendResponse(new BytesRestResponse(channel, RestStatus.INTERNAL_SERVER_ERROR, e));
+            }
         };
     }
 }

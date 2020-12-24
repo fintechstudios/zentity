@@ -1,11 +1,13 @@
 package org.elasticsearch.plugin.zentity;
 
+import io.zentity.common.ActionRequestUtil;
 import io.zentity.model.Model;
 import io.zentity.resolution.XContentUtils;
 import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.ActionRequestBuilder;
 import org.elasticsearch.action.ActionResponse;
+import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequestBuilder;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.delete.DeleteRequestBuilder;
@@ -31,9 +33,13 @@ import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
+import static io.zentity.common.CompletableFutureUtil.composeExceptionally;
 import static org.elasticsearch.rest.RestRequest.Method;
 import static org.elasticsearch.rest.RestRequest.Method.DELETE;
 import static org.elasticsearch.rest.RestRequest.Method.GET;
@@ -57,14 +63,16 @@ public class ModelsAction extends BaseAction {
      * Check if the .zentity-models index exists, and if it doesn't, then create it.
      *
      * @param client The client that will communicate with Elasticsearch.
-     * @throws ForbiddenException
      */
-    static void ensureIndex(NodeClient client) throws ForbiddenException {
+    static CompletableFuture<Void> ensureIndex(NodeClient client) {
         IndicesExistsRequestBuilder request = client.admin().indices().prepareExists(INDEX_NAME);
-        IndicesExistsResponse response = getResponseWithImplicitIndexCreation(client, request);
-        if (!response.isExists()) {
-            SetupAction.createIndex(client);
-        }
+        return ActionRequestUtil.toCompletableFuture(request)
+            .thenCompose((res) -> {
+                if (!res.isExists()) {
+                    return SetupAction.createIndex(client).thenApply((val) -> null);
+                }
+                return CompletableFuture.completedFuture(null);
+            });
     }
 
     /**
@@ -75,18 +83,18 @@ public class ModelsAction extends BaseAction {
      * @return The response from Elasticsearch.
      * @throws ForbiddenException If the user is not authorized to create the .zentity-models index.
      */
-    static <ReqT extends ActionRequest, ResT extends ActionResponse> ResT getResponseWithImplicitIndexCreation(NodeClient client, ActionRequestBuilder<ReqT, ResT> builder) {
-        try {
-            // TODO: better future handling
-            return builder.get();
-        } catch (IndexNotFoundException e) {
-            try {
-                SetupAction.createIndex(client);
-            } catch (ElasticsearchSecurityException se) {
-                throw new ForbiddenException("The .zentity-models index does not exist and you do not have the 'create_index' privilege. An authorized user must create the index by submitting: POST _zentity/_setup");
+    static <ReqT extends ActionRequest, ResT extends ActionResponse> CompletableFuture<ResT> getResponseWithImplicitIndexCreation(NodeClient client, ActionRequestBuilder<ReqT, ResT> builder) {
+        return (CompletableFuture<ResT>) composeExceptionally(
+            ActionRequestUtil.toCompletableFuture(builder),
+            (ex) -> {
+                if (!(ex instanceof IndexNotFoundException)) {
+                    throw new CompletionException(ex);
+                }
+                return SetupAction
+                    .createIndex(client)
+                    .thenCompose(res -> ActionRequestUtil.toCompletableFuture(builder));
             }
-            return builder.get();
-        }
+        );
     }
 
     /**
@@ -95,7 +103,7 @@ public class ModelsAction extends BaseAction {
      * @param client The client that will communicate with Elasticsearch.
      * @return The response from Elasticsearch.
      */
-    static SearchResponse getEntityModels(NodeClient client) throws ForbiddenException {
+    static CompletableFuture<SearchResponse> getEntityModels(NodeClient client) {
         SearchRequestBuilder request = client.prepareSearch(INDEX_NAME);
         request.setSize(10000); // max request size
         return getResponseWithImplicitIndexCreation(client, request);
@@ -108,7 +116,7 @@ public class ModelsAction extends BaseAction {
      * @param client     The client that will communicate with Elasticsearch.
      * @return The response from Elasticsearch.
      */
-    static GetResponse getEntityModel(String entityType, NodeClient client) {
+    static CompletableFuture<GetResponse> getEntityModel(String entityType, NodeClient client) {
         GetRequestBuilder request = client.prepareGet(INDEX_NAME, "doc", entityType);
         return getResponseWithImplicitIndexCreation(client, request);
     }
@@ -120,13 +128,14 @@ public class ModelsAction extends BaseAction {
      * @param requestBody The request body.
      * @param client      The client that will communicate with Elasticsearch.
      * @return The response from Elasticsearch.
-     * @throws ForbiddenException
      */
-    static IndexResponse indexEntityModel(String entityType, String requestBody, NodeClient client) throws ForbiddenException {
-        ensureIndex(client);
-        IndexRequestBuilder request = client.prepareIndex(INDEX_NAME, "doc", entityType);
-        request.setSource(requestBody, XContentType.JSON).setCreate(true).setRefreshPolicy("wait_for");
-        return request.get();
+    static CompletableFuture<IndexResponse> indexEntityModel(String entityType, String requestBody, NodeClient client) {
+        return ensureIndex(client)
+            .thenCompose((nil) -> {
+                IndexRequestBuilder request = client.prepareIndex(INDEX_NAME, "doc", entityType);
+                request.setSource(requestBody, XContentType.JSON).setCreate(true).setRefreshPolicy("wait_for");
+                return ActionRequestUtil.toCompletableFuture(request);
+            });
     }
 
     /**
@@ -136,13 +145,17 @@ public class ModelsAction extends BaseAction {
      * @param requestBody The request body.
      * @param client      The client that will communicate with Elasticsearch.
      * @return The response from Elasticsearch.
-     * @throws ForbiddenException
      */
-    static IndexResponse updateEntityModel(String entityType, String requestBody, NodeClient client) throws ForbiddenException {
-        ensureIndex(client);
-        IndexRequestBuilder request = client.prepareIndex(INDEX_NAME, "doc", entityType);
-        request.setSource(requestBody, XContentType.JSON).setCreate(false).setRefreshPolicy("wait_for");
-        return request.get();
+    static CompletableFuture<IndexResponse> updateEntityModel(String entityType, String requestBody, NodeClient client) {
+        return ensureIndex(client)
+            .thenCompose((nil) -> {
+                IndexRequestBuilder request = client.prepareIndex(INDEX_NAME, "doc", entityType);
+                request
+                    .setSource(requestBody, XContentType.JSON)
+                    .setCreate(false)
+                    .setRefreshPolicy("wait_for");
+                return ActionRequestUtil.toCompletableFuture(request);
+            });
     }
 
     /**
@@ -151,9 +164,8 @@ public class ModelsAction extends BaseAction {
      * @param entityType The entity type.
      * @param client     The client that will communicate with Elasticsearch.
      * @return The response from Elasticsearch.
-     * @throws ForbiddenException
      */
-    static DeleteResponse deleteEntityModel(String entityType, NodeClient client) throws ForbiddenException {
+    static CompletableFuture<DeleteResponse> deleteEntityModel(String entityType, NodeClient client) {
         DeleteRequestBuilder request = client.prepareDelete(INDEX_NAME, "doc", entityType);
         request.setRefreshPolicy("wait_for");
         return getResponseWithImplicitIndexCreation(client, request);
@@ -193,39 +205,31 @@ public class ModelsAction extends BaseAction {
                 new Model(requestBody);
             }
 
+            final CompletableFuture<? extends ToXContent> responseFuture;
+
             // Handle request
             if (method == GET && (entityType == null || entityType.equals(""))) {
                 // GET _zentity/models
-                SearchResponse response = getEntityModels(client);
-                String responseBody = XContentUtils.serializeAsJson(prettyPrintModifier, response);
-                channel.sendResponse(new BytesRestResponse(RestStatus.OK, responseBody));
+                responseFuture = getEntityModels(client);
             } else if (method == GET) {
                 // GET _zentity/models/{entity_type}
-                GetResponse response = getEntityModel(entityType, client);
-                String responseBody = XContentUtils.serializeAsJson(prettyPrintModifier, response);
-                channel.sendResponse(new BytesRestResponse(RestStatus.OK, responseBody));
-
+                responseFuture = getEntityModel(entityType, client);
             } else if (method == POST && !entityType.equals("")) {
                 // POST _zentity/models/{entity_type}
-                IndexResponse response = indexEntityModel(entityType, requestBody, client);
-                String responseBody = XContentUtils.serializeAsJson(prettyPrintModifier, response);
-                channel.sendResponse(new BytesRestResponse(RestStatus.OK, responseBody));
-
+                responseFuture = indexEntityModel(entityType, requestBody, client);
             } else if (method == PUT && !entityType.equals("")) {
                 // PUT _zentity/models/{entity_type}
-                IndexResponse response = updateEntityModel(entityType, requestBody, client);
-                String responseBody = XContentUtils.serializeAsJson(prettyPrintModifier, response);
-                channel.sendResponse(new BytesRestResponse(RestStatus.OK, responseBody));
-
+                responseFuture = updateEntityModel(entityType, requestBody, client);
             } else if (method == DELETE && !entityType.equals("")) {
                 // DELETE _zentity/models/{entity_type}
-                DeleteResponse response = deleteEntityModel(entityType, client);
-                String responseBody = XContentUtils.serializeAsJson(prettyPrintModifier, response);
-                channel.sendResponse(new BytesRestResponse(RestStatus.OK, responseBody));
-
+                responseFuture = deleteEntityModel(entityType, client);
             } else {
                 throw new NotImplementedException("Method and endpoint not implemented.");
             }
+
+            ToXContent responseContent = responseFuture.get();
+            String responseBody = XContentUtils.serializeAsJson(prettyPrintModifier, responseContent);
+            channel.sendResponse(new BytesRestResponse(RestStatus.OK, responseBody));
         });
     }
 }

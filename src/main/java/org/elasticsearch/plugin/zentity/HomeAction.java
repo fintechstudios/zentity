@@ -32,22 +32,22 @@ public class HomeAction extends BaseAction {
         boolean pretty = restRequest.paramAsBoolean("pretty", false);
 
         return errorHandlingConsumer(channel -> {
-            XContentBuilder content = XContentFactory.jsonBuilder();
+            XContentBuilder contentBuilder = XContentFactory.jsonBuilder();
             if (pretty) {
-                content.prettyPrint();
+                contentBuilder.prettyPrint();
             }
-            content.startObject();
-            content.field("name", props.getProperty("name"));
-            content.field("description", props.getProperty("description"));
-            content.field("website", props.getProperty("zentity.website"));
+            contentBuilder.startObject();
+            contentBuilder.field("name", props.getProperty("name"));
+            contentBuilder.field("description", props.getProperty("description"));
+            contentBuilder.field("website", props.getProperty("zentity.website"));
 
-            content.startObject("version");
-            content.field("zentity", props.getProperty("zentity.version"));
-            content.field("elasticsearch", props.getProperty("elasticsearch.version"));
-            content.endObject();
+            contentBuilder.startObject("version");
+            contentBuilder.field("zentity", props.getProperty("zentity.version"));
+            contentBuilder.field("elasticsearch", props.getProperty("elasticsearch.version"));
+            contentBuilder.endObject();
 
-            content.endObject();
-            channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
+            contentBuilder.endObject();
+            channel.sendResponse(new BytesRestResponse(RestStatus.OK, contentBuilder));
         });
     }
 }

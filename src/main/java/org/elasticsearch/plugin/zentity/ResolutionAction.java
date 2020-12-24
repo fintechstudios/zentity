@@ -34,7 +34,7 @@ public class ResolutionAction extends BaseAction {
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest restRequest, NodeClient client) {
 
-        String body = restRequest.content().utf8ToString();
+        final String body = restRequest.content().utf8ToString();
 
         // Parse the request params that will be passed to the job configuration
         final String entityType = restRequest.param("entity_type");
@@ -74,9 +74,10 @@ public class ResolutionAction extends BaseAction {
             if (entityType == null || entityType.equals("")) {
                 input = new Input(body);
             } else {
-                GetResponse getResponse = ModelsAction.getEntityModel(entityType, client);
-                if (!getResponse.isExists())
+                GetResponse getResponse = ModelsAction.getEntityModel(entityType, client).get();
+                if (!getResponse.isExists()) {
                     throw new NotFoundException("Entity type '" + entityType + "' not found.");
+                }
                 String model = getResponse.getSourceAsString();
                 input = new Input(body, new Model(model));
             }
