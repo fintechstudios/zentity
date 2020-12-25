@@ -11,14 +11,16 @@ import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.plugin.zentity.exceptions.BadRequestException;
 import org.elasticsearch.plugin.zentity.exceptions.NotFoundException;
+import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
 
+import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 
-public class ResolutionAction extends BaseAction {
+public class ResolutionAction extends BaseRestHandler {
 
     @Inject
     ResolutionAction(RestController controller) {

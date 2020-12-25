@@ -3,13 +3,10 @@ package org.elasticsearch.plugin.zentity;
 import io.zentity.common.ActionRequestUtil;
 import io.zentity.model.Model;
 import io.zentity.resolution.XContentUtils;
-import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.ActionRequestBuilder;
 import org.elasticsearch.action.ActionResponse;
-import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequestBuilder;
-import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.delete.DeleteRequestBuilder;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetRequestBuilder;
@@ -22,12 +19,12 @@ import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.IndexNotFoundException;
 import org.elasticsearch.plugin.zentity.exceptions.BadRequestException;
 import org.elasticsearch.plugin.zentity.exceptions.ForbiddenException;
 import org.elasticsearch.plugin.zentity.exceptions.NotImplementedException;
+import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
@@ -35,18 +32,17 @@ import org.elasticsearch.rest.RestStatus;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
-import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 import static io.zentity.common.CompletableFutureUtil.composeExceptionally;
+import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
 import static org.elasticsearch.rest.RestRequest.Method;
 import static org.elasticsearch.rest.RestRequest.Method.DELETE;
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
-public class ModelsAction extends BaseAction {
+public class ModelsAction extends BaseRestHandler {
 
     public static final String INDEX_NAME = ".zentity-models";
 
@@ -84,7 +80,7 @@ public class ModelsAction extends BaseAction {
      * @throws ForbiddenException If the user is not authorized to create the .zentity-models index.
      */
     static <ReqT extends ActionRequest, ResT extends ActionResponse> CompletableFuture<ResT> getResponseWithImplicitIndexCreation(NodeClient client, ActionRequestBuilder<ReqT, ResT> builder) {
-        return (CompletableFuture<ResT>) composeExceptionally(
+        return composeExceptionally(
             ActionRequestUtil.toCompletableFuture(builder),
             (ex) -> {
                 if (!(ex instanceof IndexNotFoundException)) {

@@ -12,6 +12,7 @@ import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.plugin.zentity.exceptions.ForbiddenException;
 import org.elasticsearch.plugin.zentity.exceptions.NotImplementedException;
+import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
@@ -22,10 +23,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 import static io.zentity.common.CompletableFutureUtil.checkedConsumer;
+import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
 import static org.elasticsearch.rest.RestRequest.Method;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 
-public class SetupAction extends BaseAction {
+public class SetupAction extends BaseRestHandler {
 
     public static final int DEFAULT_NUMBER_OF_SHARDS = 1;
     public static final int DEFAULT_NUMBER_OF_REPLICAS = 1;

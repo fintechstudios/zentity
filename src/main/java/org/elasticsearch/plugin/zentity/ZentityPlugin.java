@@ -20,7 +20,7 @@ import java.util.function.Supplier;
 
 public class ZentityPlugin extends Plugin implements ActionPlugin {
 
-    private static final Properties properties = new Properties();
+    private static final Properties PROPERTIES = new Properties();
 
     public ZentityPlugin() throws IOException {
         Properties zentityProperties = new Properties();
@@ -29,16 +29,16 @@ public class ZentityPlugin extends Plugin implements ActionPlugin {
         InputStream pluginDescriptorStream = this.getClass().getResourceAsStream("/plugin-descriptor.properties");
         zentityProperties.load(zentityStream);
         pluginDescriptorProperties.load(pluginDescriptorStream);
-        properties.putAll(zentityProperties);
-        properties.putAll(pluginDescriptorProperties);
+        PROPERTIES.putAll(zentityProperties);
+        PROPERTIES.putAll(pluginDescriptorProperties);
     }
 
     public static Properties properties() {
-        return properties;
+        return PROPERTIES;
     }
 
     public String version() {
-        return properties.getProperty("version");
+        return PROPERTIES.getProperty("version");
     }
 
     @Override
