@@ -22,15 +22,22 @@ public class ZentityPlugin extends Plugin implements ActionPlugin {
 
     private static final Properties PROPERTIES = new Properties();
 
-    public ZentityPlugin() throws IOException {
-        Properties zentityProperties = new Properties();
-        Properties pluginDescriptorProperties = new Properties();
-        InputStream zentityStream = this.getClass().getResourceAsStream("/zentity.properties");
-        InputStream pluginDescriptorStream = this.getClass().getResourceAsStream("/plugin-descriptor.properties");
-        zentityProperties.load(zentityStream);
-        pluginDescriptorProperties.load(pluginDescriptorStream);
-        PROPERTIES.putAll(zentityProperties);
-        PROPERTIES.putAll(pluginDescriptorProperties);
+    private static Properties loadPropertiesFromResources(String resourcePath) throws IOException {
+        Properties props = new Properties();
+        InputStream inputStream = ZentityPlugin.class.getResourceAsStream(resourcePath);
+        props.load(inputStream);
+        return props;
+    }
+
+    static {
+        try {
+            Properties zentityProperties = loadPropertiesFromResources("/zentity.properties");
+            Properties pluginDescriptorProperties = loadPropertiesFromResources("/plugin-descriptor.properties");
+            PROPERTIES.putAll(zentityProperties);
+            PROPERTIES.putAll(pluginDescriptorProperties);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     public static Properties properties() {

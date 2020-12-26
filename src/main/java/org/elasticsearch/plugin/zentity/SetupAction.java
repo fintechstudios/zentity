@@ -117,10 +117,10 @@ public class SetupAction extends BaseRestHandler {
     protected RestChannelConsumer prepareRequest(RestRequest restRequest, NodeClient client) {
 
         // Parse request
-        boolean pretty = restRequest.paramAsBoolean("pretty", false);
-        int numberOfShards = restRequest.paramAsInt("number_of_shards", 1);
-        int numberOfReplicas = restRequest.paramAsInt("number_of_replicas", 1);
-        Method method = restRequest.method();
+        final boolean pretty = restRequest.paramAsBoolean("pretty", false);
+        final int numberOfShards = restRequest.paramAsInt("number_of_shards", 1);
+        final int numberOfReplicas = restRequest.paramAsInt("number_of_replicas", 1);
+        final Method method = restRequest.method();
 
         return errorHandlingConsumer(channel -> {
             if (method == POST) {
