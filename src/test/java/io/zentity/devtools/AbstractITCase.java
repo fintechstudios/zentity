@@ -14,10 +14,13 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.utility.DockerImageName;
+import org.testcontainers.utility.MountableFile;
 
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Objects;
@@ -82,6 +85,16 @@ public abstract class AbstractITCase {
             .withPluginDir(Paths.get(PLUGIN_DIR))
             .withLogConsumer(new Slf4jLogConsumer(LOG));
 
+        // allow reflection for jackson
+        URL policyResourceUrl = AbstractITCase.class.getResource("java-security.policy");
+        String policyPath = policyResourceUrl.getPath();
+        container
+            .withEsJavaOpt("-Djava.security.manager -Djava.security.policy=/var/run/java/.java-policy")
+            .withCopyFileToContainer(
+                MountableFile.forHostPath(policyPath),
+                "/var/run/java/.java-policy"
+            );
+
         if (DEBUGGER_ENABLED) {
             LOG.info("Starting remote ES debugger on port {}", DEBUGGER_PORT);
             container.withDebugger(DEBUGGER_PORT);
@@ -94,7 +107,8 @@ public abstract class AbstractITCase {
         return RestClient
             .builder(HttpHost.create(ES_CONTAINER.getHttpHostAddress()))
             .setHttpClientConfigCallback(builder -> builder.setDefaultRequestConfig(
-                RequestConfig.custom()
+                RequestConfig
+                    .custom()
                     .setSocketTimeout(
                         Long.valueOf(CLIENT_SOCKET_TIMEOUT.toMillis()).intValue()
                     )
@@ -118,7 +132,7 @@ public abstract class AbstractITCase {
 
         debuggerProxy = new TcpProxy(config);
         debuggerProxy.start();
-        // Sleep so the debugger can be attached
+        // Sleep so the debugger can be manually attached
         LOG.info("Sleeping {}ms to allow debugger attaching.", DEBUGGER_SLEEP.toMillis());
         Thread.sleep(DEBUGGER_SLEEP.toMillis());
     }

@@ -91,6 +91,13 @@ public class PluggableElasticsearchContainer extends ElasticsearchContainer {
         return withPluginDir(pluginDir, (path) -> path.toString().endsWith(".zip"));
     }
 
+    public PluggableElasticsearchContainer withEsJavaOpt(String opt) {
+        String currentJavaOpts = getEnvMap().getOrDefault("ES_JAVA_OPTS", "");
+        String javaOpts = currentJavaOpts + " " + opt;
+        withEnv("ES_JAVA_OPTS", javaOpts);
+        return this;
+    }
+
     /**
      * Expose a java debugger.
      *
@@ -100,10 +107,7 @@ public class PluggableElasticsearchContainer extends ElasticsearchContainer {
      */
     public PluggableElasticsearchContainer withDebugger(int port) {
         addExposedPort(port);
-
-        String currentJavaOpts = getEnvMap().getOrDefault("ES_JAVA_OPTS", "");
-        String javaOpts = currentJavaOpts + " -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:" + port;
-        withEnv("ES_JAVA_OPTS", javaOpts);
+        withEsJavaOpt("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:" + port);
         return this;
     }
 
