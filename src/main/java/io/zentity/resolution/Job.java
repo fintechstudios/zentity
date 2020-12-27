@@ -54,6 +54,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
@@ -855,12 +856,15 @@ public class Job {
         return termValues;
     }
 
-    private Map<String, Attribute> buildAttributeMap(Map<String, Set<Value>> termValues) throws IOException, ValidationException {
+    private Map<String, Attribute> buildAttributeMap(Map<String, Set<Value>> termValues) throws ValidationException {
         Map<String, Attribute> termAttributes = new HashMap<>();
         for (String attributeName : termValues.keySet()) {
             String attributeType = this.config.input.model().attributes().get(attributeName).type();
             Set<Value> values = termValues.get(attributeName);
-            Map<String, String> params = this.config.input.attributes().get(attributeName).params();
+            Map<String, Attribute> attributeMap = this.config.input.attributes();
+            Map<String, String> params = attributeMap.containsKey(attributeName)
+                ? attributeMap.get(attributeName).params()
+                : Collections.emptyMap();
             termAttributes.put(attributeName, new Attribute(attributeName, attributeType, params, values));
         }
         return termAttributes;
@@ -1390,7 +1394,7 @@ public class Job {
     /**
      * Given a set of attribute values, determine which queries to submit to which indices then submit them and recurse.
      * <p>
-     * TODO: this should probably return a {@link ResolutionResponse} instead of a JobResult.
+     * TODO: this should probably return a {@link CompletableFuture<ResolutionResponse>} instead of a JobResult.
      *
      * @throws IOException         If there is an error parsing content.
      * @throws ValidationException If an input is invalid.
