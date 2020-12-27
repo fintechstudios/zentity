@@ -1,11 +1,13 @@
-package io.zentity.resolution;
+package io.zentity.common;
 
+import org.elasticsearch.common.CheckedFunction;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.function.UnaryOperator;
 
 public class XContentUtils {
@@ -60,5 +62,35 @@ public class XContentUtils {
      */
     public static String serializeAsJson(UnaryOperator<XContentBuilder> builderModifier, ToXContent content) throws IOException {
         return serializeAsJson(builderModifier, content, ToXContent.EMPTY_PARAMS);
+    }
+
+    public static UnaryOperator<XContentBuilder> composeModifiers(List<UnaryOperator<XContentBuilder>> builderModifiers) {
+        return builderModifiers
+            .stream()
+            .reduce(
+                UnaryOperator.identity(),
+                (mod1, mod2) -> (builder) -> mod1.andThen(mod2).apply(builder),
+                (mod1, mod2) -> (builder) -> mod1.andThen(mod2).apply(builder)
+            );
+    }
+
+    public static XContentBuilder jsonBuilder(UnaryOperator<XContentBuilder> modifier) throws IOException {
+        return modifier.apply(XContentFactory.jsonBuilder());
+    }
+
+    /**
+     * Wrap a {@link CheckedFunction} into something that can be used as a builder modifier.
+     *
+     * @param checkedFunction The function that throws a checked exception.
+     * @return A wrapped function that re-throws any caught checked exceptions as {@link RuntimeException RuntimeExceptions}.
+     */
+    public static UnaryOperator<XContentBuilder> uncheckedModifier(CheckedFunction<XContentBuilder, XContentBuilder, ? extends Exception> checkedFunction) {
+        return (builder) -> {
+            try {
+                return checkedFunction.apply(builder);
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        };
     }
 }

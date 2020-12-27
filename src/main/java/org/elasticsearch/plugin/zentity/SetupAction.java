@@ -1,6 +1,8 @@
 package org.elasticsearch.plugin.zentity;
 
 import io.zentity.common.ActionRequestUtil;
+import io.zentity.common.CompletableFutureUtil;
+import io.zentity.common.XContentUtils;
 import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
@@ -8,7 +10,6 @@ import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.plugin.zentity.exceptions.ForbiddenException;
 import org.elasticsearch.plugin.zentity.exceptions.NotImplementedException;
@@ -18,11 +19,13 @@ import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
 
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.function.UnaryOperator;
 
-import static io.zentity.common.CompletableFutureUtil.checkedConsumer;
+import static io.zentity.common.CompletableFutureUtil.uncheckedFunction;
 import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
 import static org.elasticsearch.rest.RestRequest.Method;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
@@ -73,7 +76,10 @@ public class SetupAction extends BaseRestHandler {
         // Elasticsearch 7.0.0+ removes mapping types
         Properties props = ZentityPlugin.properties();
 
-        CreateIndexRequestBuilder reqBuilder = client.admin().indices().prepareCreate(ModelsAction.INDEX_NAME)
+        CreateIndexRequestBuilder reqBuilder = client
+            .admin()
+            .indices()
+            .prepareCreate(ModelsAction.INDEX_NAME)
             .setSettings(Settings.builder()
                 .put("index.number_of_shards", numberOfShards)
                 .put("index.number_of_replicas", numberOfReplicas)
@@ -89,12 +95,12 @@ public class SetupAction extends BaseRestHandler {
 
         return ActionRequestUtil.toCompletableFuture(reqBuilder)
             .exceptionally(ex -> {
-                Throwable toThrow = ex;
-                if (ex instanceof ElasticsearchSecurityException) {
-                    toThrow = new ForbiddenException("The .zentity-models index does not exist and you do not have the 'create_index' privilege. An authorized user must create the index by submitting: POST _zentity/_setup");
-                    toThrow.initCause(ex);
+                Throwable cause = CompletableFutureUtil.getCause(ex);
+                if (cause instanceof ElasticsearchSecurityException) {
+                    cause = new ForbiddenException("The .zentity-models index does not exist and you do not have the 'create_index' privilege. An authorized user must create the index by submitting: POST _zentity/_setup");
+                    cause.initCause(ex);
                 }
-                throw new CompletionException(toThrow);
+                throw new CompletionException(cause);
             });
     }
 
@@ -122,17 +128,32 @@ public class SetupAction extends BaseRestHandler {
         final int numberOfReplicas = restRequest.paramAsInt("number_of_replicas", 1);
         final Method method = restRequest.method();
 
+        final UnaryOperator<XContentBuilder> prettyPrintModifier = (builder) -> {
+            if (pretty) {
+                return builder.prettyPrint();
+            }
+            return builder;
+        };
+
+        final UnaryOperator<XContentBuilder> ackResponseModifier = XContentUtils.uncheckedModifier(
+            (builder) -> builder
+                .startObject()
+                .field("acknowledged", true)
+                .endObject()
+        );
+
+        final UnaryOperator<XContentBuilder> composedModifier = XContentUtils.composeModifiers(
+            Arrays.asList(
+                prettyPrintModifier,
+                ackResponseModifier
+            )
+        );
+
         return errorHandlingConsumer(channel -> {
             if (method == POST) {
                 createIndex(client, numberOfShards, numberOfReplicas)
-                    .thenAccept(checkedConsumer((createRes) -> {
-                        XContentBuilder content = XContentFactory.jsonBuilder();
-                        if (pretty) {
-                            content.prettyPrint();
-                        }
-                        content.startObject().field("acknowledged", true).endObject();
-                        channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
-                    }))
+                    .thenApply(uncheckedFunction(res -> XContentUtils.jsonBuilder(composedModifier)))
+                    .thenAccept(builder -> channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder)))
                     .get();
 
             } else {

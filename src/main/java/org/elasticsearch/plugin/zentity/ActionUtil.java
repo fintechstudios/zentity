@@ -7,6 +7,9 @@ import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestStatus;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+
 /**
  * A utility class for actions that provides common handler functionality.
  */
@@ -21,9 +24,9 @@ public abstract class ActionUtil extends BaseRestHandler {
         return channel -> {
             try {
                 consumer.accept(channel);
-            } catch (Exception ex) {
+            } catch (Throwable ex) {
                 RestStatus status;
-                Exception unwrapped = CompletableFutureUtil.unwrapCompletionException(ex);
+                Throwable unwrapped = CompletableFutureUtil.getCause(ex);
 
                 if (unwrapped instanceof ElasticsearchStatusException) {
                     status = ((ElasticsearchStatusException) unwrapped).status();
@@ -34,7 +37,11 @@ public abstract class ActionUtil extends BaseRestHandler {
                     status = RestStatus.INTERNAL_SERVER_ERROR;
                 }
 
-                channel.sendResponse(new BytesRestResponse(channel, status, unwrapped));
+                if (!(unwrapped instanceof Exception)) {
+                    unwrapped = new Exception(unwrapped);
+                }
+
+                channel.sendResponse(new BytesRestResponse(channel, status, (Exception) unwrapped));
             }
         };
     }

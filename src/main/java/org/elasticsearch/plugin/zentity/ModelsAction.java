@@ -1,8 +1,9 @@
 package org.elasticsearch.plugin.zentity;
 
 import io.zentity.common.ActionRequestUtil;
+import io.zentity.common.CompletableFutureUtil;
 import io.zentity.model.Model;
-import io.zentity.resolution.XContentUtils;
+import io.zentity.common.XContentUtils;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.ActionRequestBuilder;
 import org.elasticsearch.action.ActionResponse;
@@ -34,6 +35,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.UnaryOperator;
 
+import static io.zentity.common.CompletableFutureUtil.uncheckedFunction;
 import static io.zentity.common.CompletableFutureUtil.composeExceptionally;
 import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
 import static org.elasticsearch.rest.RestRequest.Method;
@@ -72,6 +74,8 @@ public class ModelsAction extends BaseRestHandler {
     }
 
     /**
+     * Run an {@link ActionRequest} that implicitly creates the .zentity-models index if it does
+     * not already exist.
      *
      * @param client The client that will communicate with Elasticsearch.
      * @param <ReqT> The type of Request.
@@ -79,12 +83,14 @@ public class ModelsAction extends BaseRestHandler {
      * @return The response from Elasticsearch.
      * @throws ForbiddenException If the user is not authorized to create the .zentity-models index.
      */
-    static <ReqT extends ActionRequest, ResT extends ActionResponse> CompletableFuture<ResT> getResponseWithImplicitIndexCreation(NodeClient client, ActionRequestBuilder<ReqT, ResT> builder) {
+    static <ReqT extends ActionRequest, ResT extends ActionResponse> CompletableFuture<ResT>
+    getResponseWithImplicitIndexCreation(NodeClient client, ActionRequestBuilder<ReqT, ResT> builder) {
         return composeExceptionally(
             ActionRequestUtil.toCompletableFuture(builder),
             (ex) -> {
-                if (!(ex instanceof IndexNotFoundException)) {
-                    throw new CompletionException(ex);
+                Throwable cause = CompletableFutureUtil.getCause(ex);
+                if (!(cause instanceof IndexNotFoundException)) {
+                    throw new CompletionException(cause);
                 }
                 return SetupAction
                     .createIndex(client)
@@ -181,7 +187,7 @@ public class ModelsAction extends BaseRestHandler {
         Method method = restRequest.method();
         String requestBody = restRequest.content().utf8ToString();
 
-        UnaryOperator<XContentBuilder> prettyPrintModifier = (builder) -> {
+        final UnaryOperator<XContentBuilder> prettyPrintModifier = (builder) -> {
             if (pretty) {
                 return builder.prettyPrint();
             }
@@ -223,9 +229,10 @@ public class ModelsAction extends BaseRestHandler {
                 throw new NotImplementedException("Method and endpoint not implemented.");
             }
 
-            ToXContent responseContent = responseFuture.get();
-            String responseBody = XContentUtils.serializeAsJson(prettyPrintModifier, responseContent);
-            channel.sendResponse(new BytesRestResponse(RestStatus.OK, responseBody));
+            responseFuture
+                .thenApply(uncheckedFunction(res -> res.toXContent(XContentUtils.jsonBuilder(prettyPrintModifier), ToXContent.EMPTY_PARAMS)))
+                .thenAccept((builder) -> channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder)))
+                .get();
         });
     }
 }

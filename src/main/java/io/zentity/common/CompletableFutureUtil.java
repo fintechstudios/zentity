@@ -1,45 +1,26 @@
 package io.zentity.common;
 
-import org.elasticsearch.common.CheckedConsumer;
-import org.elasticsearch.common.CheckedSupplier;
+import org.elasticsearch.common.CheckedFunction;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
-import java.util.function.Consumer;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 public class CompletableFutureUtil {
     /**
-     * Wrap a checked consumer's error in a {@link CompletionException}.
+     * Wrap a checked function's error in a {@link CompletionException}.
      *
-     * @param consumer The checked consumer.
+     * @param func The checked function.
      * @param <T> The type of input.
-     * @return The error-wrapped consumer.
+     * @return The error-wrapped function.
      */
-    public static <T> Consumer<T> checkedConsumer(CheckedConsumer<T, ?> consumer) {
+    public static <T, R> Function<T, R> uncheckedFunction(CheckedFunction<T, R, ?> func) {
         return (val) -> {
             try {
-                consumer.accept(val);
-            } catch (Exception ex) {
-                throw new CompletionException(ex);
-            }
-        };
-    }
-
-    /**
-     * Wrap a checked supplier's error in a {@link CompletionException}.
-     *
-     * @param supplier The checked supplier.
-     * @param <T> The type of input.
-     * @return The error-wrapped supplier.
-     */
-    public static <T> Supplier<T> checkedSupplier(CheckedSupplier<T, ?> supplier) {
-        return () -> {
-            try {
-                return supplier.get();
+                return func.apply(val);
             } catch (Exception ex) {
                 throw new CompletionException(ex);
             }
@@ -84,12 +65,12 @@ public class CompletableFutureUtil {
      * last-most {@link CompletionException} if there is no more specific cause.
      *
      * @param ex The exception.
-     * @return The most specific {@link Exception} that was found.
+     * @return The most specific {@link Throwable} that was found.
      */
-    public static Exception unwrapCompletionException(Exception ex) {
+    public static Throwable getCause(Throwable ex) {
         Objects.requireNonNull(ex, "exception cannot be null");
-        if (ex instanceof CompletionException && ex.getCause() != null && ex.getCause() instanceof Exception) {
-            return unwrapCompletionException((Exception) ex.getCause());
+        if ((ex instanceof CompletionException || ex instanceof ExecutionException) && ex.getCause() != null) {
+            return getCause(ex.getCause());
         }
 
         return ex;

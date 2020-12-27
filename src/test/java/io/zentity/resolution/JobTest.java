@@ -1,5 +1,6 @@
 package io.zentity.resolution;
 
+import io.zentity.common.XContentUtils;
 import io.zentity.model.Matcher;
 import io.zentity.model.Model;
 import io.zentity.model.ValidationException;
