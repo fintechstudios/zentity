@@ -785,20 +785,22 @@ public class JobIT extends AbstractITCase {
             docsExpected.add("a1,1");
             docsExpected.add("a2,1");
             assertEquals(docsExpected, getActualIdHits(json));
-            for (JsonNode doc : json.get("hits").get("hits")) {
-                String expected = "";
-                switch (doc.get("_id").asText()) {
+            for (JsonNode hit : json.get("hits").get("hits")) {
+                String expectedExplanation = "";
+                switch (hit.get("_id").asText()) {
                     case "a0":
-                        expected = "{\"resolvers\":{\"resolver_a\":{\"attributes\":[\"attribute_a\"]},\"resolver_type_date_a\":{\"attributes\":[\"attribute_a\",\"attribute_type_date\"]}},\"matches\":[{\"attribute\":\"attribute_a\",\"target_field\":\"field_a.clean\",\"target_value\":\"a_00\",\"input_value\":\"a_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_a\",\"target_field\":\"field_a.keyword\",\"target_value\":\"a_00\",\"input_value\":\"a_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"1999-12-31T23:59:57.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}}]}";
+                        expectedExplanation = "{\"resolvers\":{\"resolver_a\":{\"attributes\":[\"attribute_a\"]},\"resolver_type_date_a\":{\"attributes\":[\"attribute_type_date\",\"attribute_a\"]}},\"matches\":[{\"attribute\":\"attribute_a\",\"target_field\":\"field_a.keyword\",\"target_value\":\"a_00\",\"input_value\":\"a_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_a\",\"target_field\":\"field_a.clean\",\"target_value\":\"a_00\",\"input_value\":\"a_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"1999-12-31T23:59:57.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}}]}";
                         break;
                     case "a1":
-                        expected = "{\"resolvers\":{\"resolver_c\":{\"attributes\":[\"attribute_d\"]},\"resolver_type_date_c\":{\"attributes\":[\"attribute_d\",\"attribute_type_date\"]}},\"matches\":[{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.clean\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.keyword\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"1999-12-31T23:59:59.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}}]}";
+                        expectedExplanation = "{\"resolvers\":{\"resolver_c\":{\"attributes\":[\"attribute_d\"]},\"resolver_type_date_c\":{\"attributes\":[\"attribute_d\",\"attribute_type_date\"]}},\"matches\":[{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.clean\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.keyword\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"1999-12-31T23:59:59.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}}]}";
                         break;
                     case "a2":
-                        expected = "{\"resolvers\":{\"resolver_c\":{\"attributes\":[\"attribute_d\"]},\"resolver_object\":{\"attributes\":[\"attribute_object\"]},\"resolver_type_boolean\":{\"attributes\":[\"attribute_type_boolean\"]},\"resolver_type_date_c\":{\"attributes\":[\"attribute_d\",\"attribute_type_date\"]},\"resolver_type_double\":{\"attributes\":[\"attribute_type_double\"]},\"resolver_type_float\":{\"attributes\":[\"attribute_type_float\"]},\"resolver_type_integer\":{\"attributes\":[\"attribute_type_integer\"]},\"resolver_type_long\":{\"attributes\":[\"attribute_type_long\"]},\"resolver_type_string\":{\"attributes\":[\"attribute_type_string\"]}},\"matches\":[{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.clean\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.keyword\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_object\",\"target_field\":\"object.a.b.c.keyword\",\"target_value\":\"a\",\"input_value\":\"a\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_boolean\",\"target_field\":\"type_boolean\",\"target_value\":true,\"input_value\":true,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"2000-01-01T00:00:00.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}},{\"attribute\":\"attribute_type_double\",\"target_field\":\"type_double\",\"target_value\":3.141592653589793,\"input_value\":3.141592653589793,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_float\",\"target_field\":\"type_float\",\"target_value\":1.0,\"input_value\":1.0,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_integer\",\"target_field\":\"type_integer\",\"target_value\":1,\"input_value\":1,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_long\",\"target_field\":\"type_long\",\"target_value\":922337203685477,\"input_value\":922337203685477,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_string\",\"target_field\":\"type_string\",\"target_value\":\"a\",\"input_value\":\"a\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}}]}";
+                        expectedExplanation = "{\"resolvers\":{\"resolver_c\":{\"attributes\":[\"attribute_d\"]},\"resolver_type_boolean\":{\"attributes\":[\"attribute_type_boolean\"]},\"resolver_type_float\":{\"attributes\":[\"attribute_type_float\"]},\"resolver_type_integer\":{\"attributes\":[\"attribute_type_integer\"]},\"resolver_type_string\":{\"attributes\":[\"attribute_type_string\"]},\"resolver_type_double\":{\"attributes\":[\"attribute_type_double\"]},\"resolver_type_date_c\":{\"attributes\":[\"attribute_d\",\"attribute_type_date\"]},\"resolver_type_long\":{\"attributes\":[\"attribute_type_long\"]},\"resolver_object\":{\"attributes\":[\"attribute_object\"]}},\"matches\":[{\"attribute\":\"attribute_type_long\",\"target_field\":\"type_long\",\"target_value\":922337203685477,\"input_value\":922337203685477,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_object\",\"target_field\":\"object.a.b.c.keyword\",\"target_value\":\"a\",\"input_value\":\"a\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_integer\",\"target_field\":\"type_integer\",\"target_value\":1,\"input_value\":1,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_float\",\"target_field\":\"type_float\",\"target_value\":1.0,\"input_value\":1.0,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.clean\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_double\",\"target_field\":\"type_double\",\"target_value\":3.141592653589793,\"input_value\":3.141592653589793,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_string\",\"target_field\":\"type_string\",\"target_value\":\"a\",\"input_value\":\"a\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_boolean\",\"target_field\":\"type_boolean\",\"target_value\":true,\"input_value\":true,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.keyword\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"2000-01-01T00:00:00.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}}]}";
                         break;
                 }
-                assertEquals(expected, Json.MAPPER.writeValueAsString(doc.get("_explanation")));
+                // TODO: compare actual contents, as ordering of arrays is fragile
+                String actualExplanation = Json.ORDERED_MAPPER.writeValueAsString(hit.get("_explanation"));
+                assertEquals(expectedExplanation, actualExplanation);
             }
         } finally {
             destroyTestResources(testResourceSet);
@@ -830,16 +832,18 @@ public class JobIT extends AbstractITCase {
                 String expected = "";
                 switch (doc.get("_id").asText()) {
                     case "a0":
-                        expected = "{\"resolvers\":{\"resolver_a\":{\"attributes\":[\"attribute_a\"]},\"resolver_type_date_a\":{\"attributes\":[\"attribute_a\",\"attribute_type_date\"]}},\"matches\":[{\"attribute\":\"attribute_a\",\"target_field\":\"field_a.clean\",\"target_value\":\"a_00\",\"input_value\":\"a_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_a\",\"target_field\":\"field_a.keyword\",\"target_value\":\"a_00\",\"input_value\":\"a_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"1999-12-31T23:59:57.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}}]}";
+                        expected = "{\"resolvers\":{\"resolver_a\":{\"attributes\":[\"attribute_a\"]},\"resolver_type_date_a\":{\"attributes\":[\"attribute_type_date\",\"attribute_a\"]}},\"matches\":[{\"attribute\":\"attribute_a\",\"target_field\":\"field_a.keyword\",\"target_value\":\"a_00\",\"input_value\":\"a_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_a\",\"target_field\":\"field_a.clean\",\"target_value\":\"a_00\",\"input_value\":\"a_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"1999-12-31T23:59:57.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}}]}";
                         break;
                     case "a1":
                         expected = "{\"resolvers\":{\"resolver_c\":{\"attributes\":[\"attribute_d\"]},\"resolver_type_date_c\":{\"attributes\":[\"attribute_d\",\"attribute_type_date\"]}},\"matches\":[{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.clean\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.keyword\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"1999-12-31T23:59:59.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}}]}";
                         break;
                     case "a2":
-                        expected = "{\"resolvers\":{\"resolver_c\":{\"attributes\":[\"attribute_d\"]},\"resolver_object\":{\"attributes\":[\"attribute_object\"]},\"resolver_type_boolean\":{\"attributes\":[\"attribute_type_boolean\"]},\"resolver_type_date_c\":{\"attributes\":[\"attribute_d\",\"attribute_type_date\"]},\"resolver_type_double\":{\"attributes\":[\"attribute_type_double\"]},\"resolver_type_float\":{\"attributes\":[\"attribute_type_float\"]},\"resolver_type_integer\":{\"attributes\":[\"attribute_type_integer\"]},\"resolver_type_long\":{\"attributes\":[\"attribute_type_long\"]},\"resolver_type_string\":{\"attributes\":[\"attribute_type_string\"]}},\"matches\":[{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.clean\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.keyword\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_object\",\"target_field\":\"object.a.b.c.keyword\",\"target_value\":\"a\",\"input_value\":\"a\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_boolean\",\"target_field\":\"type_boolean\",\"target_value\":true,\"input_value\":true,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"2000-01-01T00:00:00.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}},{\"attribute\":\"attribute_type_double\",\"target_field\":\"type_double\",\"target_value\":3.141592653589793,\"input_value\":3.141592653589793,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_float\",\"target_field\":\"type_float\",\"target_value\":1.0,\"input_value\":1.0,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_integer\",\"target_field\":\"type_integer\",\"target_value\":1,\"input_value\":1,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_long\",\"target_field\":\"type_long\",\"target_value\":922337203685477,\"input_value\":922337203685477,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_string\",\"target_field\":\"type_string\",\"target_value\":\"a\",\"input_value\":\"a\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}}]}";
+                        expected = "{\"resolvers\":{\"resolver_c\":{\"attributes\":[\"attribute_d\"]},\"resolver_type_boolean\":{\"attributes\":[\"attribute_type_boolean\"]},\"resolver_type_float\":{\"attributes\":[\"attribute_type_float\"]},\"resolver_type_integer\":{\"attributes\":[\"attribute_type_integer\"]},\"resolver_type_string\":{\"attributes\":[\"attribute_type_string\"]},\"resolver_type_double\":{\"attributes\":[\"attribute_type_double\"]},\"resolver_type_date_c\":{\"attributes\":[\"attribute_d\",\"attribute_type_date\"]},\"resolver_type_long\":{\"attributes\":[\"attribute_type_long\"]},\"resolver_object\":{\"attributes\":[\"attribute_object\"]}},\"matches\":[{\"attribute\":\"attribute_type_long\",\"target_field\":\"type_long\",\"target_value\":922337203685477,\"input_value\":922337203685477,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_object\",\"target_field\":\"object.a.b.c.keyword\",\"target_value\":\"a\",\"input_value\":\"a\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_integer\",\"target_field\":\"type_integer\",\"target_value\":1,\"input_value\":1,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_float\",\"target_field\":\"type_float\",\"target_value\":1.0,\"input_value\":1.0,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.clean\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_double\",\"target_field\":\"type_double\",\"target_value\":3.141592653589793,\"input_value\":3.141592653589793,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_string\",\"target_field\":\"type_string\",\"target_value\":\"a\",\"input_value\":\"a\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_boolean\",\"target_field\":\"type_boolean\",\"target_value\":true,\"input_value\":true,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.keyword\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"2000-01-01T00:00:00.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}}]}";
                         break;
                 }
-                assertEquals(expected, Json.MAPPER.writeValueAsString(doc.get("_explanation")));
+                // TODO: compare actual contents, serialized form is fragile
+                String actual = Json.ORDERED_MAPPER.writeValueAsString(doc.get("_explanation"));
+                assertEquals(expected, actual);
             }
         } finally {
             destroyTestResources(testResourceSet);
@@ -856,6 +860,7 @@ public class JobIT extends AbstractITCase {
             postResolution.setEntity(TEST_PAYLOAD_JOB_IDS);
             Response response = client.performRequest(postResolution);
             JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            // TODO: ids not being passed correctly
             assertEquals(json.get("hits").get("total").asInt(), 6);
             Set<String> docsExpected = new TreeSet<>();
             docsExpected.add("a0,0");
@@ -880,11 +885,11 @@ public class JobIT extends AbstractITCase {
             postResolution.setEntity(TEST_PAYLOAD_JOB_ATTRIBUTES_IDS);
             Response response = client.performRequest(postResolution);
             JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
-            assertEquals(json.get("hits").get("total").asInt(), 30);
+            assertEquals(30, json.get("hits").get("total").asInt());
             Set<String> docsExpected = new TreeSet<>();
-            docsExpected.add("a0,0");
+            docsExpected.add("a0,0"); // check
             docsExpected.add("a6,0");
-            docsExpected.add("b0,0");
+            docsExpected.add("b0,0"); // check
             docsExpected.add("a2,1");
             docsExpected.add("a7,1");
             docsExpected.add("a8,1");
@@ -900,7 +905,7 @@ public class JobIT extends AbstractITCase {
             docsExpected.add("c7,1");
             docsExpected.add("c8,1");
             docsExpected.add("c9,1");
-            docsExpected.add("a1,2");
+            docsExpected.add("a1,2"); // check
             docsExpected.add("a3,2");
             docsExpected.add("a4,2");
             docsExpected.add("a5,2");
@@ -910,8 +915,8 @@ public class JobIT extends AbstractITCase {
             docsExpected.add("c3,2");
             docsExpected.add("c4,2");
             docsExpected.add("c5,2");
-            docsExpected.add("b1,3");
-            docsExpected.add("c1,4");
+            docsExpected.add("b1,3"); // check
+            docsExpected.add("c1,4"); // check
             assertEquals(docsExpected, getActualIdHits(json));
         } finally {
             destroyTestResources(testResourceSet);
@@ -988,7 +993,6 @@ public class JobIT extends AbstractITCase {
             docsExpected.add("c1,0");
             docsExpected.add("d0,0");
             docsExpected.add("d1,0");
-            // STOPS HERE, no new attribute hits
             docsExpected.add("a2,1");
             docsExpected.add("b2,1");
             docsExpected.add("c2,1");
@@ -1669,10 +1673,14 @@ public class JobIT extends AbstractITCase {
                 Response response = e.getResponse();
                 assertEquals(response.getStatusLine().getStatusCode(), 500);
                 JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
-                assertEquals(json.get("error").get("by").asText(), "zentity");
-                assertEquals(json.get("error").get("type").asText(), "io.zentity.model.ValidationException");
-                assertEquals(json.get("error").get("reason").asText(), "Expected 'number' attribute data type.");
-                assertTrue(json.get("error").get("stack_trace").asText().startsWith("io.zentity.model.ValidationException: Expected 'number' attribute data type."));
+                assertTrue("has an error", json.has("error"));
+
+                JsonNode errorJson = json.get("error");
+                assertEquals(errorJson.get("by").asText(), "zentity");
+                assertEquals(errorJson.get("type").asText(), "io.zentity.model.ValidationException");
+                assertEquals(errorJson.get("reason").asText(), "Expected 'number' attribute data type.");
+                assertTrue(errorJson.get("stack_trace").asText().startsWith("io.zentity.model.ValidationException: Expected 'number' attribute data type."));
+
                 assertEquals(json.get("hits").get("total").asInt(), 0);
             }
 
@@ -1710,29 +1718,37 @@ public class JobIT extends AbstractITCase {
             docsExpectedArrays.add("1,0");
             docsExpectedArrays.add("2,1");
 
-            Request q1 = new Request("POST", endpoint);
-            q1.addParameter("_explanation", "true");
-            q1.setEntity(TEST_PAYLOAD_JOB_ARRAYS);
-            Response r1 = client.performRequest(q1);
-            JsonNode j1 = Json.MAPPER.readTree(r1.getEntity().getContent());
-            assertEquals(j1.get("hits").get("total").asInt(), 2);
-            assertEquals(docsExpectedArrays, getActualIdHits(j1));
+            Request req = new Request("POST", endpoint);
+            req.addParameter("_explanation", "true");
+            req.setEntity(TEST_PAYLOAD_JOB_ARRAYS);
+            Response res = client.performRequest(req);
+            JsonNode resJson = Json.MAPPER.readTree(res.getEntity().getContent());
 
-            for (JsonNode doc : j1.get("hits").get("hits")) {
+            // round-trip json so that it is ordered
+            resJson = Json.ORDERED_MAPPER.readTree(Json.ORDERED_MAPPER.writeValueAsString(resJson));
+
+            assertEquals(resJson.get("hits").get("total").asInt(), 2);
+            assertEquals(docsExpectedArrays, getActualIdHits(resJson));
+
+            for (JsonNode doc : resJson.get("hits").get("hits")) {
                 String attributesExpected = "";
                 String explanationExpected = "";
                 switch (doc.get("_id").asText()) {
                     case "1":
                         attributesExpected = "{\"array\":[\"111\",\"222\",\"333\",\"444\"],\"string\":[\"abc\"]}";
-                        explanationExpected = "{\"resolvers\":{\"array\":{\"attributes\":[\"array\"]},\"string\":{\"attributes\":[\"string\"]}},\"matches\":[{\"attribute\":\"array\",\"target_field\":\"array_2\",\"target_value\":[\"222\",null,\"222\"],\"input_value\":\"222\",\"input_matcher\":\"exact\",\"input_matcher_params\":{}},{\"attribute\":\"array\",\"target_field\":\"array_4\",\"target_value\":[\"222\",\"333\",\"444\"],\"input_value\":\"222\",\"input_matcher\":\"exact\",\"input_matcher_params\":{}},{\"attribute\":\"string\",\"target_field\":\"string\",\"target_value\":\"abc\",\"input_value\":\"abc\",\"input_matcher\":\"exact\",\"input_matcher_params\":{}}]}";
+                        explanationExpected = "{\"resolvers\":{\"string\":{\"attributes\":[\"string\"]},\"array\":{\"attributes\":[\"array\"]}},\"matches\":[{\"attribute\":\"array\",\"target_field\":\"array_4\",\"target_value\":[\"222\",\"333\",\"444\"],\"input_value\":\"222\",\"input_matcher\":\"exact\",\"input_matcher_params\":{}},{\"attribute\":\"string\",\"target_field\":\"string\",\"target_value\":\"abc\",\"input_value\":\"abc\",\"input_matcher\":\"exact\",\"input_matcher_params\":{}},{\"attribute\":\"array\",\"target_field\":\"array_2\",\"target_value\":[\"222\",null,\"222\"],\"input_value\":\"222\",\"input_matcher\":\"exact\",\"input_matcher_params\":{}}]}";
                         break;
                     case "2":
                         attributesExpected = "{\"array\":[\"444\",\"555\"],\"string\":[\"xyz\"]}";
                         explanationExpected = "{\"resolvers\":{\"array\":{\"attributes\":[\"array\"]}},\"matches\":[{\"attribute\":\"array\",\"target_field\":\"array_1\",\"target_value\":[\"444\"],\"input_value\":\"444\",\"input_matcher\":\"exact\",\"input_matcher_params\":{}}]}";
                         break;
                 }
-                assertEquals(attributesExpected, Json.MAPPER.writeValueAsString(doc.get("_attributes")));
-                assertEquals(explanationExpected, Json.MAPPER.writeValueAsString(doc.get("_explanation")));
+                // TODO: test actual contents, as serialized form is fragile
+                String attributesActual = Json.ORDERED_MAPPER.writeValueAsString(doc.get("_attributes"));
+                assertEquals(attributesExpected, attributesActual);
+
+                String explanationActual = Json.ORDERED_MAPPER.writeValueAsString(doc.get("_explanation"));
+                assertEquals(explanationExpected, explanationActual);
             }
 
         } finally {
@@ -1814,42 +1830,45 @@ public class JobIT extends AbstractITCase {
             Response response = client.performRequest(postResolution);
             JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
             assertEquals(json.get("hits").get("total").asInt(), 14);
-            for (JsonNode doc : json.get("hits").get("hits")) {
-                switch (doc.get("_id").textValue()) {
+            for (JsonNode hit : json.get("hits").get("hits")) {
+                JsonNode scoreNode = hit.get("_score");
+                assertTrue(scoreNode.isFloatingPointNumber() || scoreNode.isNull());
+                double score = scoreNode.doubleValue();
+                switch (hit.get("_id").textValue()) {
                     case "a0":
                     case "b0":
-                        assertEquals(0.794, doc.get("_score").doubleValue(), 0.0000000001);
+                        assertEquals(0.794, score, 0.0000000001);
                         break;
                     case "a1":
                     case "b1":
-                        assertEquals(0.5, doc.get("_score").doubleValue(), 0.0000000001);
+                        assertEquals(0.5, score, 0.0000000001);
                         break;
                     case "c0":
                     case "d0":
                     case "c2":
                     case "d2":
-                        assertEquals(0.0, doc.get("_score").doubleValue(),  0.0000000001);
+                        assertEquals(0.0, score,  0.0000000001);
                         break;
                     case "a2":
                     case "b2":
-                        assertEquals(0.8426393720609059, doc.get("_score").doubleValue(), 0.0000000001);
+                        assertEquals(0.8426393720609059, score, 0.0000000001);
                         break;
                     case "c1":
-                        assertEquals(0.9356979368877253, doc.get("_score").doubleValue(), 0.0000000001);
+                        assertEquals(0.9356979368877253, score, 0.0000000001);
                         break;
                     case "d1":
-                        assertEquals(0.9262128928820453, doc.get("_score").doubleValue(), 0.0000000001);
+                        assertEquals(0.9262128928820453, score, 0.0000000001);
                         break;
                     case "a3":
-                        assertEquals(0.9684567702655289, doc.get("_score").doubleValue(), 0.0000000001);
+                        assertEquals(0.9684567702655289, score, 0.0000000001);
                         break;
                     case "b3":
-                        assertEquals(0.9680814702469515, doc.get("_score").doubleValue(), 0.0000000001);
+                        assertEquals(0.9680814702469515, score, 0.0000000001);
                         break;
                     default:
                         Assert.fail();
                 }
-                for (JsonNode match : doc.get("_explanation").get("matches")) {
+                for (JsonNode match : hit.get("_explanation").get("matches")) {
                     assertFalse(match.get("score").isMissingNode());
                 }
             }
