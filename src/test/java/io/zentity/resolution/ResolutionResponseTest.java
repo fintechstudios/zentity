@@ -111,7 +111,7 @@ public class ResolutionResponseTest {
         response.includeHits = true;
 
         String actual = MAPPER.writeValueAsString(response);
-        String expected = "{\"took\":60000,\"hits\":{\"total\":0,\"hits\":[]},\"error\":{\"by\":\"zentity\",\"type\":\"java.lang.RuntimeException\",\"reason\":\"woops!\",\"stackTrace\":\"java.lang.RuntimeException: woops!\\n\\tat TotalBogus.bungledMethod(NotThisFile.java:3)\\n\"}}";
+        String expected = "{\"took\":60000,\"hits\":{\"total\":0,\"hits\":[]},\"error\":{\"by\":\"zentity\",\"type\":\"java.lang.RuntimeException\",\"reason\":\"woops!\",\"stack_trace\":\"java.lang.RuntimeException: woops!\\n\\tat TotalBogus.bungledMethod(NotThisFile.java:3)\\n\"}}";
         assertEquals(expected, actual);
     }
 

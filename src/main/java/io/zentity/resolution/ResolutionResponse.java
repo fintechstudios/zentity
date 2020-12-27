@@ -4,7 +4,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import org.elasticsearch.ElasticsearchException;
@@ -33,6 +35,7 @@ public class ResolutionResponse {
     // TODO: move to where the response is needed
     public boolean includeStackTrace = true;
 
+    @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
     public static class SerializedException {
         public String by;
         public String type;
