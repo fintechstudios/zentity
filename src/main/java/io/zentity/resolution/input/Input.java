@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 public class Input {
 
@@ -130,12 +131,13 @@ public class Input {
      * @throws ValidationException
      */
     public static Map<String, Set<String>> parseIds(JsonNode requestBody, Model model) throws ValidationException {
-        Map<String, Set<String>> idsObj = new HashMap<>();
+        Map<String, Set<String>> indexToIdsMap = new HashMap<>();
         if (!requestBody.has("ids") || requestBody.get("ids").size() == 0) {
-            return idsObj;
+            return indexToIdsMap;
         }
-        JsonNode ids = requestBody.get("ids");
-        Iterator<Map.Entry<String, JsonNode>> indices = ids.fields();
+        JsonNode idsNode = requestBody.get("ids");
+
+        Iterator<Map.Entry<String, JsonNode>> indices = idsNode.fields();
         while (indices.hasNext()) {
             Map.Entry<String, JsonNode> index = indices.next();
             String indexName = index.getKey();
@@ -147,13 +149,13 @@ public class Input {
             }
 
             // Parse the id values.
-            idsObj.put(indexName, new HashSet<>());
+            Set<String> validIds = new HashSet<>();
             if (!idsValues.isNull() && !idsValues.isArray()) {
                 throw new ValidationException("'ids." + indexName + "' must be an array.");
             }
-            Iterator<JsonNode> idsNode = idsValues.elements();
-            while (idsNode.hasNext()) {
-                JsonNode idNode = idsNode.next();
+            Iterator<JsonNode> idsElems = idsValues.elements();
+            while (idsElems.hasNext()) {
+                JsonNode idNode = idsElems.next();
                 if (!idNode.isTextual()) {
                     throw new ValidationException("'ids." + indexName + "' must be an array of strings.");
                 }
@@ -161,10 +163,11 @@ public class Input {
                 if (Patterns.EMPTY_STRING.matcher(id).matches()) {
                     throw new ValidationException("'ids." + indexName + "' must be an array of non-empty strings.");
                 }
-                idsObj.get(indexName).add(Json.quoteString(id));
+                validIds.add(id);
             }
+            indexToIdsMap.put(indexName, validIds);
         }
-        return idsObj;
+        return indexToIdsMap;
     }
 
     /**
@@ -242,39 +245,6 @@ public class Input {
             throw new ValidationException("Entity model must be an object.");
         }
         return new Model(modelJsonObj);
-    }
-
-    /**
-     * Validate a top-level field of the input.
-     *
-     * @param json  JSON object.
-     * @param field Field name.
-     * @throws ValidationException
-     */
-    private void validateField(JsonNode json, String field) throws ValidationException {
-        if (!json.get(field).isObject()) {
-            throw new ValidationException("'" + field + "' must be an object.");
-        }
-        if (json.get(field).size() == 0) {
-            throw new ValidationException("'" + field + "' must not be empty.");
-        }
-    }
-
-    /**
-     * Validate the object of a top-level field of the input.
-     *
-     * @param field  Field name.
-     * @param object JSON object.
-     * @throws ValidationException
-     */
-    private void validateObject(String field, JsonNode object) throws ValidationException {
-        if (!object.isObject()) {
-            throw new ValidationException("'" + field + "' must be an object.");
-        }
-        if (object.size() == 0) {
-            throw new ValidationException("'" + field + "' is empty.");
-        }
-
     }
 
     public Map<String, Attribute> attributes() {

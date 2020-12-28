@@ -118,6 +118,7 @@ public class Term implements Comparable<Term> {
      */
     public DateValue dateValue() throws IOException, ValidationException {
         if (this.dateValue == null) {
+            // TODO: remove json parsing
             JsonNode value = Json.MAPPER.readTree("{\"value\":" + Json.quoteString(this.term) + "}").get("value");
             this.dateValue = new DateValue(value);
         }
@@ -146,6 +147,7 @@ public class Term implements Comparable<Term> {
      */
     public StringValue stringValue() throws IOException, ValidationException {
         if (this.stringValue == null) {
+            // TODO: remove json parsing
             JsonNode value = Json.MAPPER.readTree("{\"value\":" + Json.quoteString(this.term) + "}").get("value");
             this.stringValue = new StringValue(value);
         }

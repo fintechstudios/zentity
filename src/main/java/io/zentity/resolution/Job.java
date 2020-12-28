@@ -35,6 +35,7 @@ import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.ExistsQueryBuilder;
 import org.elasticsearch.index.query.IdsQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
 import org.elasticsearch.search.SearchModule;
@@ -937,8 +938,9 @@ public class Job {
         BoolQueryBuilder idsQuery = null;
         if (canQueryIds) {
             String[] ids = this.config.input.ids().get(indexName).toArray(new String[0]);
-            idsQuery = new BoolQueryBuilder();
-            idsQuery.filter(new IdsQueryBuilder().addIds(ids));
+            idsQuery = QueryBuilders
+                .boolQuery()
+                .filter(QueryBuilders.idsQuery().addIds(ids));
         }
 
         // Construct the resolvers clause for attribute values.
