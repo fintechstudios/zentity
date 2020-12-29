@@ -1,26 +1,61 @@
 package io.zentity.common;
 
+import org.elasticsearch.common.CheckedBiFunction;
 import org.elasticsearch.common.CheckedFunction;
+import org.elasticsearch.common.CheckedSupplier;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
+import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class CompletableFutureUtil {
     /**
      * Wrap a checked function's error in a {@link CompletionException}.
      *
      * @param func The checked function.
-     * @param <T> The type of input.
      * @return The error-wrapped function.
      */
     public static <T, R> Function<T, R> uncheckedFunction(CheckedFunction<T, R, ?> func) {
         return (val) -> {
             try {
                 return func.apply(val);
+            } catch (Exception ex) {
+                throw new CompletionException(ex);
+            }
+        };
+    }
+
+    /**
+     * Wrap a checked bi-function's error in a {@link CompletionException}.
+     *
+     * @param func The checked function.
+     * @return The error-wrapped function.
+     */
+    public static <T, U, R> BiFunction<T, U, R> uncheckedBiFunction(CheckedBiFunction<T, U, R, ?> func) {
+        return (val1, val2) -> {
+            try {
+                return func.apply(val1, val2);
+            } catch (Exception ex) {
+                throw new CompletionException(ex);
+            }
+        };
+    }
+
+    /**
+     * Wrap a checked supplier's error in a {@link CompletionException}.
+     *
+     * @param func The checked function.
+     * @return The error-wrapped function.
+     */
+    public static <R> Supplier<R> uncheckedSupplier(CheckedSupplier<R, ?> func) {
+        return () -> {
+            try {
+                return func.get();
             } catch (Exception ex) {
                 throw new CompletionException(ex);
             }
@@ -57,7 +92,7 @@ public class CompletableFutureUtil {
      * @see <a href="https://github.com/spotify/completable-futures/blob/25bbd6e0c1c6cef974112aeb859938a6e927f4c5/src/main/java/com/spotify/futures/CompletableFutures.java"></a>
      */
     public static <T> CompletableFuture<T> composeExceptionally(CompletableFuture<T> fut, Function<Throwable, ? extends CompletableFuture<T>> fn) {
-        return (CompletableFuture<T>) composeExceptionally((CompletionStage<T>) fut, fn);
+        return composeExceptionally((CompletionStage<T>) fut, fn).toCompletableFuture();
     }
 
     /**

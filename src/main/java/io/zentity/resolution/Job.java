@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.zentity.common.ActionRequestUtil;
+import io.zentity.common.CompletableFutureUtil;
 import io.zentity.common.Json;
 import io.zentity.common.Patterns;
 import io.zentity.model.Index;
@@ -18,10 +20,13 @@ import io.zentity.resolution.input.Input;
 import io.zentity.resolution.input.Term;
 import io.zentity.resolution.input.value.Value;
 import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.action.search.SearchAction;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.node.NodeClient;
+import org.elasticsearch.common.CheckedFunction;
+import org.elasticsearch.common.CheckedSupplier;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.DeprecationHandler;
@@ -38,6 +43,7 @@ import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
+import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchModule;
 
 import java.io.IOException;
@@ -56,9 +62,21 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
+import static io.zentity.common.CompletableFutureUtil.composeExceptionally;
+import static io.zentity.common.CompletableFutureUtil.uncheckedBiFunction;
+import static io.zentity.common.CompletableFutureUtil.uncheckedFunction;
+import static io.zentity.common.CompletableFutureUtil.uncheckedSupplier;
 import static io.zentity.common.Patterns.COLON;
 import static io.zentity.resolution.BoolQueryUtils.BoolQueryCombiner.FILTER;
 import static io.zentity.resolution.BoolQueryUtils.BoolQueryCombiner.SHOULD;
@@ -286,6 +304,7 @@ public class Job {
      * @return Boolean decision.
      */
     private static boolean canQueryResolver(Model model, String indexName, String resolverName, Map<String, Attribute> attributes) {
+        Map<String, Map<String, IndexField>> attributeIndexFieldMap = model.indices().get(indexName).attributeIndexFieldsMap();
         // Each attribute of the resolver must pass these conditions:
         for (String attributeName : model.resolvers().get(resolverName).attributes()) {
 
@@ -300,17 +319,17 @@ public class Job {
             }
 
             // The index must have at least one index field mapped to the attribute.
-            if (!model.indices().get(indexName).attributeIndexFieldsMap().containsKey(attributeName)) {
+            if (!attributeIndexFieldMap.containsKey(attributeName)) {
                 return false;
             }
 
-            if (model.indices().get(indexName).attributeIndexFieldsMap().get(attributeName).isEmpty()) {
+            if (attributeIndexFieldMap.get(attributeName).isEmpty()) {
                 return false;
             }
 
             // The index field must have a matcher defined for it.
             boolean hasMatcher = false;
-            for (String indexFieldName : model.indices().get(indexName).attributeIndexFieldsMap().get(attributeName).keySet()) {
+            for (String indexFieldName : attributeIndexFieldMap.get(attributeName).keySet()) {
                 if (indexFieldHasMatcher(model, indexName, indexFieldName)) {
                     hasMatcher = true;
                     break;
@@ -391,7 +410,7 @@ public class Job {
             // Order of precedence:
             //  - Input attribute params override model attribute params
             //  - Model attribute params override matcher attribute params
-            Map<String, String> params = new TreeMap<>();
+            Map<String, String> params = new HashMap<>();
             params.putAll(matcher.params());
             params.putAll(model.attributes().get(attributeName).params());
             params.putAll(attributes.get(attributeName).params());
@@ -579,26 +598,28 @@ public class Job {
      * @param counts    For each attribute, the number of resolvers it appears in.
      * @return For each resolver, a list of attributes sorted first by priority and then lexicographically.
      */
-    static List<List<String>> sortResolverAttributes(Model model, List<String> resolvers, Map<String, Integer> counts) {
-        List<List<String>> resolversSorted = new ArrayList<>();
-        for (String resolverName : resolvers) {
-            List<String> resolverSorted = new ArrayList<>();
-            Map<Integer, Set<String>> attributeGroups = new TreeMap<>();
-            for (String attributeName : model.resolvers().get(resolverName).attributes()) {
-                int count = counts.get(attributeName);
-                if (!attributeGroups.containsKey(count)) {
-                    attributeGroups.put(count, new TreeSet<>());
+    static List<List<String>> sortResolverAttributes(final Model model, final List<String> resolvers, final Map<String, Integer> counts) {
+        return resolvers.stream()
+            .map((resolverName) -> {
+                Map<Integer, Set<String>> attributeGroups = new TreeMap<>();
+                for (String attributeName : model.resolvers().get(resolverName).attributes()) {
+                    int count = counts.get(attributeName);
+                    if (!attributeGroups.containsKey(count)) {
+                        attributeGroups.put(count, new TreeSet<>());
+                    }
+                    attributeGroups.get(count).add(attributeName);
                 }
-                attributeGroups.get(count).add(attributeName);
-            }
-            Set<Integer> countsKeys = new TreeSet<>(Collections.reverseOrder());
-            countsKeys.addAll(attributeGroups.keySet());
-            for (int count : countsKeys) {
-                resolverSorted.addAll(attributeGroups.get(count));
-            }
-            resolversSorted.add(resolverSorted);
-        }
-        return resolversSorted;
+
+                Set<Integer> countsKeys = new TreeSet<>(Collections.reverseOrder());
+                countsKeys.addAll(attributeGroups.keySet());
+
+                List<String> resolverSorted = new ArrayList<>();
+                for (int count : countsKeys) {
+                    resolverSorted.addAll(attributeGroups.get(count));
+                }
+                return resolverSorted;
+            })
+            .collect(Collectors.toList());
     }
 
     /**
@@ -643,8 +664,8 @@ public class Job {
      */
     private void initializeState() {
         this.attributeIdConfidenceScores = new AttributeIdConfidenceScoreMap();
-        this.attributes = new TreeMap<>(this.config.input.attributes());
-        this.docIds = new TreeMap<>();
+        this.attributes = new HashMap<>(this.config.input.attributes());
+        this.docIds = new HashMap<>();
         this.hits = new ArrayList<>();
         this.queries = new ArrayList<>();
         this.ran = false;
@@ -1348,6 +1369,7 @@ public class Job {
         if (!this.config.includeSource) {
             docObjNode.remove("_source");
         } else {
+            // TODO: this doesn't nest _source under _attributes?
             JsonNode sourceNode = docObjNode.get("_source");
             docObjNode.remove("_source");
             docObjNode.set("_source", sourceNode);
@@ -1393,26 +1415,192 @@ public class Job {
         return searchReqBuilder;
     }
 
+    private Function<Void, CompletableFuture<Void>> asyncTraversalLoopHandler(Predicate<Void> shouldContinuePred, Supplier<CompletableFuture<Void>> traversalLoopFunc) {
+        return (nil) -> {
+            if (!shouldContinuePred.test(null)) {
+                return CompletableFuture.completedFuture(null);
+            }
+            return traversalLoopFunc.get()
+                .thenCompose(asyncTraversalLoopHandler(shouldContinuePred, traversalLoopFunc));
+        };
+
+    }
+
     /**
-     * Given a set of attribute values, determine which queries to submit to which indices then submit them and recurse.
-     * <p>
-     * TODO: this should probably return a {@link CompletableFuture<ResolutionResponse>} instead of a JobResult.
-     *
-     * @throws IOException         If there is an error parsing content.
-     * @throws ValidationException If an input is invalid.
+     * Given a set of attribute values, determine which queries to submit to which indices then submit them and recurse
+     * asynchronously.
      */
-    private JobResult traverse() throws IOException, ValidationException {
-        // Prepare to collect attributes from the results of these queries as the inputs to subsequent queries.
-        boolean newAttributeHits = true;
-        int hop = 0;
-        int maxHops = this.config.maxHops <= -1 ? Integer.MAX_VALUE : this.config.maxHops;
-        boolean namedFilters = this.config.includeExplanation || this.config.includeScore;
-        Set<String> missingIndices = new HashSet<>();
-        // Stop traversing if there are no more attributes to query.
-        // or we've reached the max depth
-        while (newAttributeHits && !(hop > maxHops)) {
-            Map<String, Attribute> nextInputAttributes = new TreeMap<>();
-            int queryCounter = 0;
+    private CompletableFuture<ResolutionResponse> traverseAsync() {
+        final AtomicBoolean newAttributeHits = new AtomicBoolean(true);
+        final AtomicInteger hop = new AtomicInteger(0);
+        final AtomicInteger maxHops = new AtomicInteger(this.config.maxHops <= -1 ? Integer.MAX_VALUE : this.config.maxHops);
+        final AtomicBoolean namedFilters = new AtomicBoolean(this.config.includeExplanation || this.config.includeScore);
+        final Set<String> missingIndices = Collections.synchronizedSet(new HashSet<>());
+        final Map<String, Attribute> nextInputAttributes = Collections.synchronizedMap(new HashMap<>());
+        final AtomicInteger queryCounter = new AtomicInteger(0);
+
+        final CompletableFuture<Void> emptyResultFut = CompletableFuture.completedFuture(null);
+
+        final Predicate<Void> shouldContinuePred = (nil) -> newAttributeHits.get() && !(hop.get() > maxHops.get());
+
+        final CheckedFunction<String, CompletableFuture<Void>, IOException> runIndexSearch = (indexName) -> {
+            // Skip this index if a prior hop determined the index to be missing.
+            if (missingIndices.contains(indexName)) {
+                return emptyResultFut;
+            }
+
+            // Track _ids for this index.
+            if (!this.docIds.containsKey(indexName)) {
+                this.docIds.put(indexName, new HashSet<>());
+            }
+
+            // "_explanation" uses named queries, and each value of the "_name" fields must be unique.
+            // Use a counter to prepend a unique and deterministic identifier for each "_name" field in the query.
+            AtomicInteger nameIdCounter = new AtomicInteger();
+
+            // Determine which resolvers can be queried for this index.
+            List<String> resolvers = new ArrayList<>();
+            Set<String> resolverNames = this.config.input.model().resolvers().keySet();
+            for (String resolverName : resolverNames) {
+                if (canQueryResolver(this.config.input.model(), indexName, resolverName, this.attributes)) {
+                    resolvers.add(resolverName);
+                }
+            }
+
+            // Determine if we can query this index.
+            boolean canQueryIds = hop.get() == 0
+                && this.config.input.ids().containsKey(indexName)
+                && !this.config.input.ids().get(indexName).isEmpty();
+
+            boolean canQueryTerms = hop.get() == 0 &&
+                !this.config.input.terms().isEmpty();
+
+            if (resolvers.size() == 0 && !canQueryIds && !canQueryTerms) {
+                return emptyResultFut;
+            }
+
+            final SearchRequestBuilder searchReqBuilder = buildSearchRequest(indexName);
+            Map<String, Script> scripts = buildScriptFields(indexName, this.config.input);
+            scripts.forEach(searchReqBuilder::addScriptField);
+
+            final Map<Integer, FilterTree> resolversFilterTreeGrouped = new TreeMap<>(Collections.reverseOrder());
+            // Construct query for this index.
+            final List<String> termResolvers = new ArrayList<>();
+            final FilterTree termResolversFilterTree = new FilterTree();
+
+            final QueryBuilder searchQuery = buildSearchQuery(
+                indexName,
+                canQueryIds,
+                canQueryTerms,
+                resolvers,
+                nameIdCounter,
+                namedFilters.get(),
+                resolversFilterTreeGrouped,
+                termResolvers,
+                termResolversFilterTree
+            );
+            searchReqBuilder.setQuery(searchQuery);
+
+            // Submit query to Elasticsearch.
+            return ActionRequestUtil
+                .toCompletableFuture(searchReqBuilder)
+                .handle(uncheckedBiFunction((response, throwable) -> {
+                    ElasticsearchException responseError = null;
+                    boolean fatalError = false;
+
+                    if (throwable != null) {
+                        Throwable cause = CompletableFutureUtil.getCause(throwable);
+
+                        if (cause instanceof IndexNotFoundException) {
+                            IndexNotFoundException idxEx = (IndexNotFoundException) cause;
+                            // Don't fail the job if an index was missing.
+                            missingIndices.add(idxEx.getIndex().getName());
+                            responseError = idxEx;
+                        } else {
+                            // TODO: maybe just throw this error?
+                            fatalError = true;
+                            responseError = (ElasticsearchException) cause;
+                        }
+                    }
+
+                    // Log queries.
+                    if (config.includeQueries || config.profile) {
+                        LoggedQuery logged = buildLoggedQuery(
+                            config.input,
+                            hop.get(),
+                            queryCounter.get(),
+                            indexName,
+                            searchQuery,
+                            response,
+                            responseError,
+                            resolvers,
+                            resolversFilterTreeGrouped,
+                            termResolvers,
+                            termResolversFilterTree
+                        );
+                        queries.add(logged);
+                    }
+
+                    // Stop traversing if there was an error not due to a missing index.
+                    if (fatalError) {
+                        throw responseError;
+                    }
+
+                    // Read response from Elasticsearch.
+                    JsonNode responseData = null;
+                    if (response != null) {
+                        responseData = Json.ORDERED_MAPPER.readTree(response.toString());
+                    }
+
+                    // Read the hits
+                    if (responseData == null) {
+                        return null;
+                    }
+                    if (!responseData.has("hits")) {
+                        return null;
+                    }
+                    if (!responseData.get("hits").has("hits")) {
+                        return null;
+                    }
+
+                    // TODO: don't parse response as JSON, use SearchHit from response.getHits().getHits()
+                    for (JsonNode doc : responseData.get("hits").get("hits")) {
+                        // Skip doc if already fetched. Otherwise mark doc as fetched and then proceed.
+                        String id = doc.get("_id").textValue();
+                        Set<String> indexDocIds = docIds.get(indexName);
+                        if (indexDocIds.contains(id)) {
+                            continue;
+                        }
+                        indexDocIds.add(id);
+
+                        // Gather attributes from the doc. Store them in the "_attributes" field of the doc,
+                        // and include them in the attributes for subsequent queries.
+                        Map<String, Set<Value>> docAttributes = new HashMap<>();
+                        Map<String, JsonNode> docIndexFields = new HashMap<>();
+
+                        parseDocHit(doc, indexName, nextInputAttributes, docAttributes, docIndexFields);
+
+                        // Modify doc metadata.
+                        if (config.includeHits) {
+                            modifyDocMetadata(
+                                (ObjectNode) doc,
+                                indexName,
+                                hop.get(),
+                                queryCounter.get(),
+                                namedFilters.get(),
+                                docAttributes,
+                                docIndexFields
+                            );
+                        }
+                    }
+                    queryCounter.incrementAndGet();
+                    return null;
+                }));
+        };
+
+        final CheckedSupplier<CompletableFuture<Void>, IOException> runTraversal = () -> {
+            nextInputAttributes.clear();
+            queryCounter.set(0);
 
             /*
              * What's this loop doing?
@@ -1434,181 +1622,42 @@ public class Job {
 
             // Construct a query for each index that maps to a resolver.
             Set<String> indices = this.config.input.model().indices().keySet();
+            CompletableFuture<Void> completeFut = CompletableFuture.completedFuture(null);
             for (String indexName : indices) {
-
-                // Skip this index if a prior hop determined the index to be missing.
-                if (missingIndices.contains(indexName)) {
-                    continue;
-                }
-
-                // Track _ids for this index.
-                if (!this.docIds.containsKey(indexName)) {
-                    this.docIds.put(indexName, new HashSet<>());
-                }
-
-                // "_explanation" uses named queries, and each value of the "_name" fields must be unique.
-                // Use a counter to prepend a unique and deterministic identifier for each "_name" field in the query.
-                AtomicInteger nameIdCounter = new AtomicInteger();
-
-                // Determine which resolvers can be queried for this index.
-                List<String> resolvers = new ArrayList<>();
-                Set<String> resolverNames = this.config.input.model().resolvers().keySet();
-                for (String resolverName : resolverNames) {
-                    if (canQueryResolver(this.config.input.model(), indexName, resolverName, this.attributes)) {
-                        resolvers.add(resolverName);
-                    }
-                }
-
-                // Determine if we can query this index.
-                boolean canQueryIds = hop == 0
-                    && this.config.input.ids().containsKey(indexName)
-                    && !this.config.input.ids().get(indexName).isEmpty();
-
-                boolean canQueryTerms = hop == 0 &&
-                    !this.config.input.terms().isEmpty();
-
-                if (resolvers.size() == 0 && !canQueryIds && !canQueryTerms) {
-                    continue;
-                }
-
-                final SearchRequestBuilder searchReqBuilder = buildSearchRequest(indexName);
-                Map<String, Script> scripts = buildScriptFields(indexName, this.config.input);
-                scripts.forEach(searchReqBuilder::addScriptField);
-
-                Map<Integer, FilterTree> resolversFilterTreeGrouped = new TreeMap<>(Collections.reverseOrder());
-                // Construct query for this index.
-                List<String> termResolvers = new ArrayList<>();
-                FilterTree termResolversFilterTree = new FilterTree();
-
-                QueryBuilder searchQuery = buildSearchQuery(
-                    indexName,
-                    canQueryIds,
-                    canQueryTerms,
-                    resolvers,
-                    nameIdCounter,
-                    namedFilters,
-                    resolversFilterTreeGrouped,
-                    termResolvers,
-                    termResolversFilterTree
-                );
-                searchReqBuilder.setQuery(searchQuery);
-
-                // Submit query to Elasticsearch.
-                SearchResponse response = null;
-                ElasticsearchException responseError = null;
-                boolean failed = false;
-                try {
-                    // TODO: better future handling
-                    response = searchReqBuilder.get();
-                } catch (IndexNotFoundException e) {
-                    // Don't fail the job if an index was missing.
-                    missingIndices.add(e.getIndex().getName());
-                    responseError = e;
-                } catch (Exception e) {
-                    // Fail the job for any other error.
-                    failed = true;
-                    responseError = (ElasticsearchException) e;
-                }
-
-                // Read response from Elasticsearch.
-                JsonNode responseData = null;
-                if (response != null) {
-                    responseData = Json.ORDERED_MAPPER.readTree(response.toString());
-                }
-
-                // Log queries.
-                if (this.config.includeQueries || this.config.profile) {
-                    LoggedQuery logged = buildLoggedQuery(
-                        this.config.input,
-                        hop,
-                        queryCounter,
-                        indexName,
-                        searchQuery,
-                        response,
-                        responseError,
-                        resolvers,
-                        resolversFilterTreeGrouped,
-                        termResolvers,
-                        termResolversFilterTree
-                    );
-                    this.queries.add(logged);
-                }
-
-                // Stop traversing if there was an error not due to a missing index.
-                if (failed) {
-                    return new JobResult(responseError);
-                }
-
-                // Read the hits
-                if (responseData == null) {
-                    continue;
-                }
-                if (!responseData.has("hits")) {
-                    continue;
-                }
-                if (!responseData.get("hits").has("hits")) {
-                    continue;
-                }
-
-                // TODO: don't parse response as JSON, use SearchHit from response.getHits().getHits()
-                for (JsonNode doc : responseData.get("hits").get("hits")) {
-                    // Skip doc if already fetched. Otherwise mark doc as fetched and then proceed.
-                    String id = doc.get("_id").textValue();
-                    Set<String> indexDocIds = this.docIds.get(indexName);
-                    if (indexDocIds.contains(id)) {
-                        continue;
-                    }
-                    indexDocIds.add(id);
-
-                    // Gather attributes from the doc. Store them in the "_attributes" field of the doc,
-                    // and include them in the attributes for subsequent queries.
-                    Map<String, Set<Value>> docAttributes = new TreeMap<>();
-                    Map<String, JsonNode> docIndexFields = new TreeMap<>();
-
-                    parseDocHit(doc, indexName, nextInputAttributes, docAttributes, docIndexFields);
-
-                    // Modify doc metadata.
-                    if (this.config.includeHits) {
-                        modifyDocMetadata((ObjectNode) doc, indexName, hop, queryCounter, namedFilters, docAttributes, docIndexFields);
-                    }
-                }
-                queryCounter++;
+                completeFut = completeFut.thenCompose(uncheckedFunction((res) -> runIndexSearch.apply(indexName)));
             }
 
-            // Update input attributes for the next queries.
-            newAttributeHits = updateInputAttributes(nextInputAttributes);
-            // Update hop count.
-            hop++;
-        }
+            return completeFut
+                .thenApply((nil) -> {
+                    // Update input attributes for the next queries.
+                    newAttributeHits.set(updateInputAttributes(nextInputAttributes));
+                    // Update hop count.
+                    hop.incrementAndGet();
+                    return null;
+                });
+        };
 
-        return new JobResult();
-    }
+        final Supplier<CompletableFuture<Void>> traversalLoopFunc = () -> uncheckedSupplier(runTraversal).get();
 
-    private JobResult runResolution() {
         // Start timer and begin job
-        long startTime = System.nanoTime();
-        JobResult result = new JobResult();
-        try {
-            result = this.traverse();
-        } catch (Exception e) {
-            result = new JobResult(e);
-        } finally {
-            // Format response
-            ResolutionResponse response = new ResolutionResponse();
-            response.took = Duration.ofNanos(System.nanoTime() - startTime);
-            response.hits = this.hits;
-            response.includeHits = this.config.includeHits;
+        final long startTime = System.nanoTime();
 
-            // TODO: move this to where the response is needed
-            if (this.config.includeQueries || this.config.profile) {
+        return asyncTraversalLoopHandler(shouldContinuePred, traversalLoopFunc)
+            .apply(null)
+            .handle((res, err) -> {
+                // Format response
+                ResolutionResponse response = new ResolutionResponse();
+                response.took = Duration.ofNanos(System.nanoTime() - startTime);
+                response.hits = this.hits;
+                response.includeHits = this.config.includeHits;
+
+                // TODO: maybe move these "includeX" settings to where the response is needed
                 response.queries = this.queries;
-                response.includeQueries = true;
-            }
-            response.error = result.error;
-            response.includeStackTrace = this.config.includeErrorTrace;
-            result.response = response;
-        }
-        return result;
+                response.includeQueries = this.config.includeQueries || this.config.profile;
+                response.error = err == null ? null : CompletableFutureUtil.getCause(err);
+                response.includeStackTrace = this.config.includeErrorTrace;
+                return response;
+            });
     }
 
     /**
@@ -1616,18 +1665,18 @@ public class Job {
      *
      * @return A JSON string to be returned as the body of the response to a client.
      */
-    public JobResult run() {
-        try {
-            // Reset the state of the job if reusing this Job object.
-            if (this.ran) {
-                this.initializeState();
-            }
-            return runResolution();
-        } finally {
-            this.ran = true;
-        }
+    public CompletableFuture<ResolutionResponse> runAsync() {
+        // TODO: move all state into something that can be passed or created in traverseAsync()
+        //       so that each call is isolated
+        this.initializeState();
+        return this.traverseAsync();
     }
 
+    /**
+     * Get a new instance of a {@link Builder}.
+     *
+     * @return The builder.
+     */
     public static Builder newBuilder() {
         return new Builder();
     }
@@ -1638,13 +1687,13 @@ public class Job {
     public static class JobResult {
         boolean failed;
         ResolutionResponse response;
-        Exception error;
+        Throwable error;
 
         JobResult() {
             this(null);
         }
 
-        JobResult(Exception error) {
+        JobResult(Throwable error) {
             this.error = error;
             this.failed = error != null;
         }

@@ -614,8 +614,7 @@ public class JobIT extends AbstractITCase {
         ByteArrayEntity testData;
 
         // Elasticsearch 7.0.0+ removes mapping types
-        Properties props = new Properties();
-        props.load(ZentityPlugin.class.getResourceAsStream("/plugin-descriptor.properties"));
+        Properties props = ZentityPlugin.properties();
         if (testResourceSet == TEST_RESOURCES_ARRAYS) {
             if (props.getProperty("elasticsearch.version").compareTo("7.") >= 0) {
                 testIndex = new ByteArrayEntity(readFile("TestIndexArrays.json"), ContentType.APPLICATION_JSON);
@@ -685,9 +684,9 @@ public class JobIT extends AbstractITCase {
     private Set<String> getActualIdHits(JsonNode json) {
         Set<String> docsActual = new TreeSet<>();
         for (JsonNode node : json.get("hits").get("hits")) {
-            String _id = node.get("_id").asText();
-            int _hop = node.get("_hop").asInt();
-            docsActual.add(_id + "," + _hop);
+            String id = node.get("_id").asText();
+            int hop = node.get("_hop").asInt();
+            docsActual.add(id + "," + hop);
         }
         return docsActual;
     }
@@ -856,11 +855,10 @@ public class JobIT extends AbstractITCase {
         prepareTestResources(testResourceSet);
         try {
             String endpoint = "_zentity/resolution/zentity_test_entity_a";
-            Request postResolution = new Request("POST", endpoint);
-            postResolution.setEntity(TEST_PAYLOAD_JOB_IDS);
-            Response response = client.performRequest(postResolution);
+            Request req = new Request("POST", endpoint);
+            req.setEntity(TEST_PAYLOAD_JOB_IDS);
+            Response response = client.performRequest(req);
             JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
-            // TODO: ids not being passed correctly
             assertEquals(json.get("hits").get("total").asInt(), 6);
             Set<String> docsExpected = new TreeSet<>();
             docsExpected.add("a0,0");
@@ -881,9 +879,9 @@ public class JobIT extends AbstractITCase {
         prepareTestResources(testResourceSet);
         try {
             String endpoint = "_zentity/resolution/zentity_test_entity_a";
-            Request postResolution = new Request("POST", endpoint);
-            postResolution.setEntity(TEST_PAYLOAD_JOB_ATTRIBUTES_IDS);
-            Response response = client.performRequest(postResolution);
+            Request req = new Request("POST", endpoint);
+            req.setEntity(TEST_PAYLOAD_JOB_ATTRIBUTES_IDS);
+            Response response = client.performRequest(req);
             JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
             assertEquals(30, json.get("hits").get("total").asInt());
             Set<String> docsExpected = new TreeSet<>();
@@ -929,9 +927,10 @@ public class JobIT extends AbstractITCase {
         prepareTestResources(testResourceSet);
         try {
             String endpoint = "_zentity/resolution/zentity_test_entity_a";
-            Request postResolution = new Request("POST", endpoint);
-            postResolution.setEntity(TEST_PAYLOAD_JOB_TERMS_IDS);
-            Response response = client.performRequest(postResolution);
+            Request req = new Request("POST", endpoint);
+            req.addParameter("queries", "true");
+            req.setEntity(TEST_PAYLOAD_JOB_TERMS_IDS);
+            Response response = client.performRequest(req);
             JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
             assertEquals(json.get("hits").get("total").asInt(), 30);
             Set<String> docsExpected = new TreeSet<>();
@@ -965,7 +964,8 @@ public class JobIT extends AbstractITCase {
             docsExpected.add("c5,2");
             docsExpected.add("b1,3");
             docsExpected.add("c1,4");
-            assertEquals(docsExpected, getActualIdHits(json));
+            Set<String> actualHits = getActualIdHits(json);
+            assertEquals(docsExpected, actualHits);
         } finally {
             destroyTestResources(testResourceSet);
         }
@@ -1735,11 +1735,11 @@ public class JobIT extends AbstractITCase {
                 String explanationExpected = "";
                 switch (doc.get("_id").asText()) {
                     case "1":
-                        attributesExpected = "{\"array\":[\"111\",\"222\",\"333\",\"444\"],\"string\":[\"abc\"]}";
+                        attributesExpected = "{\"string\":[\"abc\"],\"array\":[\"111\",\"222\",\"333\",\"444\"]}";
                         explanationExpected = "{\"resolvers\":{\"string\":{\"attributes\":[\"string\"]},\"array\":{\"attributes\":[\"array\"]}},\"matches\":[{\"attribute\":\"array\",\"target_field\":\"array_4\",\"target_value\":[\"222\",\"333\",\"444\"],\"input_value\":\"222\",\"input_matcher\":\"exact\",\"input_matcher_params\":{}},{\"attribute\":\"string\",\"target_field\":\"string\",\"target_value\":\"abc\",\"input_value\":\"abc\",\"input_matcher\":\"exact\",\"input_matcher_params\":{}},{\"attribute\":\"array\",\"target_field\":\"array_2\",\"target_value\":[\"222\",null,\"222\"],\"input_value\":\"222\",\"input_matcher\":\"exact\",\"input_matcher_params\":{}}]}";
                         break;
                     case "2":
-                        attributesExpected = "{\"array\":[\"444\",\"555\"],\"string\":[\"xyz\"]}";
+                        attributesExpected = "{\"string\":[\"xyz\"],\"array\":[\"444\",\"555\"]}";
                         explanationExpected = "{\"resolvers\":{\"array\":{\"attributes\":[\"array\"]}},\"matches\":[{\"attribute\":\"array\",\"target_field\":\"array_1\",\"target_value\":[\"444\"],\"input_value\":\"444\",\"input_matcher\":\"exact\",\"input_matcher_params\":{}}]}";
                         break;
                 }

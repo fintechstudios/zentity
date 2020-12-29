@@ -31,9 +31,13 @@ public class ResolutionResponse {
     public boolean includeQueries = true;
     public List<LoggedQuery> queries = new ArrayList<>();
     // error, perhaps w/ stack trace
-    public Exception error;
+    public Throwable error;
     // TODO: move to where the response is needed
     public boolean includeStackTrace = true;
+
+    public boolean isFailure() {
+        return this.error != null;
+    }
 
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
     public static class SerializedException {
@@ -44,7 +48,7 @@ public class ResolutionResponse {
         @JsonInclude(Include.NON_NULL)
         public String stackTrace = null;
 
-        public SerializedException(Exception ex, boolean includeStackTrace) {
+        public SerializedException(Throwable ex, boolean includeStackTrace) {
             by = (ex instanceof ElasticsearchException) ? "elasticsearch": "zentity";
             type = ex.getClass().getCanonicalName();
             reason = ex.getMessage();
@@ -76,7 +80,7 @@ public class ResolutionResponse {
                 gen.writeObjectFieldStart("hits");
 
                 gen.writeFieldName("total");
-                gen.writeObject(value.hits.size());
+                gen.writeNumber(value.hits.size());
 
                 gen.writeFieldName("hits");
                 gen.writeObject(value.hits);

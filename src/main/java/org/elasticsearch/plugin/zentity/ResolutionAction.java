@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import io.zentity.common.Json;
 import io.zentity.model.Model;
 import io.zentity.resolution.Job;
-import io.zentity.resolution.Job.JobResult;
 import io.zentity.resolution.input.Input;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.client.node.NodeClient;
@@ -17,6 +16,7 @@ import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
 
+import static io.zentity.common.CompletableFutureUtil.uncheckedFunction;
 import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 
@@ -110,16 +110,19 @@ public class ResolutionAction extends BaseRestHandler {
                 .build();
 
             // Run the entity resolution job.
-            JobResult result = job.run();
-            ObjectWriter writer = pretty
-                ? Json.ORDERED_MAPPER.writerWithDefaultPrettyPrinter()
-                : Json.MAPPER.writer();
-            String responseJson = writer.writeValueAsString(result.getResponse());
-            if (result.failed()) {
-                channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, "application/json", responseJson));
-            } else {
-                channel.sendResponse(new BytesRestResponse(RestStatus.OK, "application/json", responseJson));
-            }
+            job.runAsync()
+                .thenApply(uncheckedFunction((res) -> {
+                    ObjectWriter writer = pretty
+                        ? Json.ORDERED_MAPPER.writerWithDefaultPrettyPrinter()
+                        : Json.MAPPER.writer();
+                    String responseJson = writer.writeValueAsString(res);
+
+                    RestStatus status = res.isFailure() ? RestStatus.INTERNAL_SERVER_ERROR : RestStatus.OK;
+
+                    channel.sendResponse(new BytesRestResponse(status, "application/json", responseJson));
+                    return null;
+                }))
+                .get();
         });
     }
 }
