@@ -1409,7 +1409,7 @@ public class Job {
             searchReqBuilder.setRequestCache(this.config.searchRequestCache);
         }
         if (this.config.maxTimePerQuery != null) {
-            searchReqBuilder.setTimeout(TimeValue.parseTimeValue(this.config.maxTimePerQuery, "timeout"));
+            searchReqBuilder.setTimeout(this.config.maxTimePerQuery);
         }
 
         return searchReqBuilder;
@@ -1723,7 +1723,7 @@ public class Job {
         private boolean includeVersion = DEFAULT_INCLUDE_VERSION;
         private int maxDocsPerQuery = DEFAULT_MAX_DOCS_PER_QUERY;
         private int maxHops = DEFAULT_MAX_HOPS;
-        private String maxTimePerQuery = DEFAULT_MAX_TIME_PER_QUERY;
+        private TimeValue maxTimePerQuery = TimeValue.parseTimeValue(DEFAULT_MAX_TIME_PER_QUERY, "timeout");
         private boolean profile = DEFAULT_PROFILE;
 
         // optional, nullable search parameters
@@ -1798,7 +1798,10 @@ public class Job {
         }
 
         public Builder maxTimePerQuery(String maxTimePerQuery) {
-            this.config.maxTimePerQuery = maxTimePerQuery;
+            // TODO: wrap in validation exception?
+            this.config.maxTimePerQuery = maxTimePerQuery == null
+                ? null
+                : TimeValue.parseTimeValue(maxTimePerQuery, "timeout");
             return this;
         }
 
