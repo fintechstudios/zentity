@@ -1,6 +1,8 @@
 package io.zentity.resolution.input;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.BooleanNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import io.zentity.common.Json;
 import io.zentity.common.Patterns;
 import io.zentity.model.ValidationException;
@@ -29,20 +31,16 @@ public class Term implements Comparable<Term> {
         this.term = term;
     }
 
-    private void validateTerm(String term) throws ValidationException {
-        if (Patterns.EMPTY_STRING.matcher(term).matches()) {
-            throw new ValidationException("A term must be a non-empty string.");
-        }
-    }
-
-    public String term() { return this.term; }
-
-    public static boolean isBoolean(String term) {
+    private static boolean isBoolean(String term) {
         String termLowerCase = term.toLowerCase();
         return termLowerCase.equals("true") || termLowerCase.equals("false");
     }
 
-    public static boolean isDate(String term, String format) {
+    private static boolean asBoolean(String term) {
+        return Boolean.parseBoolean(term);
+    }
+
+    private static boolean isDate(String term, String format) {
         try {
             SimpleDateFormat formatter = new SimpleDateFormat(format);
             formatter.setLenient(false);
@@ -53,8 +51,14 @@ public class Term implements Comparable<Term> {
         return true;
     }
 
-    public static boolean isNumber(String term) {
+    private static boolean isNumber(String term) {
         return Patterns.NUMBER_STRING.matcher(term).matches();
+    }
+
+    private void validateTerm(String term) throws ValidationException {
+        if (Patterns.EMPTY_STRING.matcher(term).matches()) {
+            throw new ValidationException("A term must be a non-empty string.");
+        }
     }
 
     /**
@@ -89,10 +93,10 @@ public class Term implements Comparable<Term> {
      *
      * @return
      */
-    public BooleanValue booleanValue() throws IOException, ValidationException {
+    public BooleanValue booleanValue() throws ValidationException {
         if (this.booleanValue == null) {
-            JsonNode value = Json.MAPPER.readTree("{\"value\":" + this.term + "}").get("value");
-            this.booleanValue = new BooleanValue(value);
+            JsonNode valNode = BooleanNode.valueOf(asBoolean(this.term));
+            this.booleanValue = new BooleanValue(valNode);
         }
         return this.booleanValue;
     }
@@ -116,11 +120,9 @@ public class Term implements Comparable<Term> {
      *
      * @return
      */
-    public DateValue dateValue() throws IOException, ValidationException {
+    public DateValue dateValue() throws ValidationException {
         if (this.dateValue == null) {
-            // TODO: remove json parsing
-            JsonNode value = Json.MAPPER.readTree("{\"value\":" + Json.quoteString(this.term) + "}").get("value");
-            this.dateValue = new DateValue(value);
+            this.dateValue = new DateValue(new TextNode(this.term));
         }
         return this.dateValue;
     }
@@ -133,6 +135,8 @@ public class Term implements Comparable<Term> {
      */
     public NumberValue numberValue() throws IOException, ValidationException {
         if (this.numberValue == null) {
+            // TODO: might be able to remove this if we can determine if floating point vs integral values
+            //      matter for attribute values
             JsonNode value = Json.MAPPER.readTree("{\"value\":" + this.term + "}").get("value");
             this.numberValue = new NumberValue(value);
         }
@@ -145,11 +149,9 @@ public class Term implements Comparable<Term> {
      *
      * @return
      */
-    public StringValue stringValue() throws IOException, ValidationException {
+    public StringValue stringValue() throws ValidationException {
         if (this.stringValue == null) {
-            // TODO: remove json parsing
-            JsonNode value = Json.MAPPER.readTree("{\"value\":" + Json.quoteString(this.term) + "}").get("value");
-            this.stringValue = new StringValue(value);
+            this.stringValue = new StringValue(new TextNode(this.term));
         }
         return this.stringValue;
     }

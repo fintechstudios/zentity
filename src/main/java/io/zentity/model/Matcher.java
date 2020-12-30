@@ -46,6 +46,7 @@ public class Matcher {
      * @return
      */
     public static Map<String, Pattern> parseVariables(String clause) {
+        // TODO: replace with Moustache lang parser
         java.util.regex.Matcher m = Patterns.VARIABLE.matcher(clause);
         Map<String, Pattern> variables = new HashMap<>();
         while (m.find()) {
