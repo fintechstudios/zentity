@@ -159,6 +159,8 @@
                         <ELASTICSEARCH_VERSION>${elasticsearch.version}</ELASTICSEARCH_VERSION>
                         <PLUGIN_BUILD_DIR>${project.build.directory}/releases/</PLUGIN_BUILD_DIR>
                     </environmentVariables>
+                    <!-- disable security manager: https://discuss.elastic.co/t/integration-tests-fail-with-java-security-accesscontrolexception/69979 -->
+                    <argLine>-Dtests.security.manager=false</argLine>
                 </configuration>
                 <executions>
                     <execution>
