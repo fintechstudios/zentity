@@ -1,5 +1,6 @@
 package io.zentity.common;
 
+import io.zentity.common.FunctionalUtil.Recursable;
 import org.elasticsearch.common.CheckedBiFunction;
 import org.elasticsearch.common.CheckedFunction;
 import org.elasticsearch.common.CheckedSupplier;
@@ -11,6 +12,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public class CompletableFutureUtil {
@@ -122,5 +124,22 @@ public class CompletableFutureUtil {
         CompletableFuture<T> fut = new CompletableFuture<>();
         fut.completeExceptionally(throwable);
         return fut;
+    }
+
+    /**
+     * Create a looping recursive function.
+     *
+     * @param exitCondition  The exit condition predicate.
+     * @param futureSupplier A function to get a new {@link CompletableFuture} for recursive chaining, called once each loop.
+     * @param <T>            The type of the result of each loop.
+     * @return A recursive function that will chain {@link CompletableFuture CompletableFutures} until the exit condition is met.
+     */
+    public static <T> Recursable<T, CompletableFuture<T>> recursiveLoopFunction(final Predicate<T> exitCondition, final Supplier<CompletableFuture<T>> futureSupplier) {
+        return (val, f) -> {
+            if (exitCondition.test(val)) {
+                return CompletableFuture.completedFuture(val);
+            }
+            return futureSupplier.get().thenCompose(f);
+        };
     }
 }

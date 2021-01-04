@@ -1415,17 +1415,6 @@ public class Job {
         return searchReqBuilder;
     }
 
-    private Function<Void, CompletableFuture<Void>> asyncTraversalLoopHandler(Predicate<Void> shouldContinuePred, Supplier<CompletableFuture<Void>> traversalLoopFunc) {
-        return (nil) -> {
-            if (!shouldContinuePred.test(null)) {
-                return CompletableFuture.completedFuture(null);
-            }
-            return traversalLoopFunc.get()
-                .thenCompose(asyncTraversalLoopHandler(shouldContinuePred, traversalLoopFunc));
-        };
-
-    }
-
     /**
      * Given a set of attribute values, determine which queries to submit to which indices then submit them and recurse
      * asynchronously.
@@ -1598,7 +1587,7 @@ public class Job {
                 }));
         };
 
-        final CheckedSupplier<CompletableFuture<Void>, IOException> runTraversal = () -> {
+        final Supplier<CompletableFuture<Void>> runTraversal = uncheckedSupplier(() -> {
             nextInputAttributes.clear();
             queryCounter.set(0);
 
@@ -1635,15 +1624,18 @@ public class Job {
                     hop.incrementAndGet();
                     return null;
                 });
-        };
-
-        final Supplier<CompletableFuture<Void>> traversalLoopFunc = () -> uncheckedSupplier(runTraversal).get();
+        });
 
         // Start timer and begin job
         final long startTime = System.nanoTime();
 
-        return asyncTraversalLoopHandler(shouldContinuePred, traversalLoopFunc)
-            .apply(null)
+        Function<Void, CompletableFuture<Void>> traversalFunc = CompletableFutureUtil
+            .recursiveLoopFunction(
+                shouldContinuePred.negate(),
+                runTraversal
+            );
+
+        return traversalFunc.apply(null)
             .handle((res, err) -> {
                 // Format response
                 ResolutionResponse response = new ResolutionResponse();
