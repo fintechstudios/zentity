@@ -9,23 +9,18 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import io.zentity.common.XContentUtils;
 import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.xcontent.ToXContent;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.function.UnaryOperator;
 
 import static io.zentity.common.XContentUtils.uncheckedModifier;
-import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
 @JsonSerialize(using = LoggedSearch.Serializer.class)
 public class LoggedSearch {
     // request
-    QueryBuilder searchRequest;
+    SearchRequestBuilder searchRequest;
     // response, if non-null
     SearchResponse response;
     // response error, if no response
@@ -79,8 +74,10 @@ public class LoggedSearch {
         @Override
         public void serialize(LoggedSearch value, JsonGenerator gen, SerializerProvider provider) throws IOException {
             gen.writeStartObject();
+
             gen.writeFieldName("request");
-            gen.writeRawValue(XContentUtils.serializeAsJSON(value.searchRequest));
+            gen.writeRawValue(XContentUtils.serializeAsJSON(value.searchRequest.request().source()));
+
             // write the response, either the error or the real response
             gen.writeFieldName("response");
             if (value.response == null) {
@@ -95,6 +92,7 @@ public class LoggedSearch {
             } else {
                 gen.writeRawValue(XContentUtils.serializeAsJSON(value.response));
             }
+
             gen.writeEndObject();
         }
     }

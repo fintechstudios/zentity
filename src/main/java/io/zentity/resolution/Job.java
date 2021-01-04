@@ -20,13 +20,11 @@ import io.zentity.resolution.input.Input;
 import io.zentity.resolution.input.Term;
 import io.zentity.resolution.input.value.Value;
 import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.action.search.SearchAction;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.CheckedFunction;
-import org.elasticsearch.common.CheckedSupplier;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.DeprecationHandler;
@@ -43,7 +41,6 @@ import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
-import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchModule;
 
 import java.io.IOException;
@@ -62,18 +59,14 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static io.zentity.common.CompletableFutureUtil.composeExceptionally;
 import static io.zentity.common.CompletableFutureUtil.uncheckedBiFunction;
 import static io.zentity.common.CompletableFutureUtil.uncheckedFunction;
 import static io.zentity.common.CompletableFutureUtil.uncheckedSupplier;
@@ -135,7 +128,7 @@ public class Job {
         int hop,
         int queryNumber,
         String indexName,
-        QueryBuilder requestQuery,
+        SearchRequestBuilder searchRequest,
         SearchResponse response,
         ElasticsearchException responseError,
         List<String> resolvers,
@@ -166,7 +159,7 @@ public class Job {
 
         // structure the search data
         LoggedSearch search = new LoggedSearch();
-        search.searchRequest = requestQuery;
+        search.searchRequest = searchRequest;
         search.response = response;
         search.responseError = responseError;
 
@@ -660,18 +653,6 @@ public class Job {
     }
 
     /**
-     * Initializes/ resets the variables that hold the state of the job.
-     */
-    private void initializeState() {
-        this.attributeIdConfidenceScores = new AttributeIdConfidenceScoreMap();
-        this.attributes = new HashMap<>(this.config.input.attributes());
-        this.docIds = new HashMap<>();
-        this.hits = new ArrayList<>();
-        this.queries = new ArrayList<>();
-        this.ran = false;
-    }
-
-    /**
      * Combine a list of attribute identity confidence scores into a single composite identity confidence score using
      * conflation of probability distributions.
      * <p>
@@ -734,6 +715,25 @@ public class Job {
         return score;
     }
 
+    private static XContentParser buildXContentParser(String query) throws IOException {
+        SearchModule searchModule = new SearchModule(Settings.EMPTY, false, Collections.emptyList());
+        NamedXContentRegistry registry = new NamedXContentRegistry(searchModule.getNamedXContents());
+        return XContentFactory.xContent(XContentType.JSON)
+            .createParser(registry, DeprecationHandler.THROW_UNSUPPORTED_OPERATION, query);
+    }
+
+    /**
+     * Initializes/ resets the variables that hold the state of the job.
+     */
+    private void initializeState() {
+        this.attributeIdConfidenceScores = new AttributeIdConfidenceScoreMap();
+        this.attributes = new HashMap<>(this.config.input.attributes());
+        this.docIds = new HashMap<>();
+        this.hits = new ArrayList<>();
+        this.queries = new ArrayList<>();
+        this.ran = false;
+    }
+
     /**
      * Get a cached attribute identity confidence score, or calculate and cache an attribute identity confidence score.
      * This function helps minimize calculations over the life of the resolution job.
@@ -763,13 +763,6 @@ public class Job {
 
         double score = calculateAttributeIdentityConfidenceScore(attributeIdentityConfidenceBaseScore, matcherQualityScore, indexFieldQualityScore);
         return this.attributeIdConfidenceScores.setScore(attributeName, matcherName, indexName, indexFieldName, score);
-    }
-
-    private static XContentParser buildXContentParser(String query) throws IOException {
-        SearchModule searchModule = new SearchModule(Settings.EMPTY, false, Collections.emptyList());
-        NamedXContentRegistry registry = new NamedXContentRegistry(searchModule.getNamedXContents());
-        return XContentFactory.xContent(XContentType.JSON)
-            .createParser(registry, DeprecationHandler.THROW_UNSUPPORTED_OPERATION, query);
     }
 
     private boolean updateInputAttributes(Map<String, Attribute> nextInputAttributes) throws ValidationException {
@@ -1519,7 +1512,7 @@ public class Job {
                             hop.get(),
                             queryCounter.get(),
                             indexName,
-                            searchQuery,
+                            searchReqBuilder,
                             response,
                             responseError,
                             resolvers,
@@ -1671,32 +1664,6 @@ public class Job {
      */
     public static Builder newBuilder() {
         return new Builder();
-    }
-
-    /**
-     * A simple holder for a resolution job's result state.
-     */
-    public static class JobResult {
-        boolean failed;
-        ResolutionResponse response;
-        Throwable error;
-
-        JobResult() {
-            this(null);
-        }
-
-        JobResult(Throwable error) {
-            this.error = error;
-            this.failed = error != null;
-        }
-
-        public boolean failed() {
-            return failed;
-        }
-
-        public ResolutionResponse getResponse() {
-            return response;
-        }
     }
 
     /**
