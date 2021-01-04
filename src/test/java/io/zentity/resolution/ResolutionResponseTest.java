@@ -110,8 +110,14 @@ public class ResolutionResponseTest {
 
         response.includeHits = true;
 
+        // remove line endings for windows compatibility
         String actual = MAPPER.writeValueAsString(response);
-        String expected = "{\"took\":60000,\"hits\":{\"total\":0,\"hits\":[]},\"error\":{\"by\":\"zentity\",\"type\":\"java.lang.RuntimeException\",\"reason\":\"woops!\",\"stack_trace\":\"java.lang.RuntimeException: woops!\\n\\tat TotalBogus.bungledMethod(NotThisFile.java:3)\\n\"}}";
+        actual = actual
+            .replaceAll("\\\\r", "")
+            .replaceAll("\\\\n", "");
+
+        String expected = "{\"took\":60000,\"hits\":{\"total\":0,\"hits\":[]},\"error\":{\"by\":\"zentity\",\"type\":\"java.lang.RuntimeException\",\"reason\":\"woops!\",\"stack_trace\":\"java.lang.RuntimeException: woops!\\tat TotalBogus.bungledMethod(NotThisFile.java:3)\"}}";
+
         assertEquals(expected, actual);
     }
 
