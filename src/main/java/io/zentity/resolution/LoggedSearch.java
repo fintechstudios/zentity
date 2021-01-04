@@ -12,10 +12,14 @@ import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.xcontent.ToXContent;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.function.UnaryOperator;
 
+import static io.zentity.common.XContentUtils.uncheckedModifier;
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
 @JsonSerialize(using = LoggedSearch.Serializer.class)
@@ -24,24 +28,36 @@ public class LoggedSearch {
     QueryBuilder searchRequest;
     // response, if non-null
     SearchResponse response;
-    // response
+    // response error, if no response
     ElasticsearchException responseError;
 
     // perhaps this belongs better as a global custom StdSerializer<ElasticsearchException> than a class
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
     public static class SerializedElasticsearchException {
         @JsonRawValue
-        public String rootCause;
+        public final String rootCause;
 
-        public String type;
+        public final String type;
 
-        public String reason;
+        public final String reason;
 
-        public int status;
+        public final int status;
 
-        public SerializedElasticsearchException(ElasticsearchException ex) throws IOException {
-            // TODO: no json string building
-            rootCause = "[" + Strings.toString(ex.toXContent(jsonBuilder().startObject(), ToXContent.EMPTY_PARAMS).endObject()) + "]";
+        public SerializedElasticsearchException(final ElasticsearchException ex) throws IOException {
+            // root_cause: [ { ...error } ]
+            rootCause = XContentUtils.serialize(
+              XContentUtils.jsonBuilder(
+                  uncheckedModifier((builder) -> {
+                      builder.startArray();
+                      builder.startObject();
+                      ex.toXContent(builder, ToXContent.EMPTY_PARAMS);
+                      builder.endObject();
+                      builder.endArray();
+                      return builder;
+                  })
+              )
+            );
+
             type = ElasticsearchException.getExceptionName(ex);
             reason = ex.getMessage();
             status = ex.status().getStatus();
@@ -71,11 +87,13 @@ public class LoggedSearch {
                 // serialize the error
                 SerializedElasticsearchException serializedEx = new SerializedElasticsearchException(value.responseError);
                 gen.writeStartObject();
+
                 gen.writeFieldName("error");
                 gen.writeObject(serializedEx);
+
                 gen.writeEndObject();
             } else {
-                gen.writeRawValue(value.response.toString());
+                gen.writeRawValue(XContentUtils.serializeAsJSON(value.response));
             }
             gen.writeEndObject();
         }

@@ -7,12 +7,17 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.UnaryOperator;
 
 public class XContentUtils {
+    public static String serialize(XContentBuilder builder) {
+        return Strings.toString(builder);
+    }
+
     public static String serialize(XContentBuilder builder, ToXContent content, ToXContent.Params params) throws IOException {
-        return Strings.toString(content.toXContent(builder, params));
+        return serialize(content.toXContent(builder, params));
     }
 
     /**
@@ -38,32 +43,6 @@ public class XContentUtils {
         return serializeAsJSON(content, ToXContent.EMPTY_PARAMS);
     }
 
-    /**
-     * A helper that allows modifying the JSON {@link XContentBuilder} before it is used.
-     *
-     * @param builderModifier The function to modify the
-     * @param content The content to serialize.
-     * @param params The params for the builder.
-     * @return The JSON string.
-     * @throws IOException When there is an issue with serialization.
-     */
-    public static String serializeAsJson(UnaryOperator<XContentBuilder> builderModifier, ToXContent content, ToXContent.Params params) throws IOException {
-        XContentBuilder builder = builderModifier.apply(XContentFactory.jsonBuilder());
-        return serialize(builder, content, params);
-    }
-
-    /**
-     * A helper that allows modifying the JSON {@link XContentBuilder} before it is used.
-     *
-     * @param builderModifier The function to modify the
-     * @param content The content to serialize.
-     * @return The JSON string.
-     * @throws IOException When there is an issue with serialization.
-     */
-    public static String serializeAsJson(UnaryOperator<XContentBuilder> builderModifier, ToXContent content) throws IOException {
-        return serializeAsJson(builderModifier, content, ToXContent.EMPTY_PARAMS);
-    }
-
     public static UnaryOperator<XContentBuilder> composeModifiers(List<UnaryOperator<XContentBuilder>> builderModifiers) {
         return builderModifiers
             .stream()
@@ -74,8 +53,12 @@ public class XContentUtils {
             );
     }
 
+    public static XContentBuilder jsonBuilder() throws IOException {
+        return XContentFactory.jsonBuilder();
+    }
+
     public static XContentBuilder jsonBuilder(UnaryOperator<XContentBuilder> modifier) throws IOException {
-        return modifier.apply(XContentFactory.jsonBuilder());
+        return modifier.apply(jsonBuilder());
     }
 
     /**
