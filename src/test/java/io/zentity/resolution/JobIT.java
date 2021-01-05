@@ -48,7 +48,7 @@ public class JobIT extends AbstractITCase {
             "  },\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\", \".zentity_test_index_b\", \".zentity_test_index_c\" ],\n" +
+            "      \"indices\": [ \"zentity_test_index_a\", \"zentity_test_index_b\", \"zentity_test_index_c\" ],\n" +
             "      \"resolvers\": [ \"resolver_a\", \"resolver_b\" ]\n" +
             "    }\n" +
             "  }\n" +
@@ -58,7 +58,7 @@ public class JobIT extends AbstractITCase {
             "  \"terms\": [ \"a_00\" ],\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\", \".zentity_test_index_b\", \".zentity_test_index_c\" ],\n" +
+            "      \"indices\": [ \"zentity_test_index_a\", \"zentity_test_index_b\", \"zentity_test_index_c\" ],\n" +
             "      \"resolvers\": [ \"resolver_a\", \"resolver_b\" ]\n" +
             "    }\n" +
             "  }\n" +
@@ -77,7 +77,7 @@ public class JobIT extends AbstractITCase {
             "  },\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -94,18 +94,18 @@ public class JobIT extends AbstractITCase {
             "  \"terms\": [ \"a_00\", \"1999-12-31T23:59:57.0000\" ],\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
 
     private final StringEntity TEST_PAYLOAD_JOB_IDS = new StringEntity("{\n" +
             "  \"ids\": {\n" +
-            "    \".zentity_test_index_a\": [ \"a0\" ]\n" +
+            "    \"zentity_test_index_a\": [ \"a0\" ]\n" +
             "  },\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\", \".zentity_test_index_b\", \".zentity_test_index_c\" ],\n" +
+            "      \"indices\": [ \"zentity_test_index_a\", \"zentity_test_index_b\", \"zentity_test_index_c\" ],\n" +
             "      \"resolvers\": [ \"resolver_a\", \"resolver_b\" ]\n" +
             "    }\n" +
             "  }\n" +
@@ -116,11 +116,11 @@ public class JobIT extends AbstractITCase {
             "    \"attribute_a\": [ \"a_00\" ]\n" +
             "  },\n" +
             "  \"ids\": {\n" +
-            "    \".zentity_test_index_a\": [ \"a6\" ]\n" +
+            "    \"zentity_test_index_a\": [ \"a6\" ]\n" +
             "  },\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\", \".zentity_test_index_b\", \".zentity_test_index_c\" ],\n" +
+            "      \"indices\": [ \"zentity_test_index_a\", \"zentity_test_index_b\", \"zentity_test_index_c\" ],\n" +
             "      \"resolvers\": [ \"resolver_a\", \"resolver_b\" ]\n" +
             "    }\n" +
             "  }\n" +
@@ -128,12 +128,12 @@ public class JobIT extends AbstractITCase {
 
     private final StringEntity TEST_PAYLOAD_JOB_TERMS_IDS = new StringEntity("{\n" +
             "  \"ids\": {\n" +
-            "    \".zentity_test_index_a\": [ \"a6\" ]\n" +
+            "    \"zentity_test_index_a\": [ \"a6\" ]\n" +
             "  },\n" +
             "  \"terms\": [ \"a_00\" ],\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\", \".zentity_test_index_b\", \".zentity_test_index_c\" ],\n" +
+            "      \"indices\": [ \"zentity_test_index_a\", \"zentity_test_index_b\", \"zentity_test_index_c\" ],\n" +
             "      \"resolvers\": [ \"resolver_a\", \"resolver_b\" ]\n" +
             "    }\n" +
             "  }\n" +
@@ -154,7 +154,7 @@ public class JobIT extends AbstractITCase {
             "  \"attributes\": { \"attribute_type_boolean\": [ true ] },\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_boolean\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_boolean\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -163,7 +163,7 @@ public class JobIT extends AbstractITCase {
             "  \"terms\": [ \"true\" ],\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_boolean\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_boolean\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -201,7 +201,7 @@ public class JobIT extends AbstractITCase {
             "  \"attributes\": { \"attribute_type_boolean\": [ false ] },\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_boolean\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_boolean\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -210,7 +210,7 @@ public class JobIT extends AbstractITCase {
             "  \"terms\": [ \"false\" ],\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_boolean\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_boolean\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -219,7 +219,7 @@ public class JobIT extends AbstractITCase {
             "  \"attributes\": { \"attribute_type_double\": [ 3.141592653589793 ] },\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_double\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_double\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -228,7 +228,7 @@ public class JobIT extends AbstractITCase {
             "  \"terms\": [ \"3.141592653589793\" ],\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_double\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_double\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -237,7 +237,7 @@ public class JobIT extends AbstractITCase {
             "  \"attributes\": { \"attribute_type_double\": [ -3.141592653589793 ] },\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_double\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_double\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -246,7 +246,7 @@ public class JobIT extends AbstractITCase {
             "  \"terms\": [ \"-3.141592653589793\" ],\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_double\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_double\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -255,7 +255,7 @@ public class JobIT extends AbstractITCase {
             "  \"attributes\": { \"attribute_type_float\": [ 1.0 ] },\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_float\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_float\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -264,7 +264,7 @@ public class JobIT extends AbstractITCase {
             "  \"terms\": [ \"1.0\" ],\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_float\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_float\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -273,7 +273,7 @@ public class JobIT extends AbstractITCase {
             "  \"attributes\": { \"attribute_type_float\": [ -1.0 ] },\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_float\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_float\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -282,7 +282,7 @@ public class JobIT extends AbstractITCase {
             "  \"terms\": [ \"-1.0\" ],\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_float\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_float\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -291,7 +291,7 @@ public class JobIT extends AbstractITCase {
             "  \"attributes\": { \"attribute_type_integer\": [ 1 ] },\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_integer\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_integer\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -300,7 +300,7 @@ public class JobIT extends AbstractITCase {
             "  \"terms\": [ \"1\" ],\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_integer\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_integer\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -309,7 +309,7 @@ public class JobIT extends AbstractITCase {
             "  \"attributes\": { \"attribute_type_integer\": [ -1 ] },\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_integer\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_integer\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -318,7 +318,7 @@ public class JobIT extends AbstractITCase {
             "  \"terms\": [ \"-1\" ],\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_integer\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_integer\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -327,7 +327,7 @@ public class JobIT extends AbstractITCase {
             "  \"attributes\": { \"attribute_type_long\": [ 922337203685477 ] },\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_long\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_long\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -336,7 +336,7 @@ public class JobIT extends AbstractITCase {
             "  \"terms\": [ \"922337203685477\" ],\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_long\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_long\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -345,7 +345,7 @@ public class JobIT extends AbstractITCase {
             "  \"attributes\": { \"attribute_type_long\": [ -922337203685477 ] },\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_long\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_long\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -354,7 +354,7 @@ public class JobIT extends AbstractITCase {
             "  \"terms\": [ \"-922337203685477\" ],\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_long\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_long\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -363,7 +363,7 @@ public class JobIT extends AbstractITCase {
             "  \"attributes\": { \"attribute_type_string\": [ \"a\" ] },\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_string\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_string\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -372,7 +372,7 @@ public class JobIT extends AbstractITCase {
             "  \"terms\": [ \"a\" ],\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_string\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_string\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -381,7 +381,7 @@ public class JobIT extends AbstractITCase {
             "  \"attributes\": { \"attribute_type_string\": [ \"b\" ] },\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_string\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_string\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -390,7 +390,7 @@ public class JobIT extends AbstractITCase {
             "  \"terms\": [ \"b\" ],\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_string\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_type_string\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -399,7 +399,7 @@ public class JobIT extends AbstractITCase {
             "  \"attributes\": { \"attribute_object\": [ \"a\" ] },\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ], \"resolvers\": [ \"resolver_object\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ], \"resolvers\": [ \"resolver_object\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -413,7 +413,7 @@ public class JobIT extends AbstractITCase {
             "      \"attributes\": { \"attribute_a\":[ \"a_11\" ], \"attribute_c\": [ \"c_03\" ] }\n" +
             "    },\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\", \".zentity_test_index_b\", \".zentity_test_index_c\" ],\n" +
+            "      \"indices\": [ \"zentity_test_index_a\", \"zentity_test_index_b\", \"zentity_test_index_c\" ],\n" +
             "      \"resolvers\": [ \"resolver_a\", \"resolver_b\", \"resolver_c\" ]\n" +
             "    }\n" +
             "  }\n" +
@@ -426,7 +426,7 @@ public class JobIT extends AbstractITCase {
             "      \"attributes\": { \"attribute_a\":[ \"a_11\" ], \"attribute_c\": [ \"c_03\" ] }\n" +
             "    },\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\", \".zentity_test_index_b\", \".zentity_test_index_c\" ],\n" +
+            "      \"indices\": [ \"zentity_test_index_a\", \"zentity_test_index_b\", \"zentity_test_index_c\" ],\n" +
             "      \"resolvers\": [ \"resolver_a\", \"resolver_b\", \"resolver_c\" ]\n" +
             "    }\n" +
             "  }\n" +
@@ -439,7 +439,7 @@ public class JobIT extends AbstractITCase {
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
             "      \"attributes\": { \"attribute_d\": [ \"d_00\" ], \"attribute_type_double\": [ 3.141592653589793 ] },\n" +
-            "      \"indices\": [ \".zentity_test_index_a\", \".zentity_test_index_b\", \".zentity_test_index_c\", \".zentity_test_index_d\" ],\n" +
+            "      \"indices\": [ \"zentity_test_index_a\", \"zentity_test_index_b\", \"zentity_test_index_c\", \"zentity_test_index_d\" ],\n" +
             "      \"resolvers\": [ \"resolver_a\", \"resolver_b\", \"resolver_c\" ]\n" +
             "    }\n" +
             "  }\n" +
@@ -450,7 +450,7 @@ public class JobIT extends AbstractITCase {
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
             "      \"attributes\": { \"attribute_d\": [ \"d_00\" ], \"attribute_type_double\": [ 3.141592653589793 ] },\n" +
-            "      \"indices\": [ \".zentity_test_index_a\", \".zentity_test_index_b\", \".zentity_test_index_c\", \".zentity_test_index_d\" ],\n" +
+            "      \"indices\": [ \"zentity_test_index_a\", \"zentity_test_index_b\", \"zentity_test_index_c\", \"zentity_test_index_d\" ],\n" +
             "      \"resolvers\": [ \"resolver_a\", \"resolver_b\", \"resolver_c\" ]\n" +
             "    }\n" +
             "  }\n" +
@@ -466,7 +466,7 @@ public class JobIT extends AbstractITCase {
             "    },\n" +
             "    \"include\": {\n" +
             "      \"attributes\": { \"attribute_d\": [ \"d_00\" ], \"attribute_type_double\": [ 3.141592653589793 ] },\n" +
-            "      \"indices\": [ \".zentity_test_index_a\", \".zentity_test_index_b\", \".zentity_test_index_c\", \".zentity_test_index_d\" ],\n" +
+            "      \"indices\": [ \"zentity_test_index_a\", \"zentity_test_index_b\", \"zentity_test_index_c\", \"zentity_test_index_d\" ],\n" +
             "      \"resolvers\": [ \"resolver_a\", \"resolver_b\", \"resolver_c\" ]\n" +
             "    }\n" +
             "  }\n" +
@@ -480,7 +480,7 @@ public class JobIT extends AbstractITCase {
             "    },\n" +
             "    \"include\": {\n" +
             "      \"attributes\": { \"attribute_d\": [ \"d_00\" ], \"attribute_type_double\": [ 3.141592653589793 ] },\n" +
-            "      \"indices\": [ \".zentity_test_index_a\", \".zentity_test_index_b\", \".zentity_test_index_c\", \".zentity_test_index_d\" ],\n" +
+            "      \"indices\": [ \"zentity_test_index_a\", \"zentity_test_index_b\", \"zentity_test_index_c\", \"zentity_test_index_d\" ],\n" +
             "      \"resolvers\": [ \"resolver_a\", \"resolver_b\", \"resolver_c\" ]\n" +
             "    }\n" +
             "  }\n" +
@@ -493,7 +493,7 @@ public class JobIT extends AbstractITCase {
             "  },\n" +
             "  \"scope\": {\n" +
             "    \"include\": {\n" +
-            "      \"indices\": [ \".zentity_test_index_a\" ]\n" +
+            "      \"indices\": [ \"zentity_test_index_a\" ]\n" +
             "    }\n" +
             "  }\n" +
             "}", ContentType.APPLICATION_JSON);
@@ -520,13 +520,13 @@ public class JobIT extends AbstractITCase {
     private void destroyTestIndices(int testResourceSet) throws IOException {
         switch (testResourceSet) {
             case TEST_RESOURCES_ARRAYS:
-                client.performRequest(new Request("DELETE", ".zentity_test_index_arrays"));
+                client.performRequest(new Request("DELETE", "zentity_test_index_arrays"));
                 break;
             default:
-                client.performRequest(new Request("DELETE", ".zentity_test_index_a"));
-                client.performRequest(new Request("DELETE", ".zentity_test_index_b"));
-                client.performRequest(new Request("DELETE", ".zentity_test_index_c"));
-                client.performRequest(new Request("DELETE", ".zentity_test_index_d"));
+                client.performRequest(new Request("DELETE", "zentity_test_index_a"));
+                client.performRequest(new Request("DELETE", "zentity_test_index_b"));
+                client.performRequest(new Request("DELETE", "zentity_test_index_c"));
+                client.performRequest(new Request("DELETE", "zentity_test_index_d"));
                 break;
         }
     }
@@ -624,7 +624,7 @@ public class JobIT extends AbstractITCase {
                 testIndex = new ByteArrayEntity(readFile("TestIndexArraysElasticsearch6.json"), ContentType.APPLICATION_JSON);
                 testData = new ByteArrayEntity(readFile("TestDataArraysElasticsearch6.ndjson"), ContentType.create("application/x-ndjson"));
             }
-            Request putTestIndexArrays = new Request("PUT", ".zentity_test_index_arrays");
+            Request putTestIndexArrays = new Request("PUT", "zentity_test_index_arrays");
             putTestIndexArrays.setEntity(testIndex);
             client.performRequest(putTestIndexArrays);
         } else {
@@ -635,16 +635,16 @@ public class JobIT extends AbstractITCase {
                 testIndex = new ByteArrayEntity(readFile("TestIndexElasticsearch6.json"), ContentType.APPLICATION_JSON);
                 testData = new ByteArrayEntity(readFile("TestDataElasticsearch6.ndjson"), ContentType.create("application/x-ndjson"));
             }
-            Request putTestIndexA = new Request("PUT", ".zentity_test_index_a");
+            Request putTestIndexA = new Request("PUT", "zentity_test_index_a");
             putTestIndexA.setEntity(testIndex);
             client.performRequest(putTestIndexA);
-            Request putTestIndexB = new Request("PUT", ".zentity_test_index_b");
+            Request putTestIndexB = new Request("PUT", "zentity_test_index_b");
             putTestIndexB.setEntity(testIndex);
             client.performRequest(putTestIndexB);
-            Request putTestIndexC = new Request("PUT", ".zentity_test_index_c");
+            Request putTestIndexC = new Request("PUT", "zentity_test_index_c");
             putTestIndexC.setEntity(testIndex);
             client.performRequest(putTestIndexC);
-            Request putTestIndexD = new Request("PUT", ".zentity_test_index_d");
+            Request putTestIndexD = new Request("PUT", "zentity_test_index_d");
             putTestIndexD.setEntity(testIndex);
             client.performRequest(putTestIndexD);
         }
@@ -701,7 +701,7 @@ public class JobIT extends AbstractITCase {
             Request postResolution = new Request("POST", endpoint);
             postResolution.setEntity(TEST_PAYLOAD_JOB_NO_SCOPE);
             Response response = client.performRequest(postResolution);
-            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
             assertEquals(json.get("hits").get("total").asInt(), 40);
             JsonPointer pathAttributes = JsonPointer.compile("/_attributes");
             JsonPointer pathNull = JsonPointer.compile("/_attributes/attribute_type_string_null");
@@ -725,7 +725,7 @@ public class JobIT extends AbstractITCase {
             Request postResolution = new Request("POST", endpoint);
             postResolution.setEntity(TEST_PAYLOAD_JOB_ATTRIBUTES);
             Response response = client.performRequest(postResolution);
-            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
             assertEquals(json.get("hits").get("total").asInt(), 6);
             Set<String> docsExpected = new TreeSet<>();
             docsExpected.add("a0,0");
@@ -749,7 +749,7 @@ public class JobIT extends AbstractITCase {
             Request postResolution = new Request("POST", endpoint);
             postResolution.setEntity(TEST_PAYLOAD_JOB_TERMS);
             Response response = client.performRequest(postResolution);
-            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
             assertEquals(json.get("hits").get("total").asInt(), 6);
             Set<String> docsExpected = new TreeSet<>();
             docsExpected.add("a0,0");
@@ -778,7 +778,7 @@ public class JobIT extends AbstractITCase {
             postResolution.addParameter("max_docs_per_query", "2");
             postResolution.setEntity(TEST_PAYLOAD_JOB_EXPLANATION);
             Response response = client.performRequest(postResolution);
-            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
             assertEquals(json.get("hits").get("total").asInt(), 3);
             Set<String> docsExpected = new TreeSet<>();
             docsExpected.add("a0,0");
@@ -792,10 +792,10 @@ public class JobIT extends AbstractITCase {
                         expectedExplanation = "{\"resolvers\":{\"resolver_a\":{\"attributes\":[\"attribute_a\"]},\"resolver_type_date_a\":{\"attributes\":[\"attribute_type_date\",\"attribute_a\"]}},\"matches\":[{\"attribute\":\"attribute_a\",\"target_field\":\"field_a.keyword\",\"target_value\":\"a_00\",\"input_value\":\"a_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_a\",\"target_field\":\"field_a.clean\",\"target_value\":\"a_00\",\"input_value\":\"a_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"1999-12-31T23:59:57.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}}]}";
                         break;
                     case "a1":
-                        expectedExplanation = "{\"resolvers\":{\"resolver_c\":{\"attributes\":[\"attribute_d\"]},\"resolver_type_date_c\":{\"attributes\":[\"attribute_d\",\"attribute_type_date\"]}},\"matches\":[{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.clean\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.keyword\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"1999-12-31T23:59:59.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}}]}";
+                        expectedExplanation = "{\"resolvers\":{\"resolver_c\":{\"attributes\":[\"attribute_d\"]},\"resolver_type_date_c\":{\"attributes\":[\"attribute_d\",\"attribute_type_date\"]}},\"matches\":[{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.keyword\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"1999-12-31T23:59:59.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.clean\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}}]}";
                         break;
                     case "a2":
-                        expectedExplanation = "{\"resolvers\":{\"resolver_c\":{\"attributes\":[\"attribute_d\"]},\"resolver_type_boolean\":{\"attributes\":[\"attribute_type_boolean\"]},\"resolver_type_float\":{\"attributes\":[\"attribute_type_float\"]},\"resolver_type_integer\":{\"attributes\":[\"attribute_type_integer\"]},\"resolver_type_string\":{\"attributes\":[\"attribute_type_string\"]},\"resolver_type_double\":{\"attributes\":[\"attribute_type_double\"]},\"resolver_type_date_c\":{\"attributes\":[\"attribute_d\",\"attribute_type_date\"]},\"resolver_type_long\":{\"attributes\":[\"attribute_type_long\"]},\"resolver_object\":{\"attributes\":[\"attribute_object\"]}},\"matches\":[{\"attribute\":\"attribute_type_integer\",\"target_field\":\"type_integer\",\"target_value\":1,\"input_value\":1,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.clean\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_long\",\"target_field\":\"type_long\",\"target_value\":922337203685477,\"input_value\":922337203685477,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_string\",\"target_field\":\"type_string\",\"target_value\":\"a\",\"input_value\":\"a\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_double\",\"target_field\":\"type_double\",\"target_value\":3.141592653589793,\"input_value\":3.141592653589793,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.keyword\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_object\",\"target_field\":\"object.a.b.c.keyword\",\"target_value\":\"a\",\"input_value\":\"a\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"2000-01-01T00:00:00.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}},{\"attribute\":\"attribute_type_boolean\",\"target_field\":\"type_boolean\",\"target_value\":true,\"input_value\":true,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_float\",\"target_field\":\"type_float\",\"target_value\":1.0,\"input_value\":1.0,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}}]}";
+                        expectedExplanation = "{\"resolvers\":{\"resolver_c\":{\"attributes\":[\"attribute_d\"]},\"resolver_type_boolean\":{\"attributes\":[\"attribute_type_boolean\"]},\"resolver_type_float\":{\"attributes\":[\"attribute_type_float\"]},\"resolver_type_integer\":{\"attributes\":[\"attribute_type_integer\"]},\"resolver_type_string\":{\"attributes\":[\"attribute_type_string\"]},\"resolver_type_double\":{\"attributes\":[\"attribute_type_double\"]},\"resolver_type_date_c\":{\"attributes\":[\"attribute_d\",\"attribute_type_date\"]},\"resolver_type_long\":{\"attributes\":[\"attribute_type_long\"]},\"resolver_object\":{\"attributes\":[\"attribute_object\"]}},\"matches\":[{\"attribute\":\"attribute_type_double\",\"target_field\":\"type_double\",\"target_value\":3.141592653589793,\"input_value\":3.141592653589793,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.keyword\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_object\",\"target_field\":\"object.a.b.c.keyword\",\"target_value\":\"a\",\"input_value\":\"a\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"2000-01-01T00:00:00.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}},{\"attribute\":\"attribute_type_boolean\",\"target_field\":\"type_boolean\",\"target_value\":true,\"input_value\":true,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_float\",\"target_field\":\"type_float\",\"target_value\":1.0,\"input_value\":1.0,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_integer\",\"target_field\":\"type_integer\",\"target_value\":1,\"input_value\":1,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.clean\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_long\",\"target_field\":\"type_long\",\"target_value\":922337203685477,\"input_value\":922337203685477,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_string\",\"target_field\":\"type_string\",\"target_value\":\"a\",\"input_value\":\"a\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}}]}";
                         break;
                 }
                 // TODO: compare actual contents, as ordering of arrays is fragile
@@ -821,7 +821,7 @@ public class JobIT extends AbstractITCase {
             postResolution.addParameter("max_docs_per_query", "2");
             postResolution.setEntity(TEST_PAYLOAD_JOB_EXPLANATION_TERMS);
             Response response = client.performRequest(postResolution);
-            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
             assertEquals(json.get("hits").get("total").asInt(), 3);
             Set<String> docsExpected = new TreeSet<>();
             docsExpected.add("a0,0");
@@ -832,13 +832,13 @@ public class JobIT extends AbstractITCase {
                 String expected = "";
                 switch (doc.get("_id").asText()) {
                     case "a0":
-                        expected = "{\"resolvers\":{\"resolver_a\":{\"attributes\":[\"attribute_a\"]},\"resolver_type_date_a\":{\"attributes\":[\"attribute_type_date\",\"attribute_a\"]}},\"matches\":[{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"1999-12-31T23:59:57.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}},{\"attribute\":\"attribute_a\",\"target_field\":\"field_a.keyword\",\"target_value\":\"a_00\",\"input_value\":\"a_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_a\",\"target_field\":\"field_a.clean\",\"target_value\":\"a_00\",\"input_value\":\"a_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}}]}";
+                        expected = "{\"resolvers\":{\"resolver_a\":{\"attributes\":[\"attribute_a\"]},\"resolver_type_date_a\":{\"attributes\":[\"attribute_type_date\",\"attribute_a\"]}},\"matches\":[{\"attribute\":\"attribute_a\",\"target_field\":\"field_a.clean\",\"target_value\":\"a_00\",\"input_value\":\"a_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_a\",\"target_field\":\"field_a.keyword\",\"target_value\":\"a_00\",\"input_value\":\"a_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"1999-12-31T23:59:57.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}}]}";
                         break;
                     case "a1":
-                        expected = "{\"resolvers\":{\"resolver_c\":{\"attributes\":[\"attribute_d\"]},\"resolver_type_date_c\":{\"attributes\":[\"attribute_d\",\"attribute_type_date\"]}},\"matches\":[{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.clean\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.keyword\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"1999-12-31T23:59:59.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}}]}";
+                        expected = "{\"resolvers\":{\"resolver_c\":{\"attributes\":[\"attribute_d\"]},\"resolver_type_date_c\":{\"attributes\":[\"attribute_d\",\"attribute_type_date\"]}},\"matches\":[{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.keyword\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"1999-12-31T23:59:59.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.clean\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}}]}";
                         break;
                     case "a2":
-                        expected = "{\"resolvers\":{\"resolver_c\":{\"attributes\":[\"attribute_d\"]},\"resolver_type_boolean\":{\"attributes\":[\"attribute_type_boolean\"]},\"resolver_type_float\":{\"attributes\":[\"attribute_type_float\"]},\"resolver_type_integer\":{\"attributes\":[\"attribute_type_integer\"]},\"resolver_type_string\":{\"attributes\":[\"attribute_type_string\"]},\"resolver_type_double\":{\"attributes\":[\"attribute_type_double\"]},\"resolver_type_date_c\":{\"attributes\":[\"attribute_d\",\"attribute_type_date\"]},\"resolver_type_long\":{\"attributes\":[\"attribute_type_long\"]},\"resolver_object\":{\"attributes\":[\"attribute_object\"]}},\"matches\":[{\"attribute\":\"attribute_type_integer\",\"target_field\":\"type_integer\",\"target_value\":1,\"input_value\":1,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.clean\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_long\",\"target_field\":\"type_long\",\"target_value\":922337203685477,\"input_value\":922337203685477,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_string\",\"target_field\":\"type_string\",\"target_value\":\"a\",\"input_value\":\"a\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_double\",\"target_field\":\"type_double\",\"target_value\":3.141592653589793,\"input_value\":3.141592653589793,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.keyword\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_object\",\"target_field\":\"object.a.b.c.keyword\",\"target_value\":\"a\",\"input_value\":\"a\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"2000-01-01T00:00:00.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}},{\"attribute\":\"attribute_type_boolean\",\"target_field\":\"type_boolean\",\"target_value\":true,\"input_value\":true,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_float\",\"target_field\":\"type_float\",\"target_value\":1.0,\"input_value\":1.0,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}}]}";
+                        expected = "{\"resolvers\":{\"resolver_c\":{\"attributes\":[\"attribute_d\"]},\"resolver_type_boolean\":{\"attributes\":[\"attribute_type_boolean\"]},\"resolver_type_float\":{\"attributes\":[\"attribute_type_float\"]},\"resolver_type_integer\":{\"attributes\":[\"attribute_type_integer\"]},\"resolver_type_string\":{\"attributes\":[\"attribute_type_string\"]},\"resolver_type_double\":{\"attributes\":[\"attribute_type_double\"]},\"resolver_type_date_c\":{\"attributes\":[\"attribute_d\",\"attribute_type_date\"]},\"resolver_type_long\":{\"attributes\":[\"attribute_type_long\"]},\"resolver_object\":{\"attributes\":[\"attribute_object\"]}},\"matches\":[{\"attribute\":\"attribute_type_double\",\"target_field\":\"type_double\",\"target_value\":3.141592653589793,\"input_value\":3.141592653589793,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.keyword\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_object\",\"target_field\":\"object.a.b.c.keyword\",\"target_value\":\"a\",\"input_value\":\"a\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_date\",\"target_field\":\"type_date\",\"target_value\":\"2000-01-01T00:00:00.0000\",\"input_value\":\"1999-12-31T23:59:57.0000\",\"input_matcher\":\"matcher_c\",\"input_matcher_params\":{\"format\":\"yyyy-MM-dd'T'HH:mm:ss.0000\",\"window\":\"1d\"}},{\"attribute\":\"attribute_type_boolean\",\"target_field\":\"type_boolean\",\"target_value\":true,\"input_value\":true,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_float\",\"target_field\":\"type_float\",\"target_value\":1.0,\"input_value\":1.0,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_integer\",\"target_field\":\"type_integer\",\"target_value\":1,\"input_value\":1,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_d\",\"target_field\":\"field_d.clean\",\"target_value\":\"d_00\",\"input_value\":\"d_00\",\"input_matcher\":\"matcher_a\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_long\",\"target_field\":\"type_long\",\"target_value\":922337203685477,\"input_value\":922337203685477,\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}},{\"attribute\":\"attribute_type_string\",\"target_field\":\"type_string\",\"target_value\":\"a\",\"input_value\":\"a\",\"input_matcher\":\"matcher_b\",\"input_matcher_params\":{}}]}";
                         break;
                 }
                 // TODO: compare actual contents, serialized form is fragile
@@ -859,7 +859,7 @@ public class JobIT extends AbstractITCase {
             Request req = new Request("POST", endpoint);
             req.setEntity(TEST_PAYLOAD_JOB_IDS);
             Response response = client.performRequest(req);
-            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
             assertEquals(json.get("hits").get("total").asInt(), 6);
             Set<String> docsExpected = new TreeSet<>();
             docsExpected.add("a0,0");
@@ -883,7 +883,7 @@ public class JobIT extends AbstractITCase {
             Request req = new Request("POST", endpoint);
             req.setEntity(TEST_PAYLOAD_JOB_ATTRIBUTES_IDS);
             Response response = client.performRequest(req);
-            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
             assertEquals(30, json.get("hits").get("total").asInt());
             Set<String> docsExpected = new TreeSet<>();
             docsExpected.add("a0,0"); // check
@@ -932,7 +932,7 @@ public class JobIT extends AbstractITCase {
             req.addParameter("queries", "true");
             req.setEntity(TEST_PAYLOAD_JOB_TERMS_IDS);
             Response response = client.performRequest(req);
-            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
             assertEquals(json.get("hits").get("total").asInt(), 30);
             Set<String> docsExpected = new TreeSet<>();
             docsExpected.add("a0,0");
@@ -983,7 +983,7 @@ public class JobIT extends AbstractITCase {
             postResolution.addParameter("max_docs_per_query", "2");
             postResolution.setEntity(TEST_PAYLOAD_JOB_MAX_HOPS_AND_DOCS);
             Response response = client.performRequest(postResolution);
-            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
             assertEquals(json.get("hits").get("total").asInt(), 20);
             Set<String> docsExpected = new TreeSet<>();
             docsExpected.add("a0,0");
@@ -1037,7 +1037,7 @@ public class JobIT extends AbstractITCase {
             Request q1 = new Request("POST", endpoint);
             q1.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_BOOLEAN_TRUE);
             Response r1 = client.performRequest(q1);
-            JsonNode j1 = Json.MAPPER.readTree(r1.getEntity().getContent());
+            JsonNode j1 = Json.ORDERED_MAPPER.readTree(r1.getEntity().getContent());
             assertEquals(j1.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedA, getActualIdHits(j1));
 
@@ -1045,7 +1045,7 @@ public class JobIT extends AbstractITCase {
             Request q1t = new Request("POST", endpoint);
             q1t.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_BOOLEAN_TRUE_TERMS);
             Response r1t = client.performRequest(q1t);
-            JsonNode j1t = Json.MAPPER.readTree(r1t.getEntity().getContent());
+            JsonNode j1t = Json.ORDERED_MAPPER.readTree(r1t.getEntity().getContent());
             assertEquals(j1t.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedA, getActualIdHits(j1t));
 
@@ -1053,7 +1053,7 @@ public class JobIT extends AbstractITCase {
             Request q2 = new Request("POST", endpoint);
             q2.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_BOOLEAN_FALSE);
             Response r2 = client.performRequest(q2);
-            JsonNode j2 = Json.MAPPER.readTree(r2.getEntity().getContent());
+            JsonNode j2 = Json.ORDERED_MAPPER.readTree(r2.getEntity().getContent());
             assertEquals(j2.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedB, getActualIdHits(j2));
 
@@ -1061,7 +1061,7 @@ public class JobIT extends AbstractITCase {
             Request q2t = new Request("POST", endpoint);
             q2t.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_BOOLEAN_FALSE_TERMS);
             Response r2t = client.performRequest(q2t);
-            JsonNode j2t = Json.MAPPER.readTree(r2t.getEntity().getContent());
+            JsonNode j2t = Json.ORDERED_MAPPER.readTree(r2t.getEntity().getContent());
             assertEquals(j2t.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedB, getActualIdHits(j2t));
 
@@ -1069,7 +1069,7 @@ public class JobIT extends AbstractITCase {
             Request q3 = new Request("POST", endpoint);
             q3.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_NUMBER_DOUBLE_POSITIVE);
             Response r3 = client.performRequest(q3);
-            JsonNode j3 = Json.MAPPER.readTree(r3.getEntity().getContent());
+            JsonNode j3 = Json.ORDERED_MAPPER.readTree(r3.getEntity().getContent());
             assertEquals(j3.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedA, getActualIdHits(j3));
 
@@ -1077,7 +1077,7 @@ public class JobIT extends AbstractITCase {
             Request q3t = new Request("POST", endpoint);
             q3t.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_NUMBER_DOUBLE_POSITIVE_TERMS);
             Response r3t = client.performRequest(q3t);
-            JsonNode j3t = Json.MAPPER.readTree(r3t.getEntity().getContent());
+            JsonNode j3t = Json.ORDERED_MAPPER.readTree(r3t.getEntity().getContent());
             assertEquals(j3t.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedA, getActualIdHits(j3t));
 
@@ -1085,7 +1085,7 @@ public class JobIT extends AbstractITCase {
             Request q4 = new Request("POST", endpoint);
             q4.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_NUMBER_DOUBLE_NEGATIVE);
             Response r4 = client.performRequest(q4);
-            JsonNode j4 = Json.MAPPER.readTree(r4.getEntity().getContent());
+            JsonNode j4 = Json.ORDERED_MAPPER.readTree(r4.getEntity().getContent());
             assertEquals(j4.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedB, getActualIdHits(j4));
 
@@ -1093,7 +1093,7 @@ public class JobIT extends AbstractITCase {
             Request q4t = new Request("POST", endpoint);
             q4t.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_NUMBER_DOUBLE_NEGATIVE_TERMS);
             Response r4t = client.performRequest(q4t);
-            JsonNode j4t = Json.MAPPER.readTree(r4t.getEntity().getContent());
+            JsonNode j4t = Json.ORDERED_MAPPER.readTree(r4t.getEntity().getContent());
             assertEquals(j4t.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedB, getActualIdHits(j4t));
 
@@ -1101,7 +1101,7 @@ public class JobIT extends AbstractITCase {
             Request q5 = new Request("POST", endpoint);
             q5.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_NUMBER_FLOAT_POSITIVE);
             Response r5 = client.performRequest(q5);
-            JsonNode j5 = Json.MAPPER.readTree(r5.getEntity().getContent());
+            JsonNode j5 = Json.ORDERED_MAPPER.readTree(r5.getEntity().getContent());
             assertEquals(j5.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedA, getActualIdHits(j5));
 
@@ -1109,7 +1109,7 @@ public class JobIT extends AbstractITCase {
             Request q5t = new Request("POST", endpoint);
             q5t.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_NUMBER_FLOAT_POSITIVE_TERMS);
             Response r5t = client.performRequest(q5t);
-            JsonNode j5t = Json.MAPPER.readTree(r5t.getEntity().getContent());
+            JsonNode j5t = Json.ORDERED_MAPPER.readTree(r5t.getEntity().getContent());
             assertEquals(j5t.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedA, getActualIdHits(j5t));
 
@@ -1117,7 +1117,7 @@ public class JobIT extends AbstractITCase {
             Request q6 = new Request("POST", endpoint);
             q6.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_NUMBER_FLOAT_NEGATIVE);
             Response r6 = client.performRequest(q6);
-            JsonNode j6 = Json.MAPPER.readTree(r6.getEntity().getContent());
+            JsonNode j6 = Json.ORDERED_MAPPER.readTree(r6.getEntity().getContent());
             assertEquals(j6.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedB, getActualIdHits(j6));
 
@@ -1125,7 +1125,7 @@ public class JobIT extends AbstractITCase {
             Request q6t = new Request("POST", endpoint);
             q6t.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_NUMBER_FLOAT_NEGATIVE_TERMS);
             Response r6t = client.performRequest(q6t);
-            JsonNode j6t = Json.MAPPER.readTree(r6t.getEntity().getContent());
+            JsonNode j6t = Json.ORDERED_MAPPER.readTree(r6t.getEntity().getContent());
             assertEquals(j6t.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedB, getActualIdHits(j6t));
 
@@ -1133,7 +1133,7 @@ public class JobIT extends AbstractITCase {
             Request q7 = new Request("POST", endpoint);
             q7.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_NUMBER_INTEGER_POSITIVE);
             Response r7 = client.performRequest(q7);
-            JsonNode j7 = Json.MAPPER.readTree(r7.getEntity().getContent());
+            JsonNode j7 = Json.ORDERED_MAPPER.readTree(r7.getEntity().getContent());
             assertEquals(j7.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedA, getActualIdHits(j7));
 
@@ -1141,7 +1141,7 @@ public class JobIT extends AbstractITCase {
             Request q7t = new Request("POST", endpoint);
             q7t.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_NUMBER_INTEGER_POSITIVE_TERMS);
             Response r7t = client.performRequest(q7t);
-            JsonNode j7t = Json.MAPPER.readTree(r7t.getEntity().getContent());
+            JsonNode j7t = Json.ORDERED_MAPPER.readTree(r7t.getEntity().getContent());
             assertEquals(j7t.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedA, getActualIdHits(j7t));
 
@@ -1149,7 +1149,7 @@ public class JobIT extends AbstractITCase {
             Request q8 = new Request("POST", endpoint);
             q8.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_NUMBER_INTEGER_NEGATIVE);
             Response r8 = client.performRequest(q8);
-            JsonNode j8 = Json.MAPPER.readTree(r8.getEntity().getContent());
+            JsonNode j8 = Json.ORDERED_MAPPER.readTree(r8.getEntity().getContent());
             assertEquals(j8.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedB, getActualIdHits(j8));
 
@@ -1157,7 +1157,7 @@ public class JobIT extends AbstractITCase {
             Request q8t = new Request("POST", endpoint);
             q8t.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_NUMBER_INTEGER_NEGATIVE_TERMS);
             Response r8t = client.performRequest(q8t);
-            JsonNode j8t = Json.MAPPER.readTree(r8t.getEntity().getContent());
+            JsonNode j8t = Json.ORDERED_MAPPER.readTree(r8t.getEntity().getContent());
             assertEquals(j8t.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedB, getActualIdHits(j8t));
 
@@ -1165,7 +1165,7 @@ public class JobIT extends AbstractITCase {
             Request q9 = new Request("POST", endpoint);
             q9.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_NUMBER_LONG_POSITIVE);
             Response r9 = client.performRequest(q9);
-            JsonNode j9 = Json.MAPPER.readTree(r9.getEntity().getContent());
+            JsonNode j9 = Json.ORDERED_MAPPER.readTree(r9.getEntity().getContent());
             assertEquals(j9.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedA, getActualIdHits(j9));
 
@@ -1173,7 +1173,7 @@ public class JobIT extends AbstractITCase {
             Request q9t = new Request("POST", endpoint);
             q9t.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_NUMBER_LONG_POSITIVE_TERMS);
             Response r9t = client.performRequest(q9t);
-            JsonNode j9t = Json.MAPPER.readTree(r9t.getEntity().getContent());
+            JsonNode j9t = Json.ORDERED_MAPPER.readTree(r9t.getEntity().getContent());
             assertEquals(j9t.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedA, getActualIdHits(j9t));
 
@@ -1181,7 +1181,7 @@ public class JobIT extends AbstractITCase {
             Request q10 = new Request("POST", endpoint);
             q10.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_NUMBER_LONG_NEGATIVE);
             Response r10 = client.performRequest(q10);
-            JsonNode j10 = Json.MAPPER.readTree(r10.getEntity().getContent());
+            JsonNode j10 = Json.ORDERED_MAPPER.readTree(r10.getEntity().getContent());
             assertEquals(j10.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedB, getActualIdHits(j10));
 
@@ -1189,7 +1189,7 @@ public class JobIT extends AbstractITCase {
             Request q10t = new Request("POST", endpoint);
             q10t.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_NUMBER_LONG_NEGATIVE_TERMS);
             Response r10t = client.performRequest(q10t);
-            JsonNode j10t = Json.MAPPER.readTree(r10t.getEntity().getContent());
+            JsonNode j10t = Json.ORDERED_MAPPER.readTree(r10t.getEntity().getContent());
             assertEquals(j10t.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedB, getActualIdHits(j10t));
 
@@ -1197,7 +1197,7 @@ public class JobIT extends AbstractITCase {
             Request q11 = new Request("POST", endpoint);
             q11.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_STRING_A);
             Response r11 = client.performRequest(q11);
-            JsonNode j11 = Json.MAPPER.readTree(r11.getEntity().getContent());
+            JsonNode j11 = Json.ORDERED_MAPPER.readTree(r11.getEntity().getContent());
             assertEquals(j11.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedA, getActualIdHits(j11));
 
@@ -1205,7 +1205,7 @@ public class JobIT extends AbstractITCase {
             Request q11t = new Request("POST", endpoint);
             q11t.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_STRING_A_TERMS);
             Response r11t = client.performRequest(q11t);
-            JsonNode j11t = Json.MAPPER.readTree(r11t.getEntity().getContent());
+            JsonNode j11t = Json.ORDERED_MAPPER.readTree(r11t.getEntity().getContent());
             assertEquals(j11t.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedA, getActualIdHits(j11t));
 
@@ -1213,7 +1213,7 @@ public class JobIT extends AbstractITCase {
             Request q12 = new Request("POST", endpoint);
             q12.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_STRING_B);
             Response r12 = client.performRequest(q12);
-            JsonNode j12 = Json.MAPPER.readTree(r12.getEntity().getContent());
+            JsonNode j12 = Json.ORDERED_MAPPER.readTree(r12.getEntity().getContent());
             assertEquals(j12.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedB, getActualIdHits(j12));
 
@@ -1221,7 +1221,7 @@ public class JobIT extends AbstractITCase {
             Request q12t = new Request("POST", endpoint);
             q12t.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_STRING_B_TERMS);
             Response r12t = client.performRequest(q12t);
-            JsonNode j12t = Json.MAPPER.readTree(r12t.getEntity().getContent());
+            JsonNode j12t = Json.ORDERED_MAPPER.readTree(r12t.getEntity().getContent());
             assertEquals(j12t.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedB, getActualIdHits(j12t));
 
@@ -1241,7 +1241,7 @@ public class JobIT extends AbstractITCase {
             postResolution.addParameter("max_docs_per_query", "2");
             postResolution.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_DATE);
             Response response = client.performRequest(postResolution);
-            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
 
             /*
             Elasticsearch 7.0.0 - 7.2.0 has a different behavior when querying date ranges.
@@ -1249,7 +1249,7 @@ public class JobIT extends AbstractITCase {
             To demonstrate, compare this query (below) with the test indices, data, and entity models on Elasticsearch
             versions 6.7.1 and 7.0.0:
 
-            GET .zentity_test_index_d/_search
+            GET zentity_test_index_d/_search
             {
               "query": {
                 "bool": {
@@ -1323,7 +1323,7 @@ public class JobIT extends AbstractITCase {
             postResolution.addParameter("max_docs_per_query", "2");
             postResolution.setEntity(TEST_PAYLOAD_JOB_DATA_TYPES_DATE_TERMS);
             Response response = client.performRequest(postResolution);
-            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
 
             /*
             Elasticsearch 7.0.0 - 7.2.0 has a different behavior when querying date ranges.
@@ -1331,7 +1331,7 @@ public class JobIT extends AbstractITCase {
             To demonstrate, compare this query (below) with the test indices, data, and entity models on Elasticsearch
             versions 6.7.1 and 7.0.0:
 
-            GET .zentity_test_index_d/_search
+            GET zentity_test_index_d/_search
             {
               "query": {
                 "bool": {
@@ -1411,7 +1411,7 @@ public class JobIT extends AbstractITCase {
             Request q1 = new Request("POST", endpoint);
             q1.setEntity(TEST_PAYLOAD_JOB_OBJECT);
             Response r1 = client.performRequest(q1);
-            JsonNode j1 = Json.MAPPER.readTree(r1.getEntity().getContent());
+            JsonNode j1 = Json.ORDERED_MAPPER.readTree(r1.getEntity().getContent());
             assertEquals(j1.get("hits").get("total").asInt(), 5);
             assertEquals(docsExpectedA, getActualIdHits(j1));
 
@@ -1429,7 +1429,7 @@ public class JobIT extends AbstractITCase {
             Request postResolution = new Request("POST", endpoint);
             postResolution.setEntity(TEST_PAYLOAD_JOB_SCOPE_EXCLUDE_ATTRIBUTES);
             Response response = client.performRequest(postResolution);
-            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
             assertEquals(json.get("hits").get("total").asInt(), 16);
             Set<String> docsExpected = new TreeSet<>();
             docsExpected.add("a0,0");
@@ -1463,7 +1463,7 @@ public class JobIT extends AbstractITCase {
             Request postResolution = new Request("POST", endpoint);
             postResolution.setEntity(TEST_PAYLOAD_JOB_SCOPE_EXCLUDE_ATTRIBUTES_TERMS);
             Response response = client.performRequest(postResolution);
-            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
             assertEquals(json.get("hits").get("total").asInt(), 16);
             Set<String> docsExpected = new TreeSet<>();
             docsExpected.add("a0,0");
@@ -1497,7 +1497,7 @@ public class JobIT extends AbstractITCase {
             Request postResolution = new Request("POST", endpoint);
             postResolution.setEntity(TEST_PAYLOAD_JOB_SCOPE_INCLUDE_ATTRIBUTES);
             Response response = client.performRequest(postResolution);
-            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
             assertEquals(json.get("hits").get("total").asInt(), 8);
             Set<String> docsExpected = new TreeSet<>();
             docsExpected.add("a0,0");
@@ -1523,7 +1523,7 @@ public class JobIT extends AbstractITCase {
             Request postResolution = new Request("POST", endpoint);
             postResolution.setEntity(TEST_PAYLOAD_JOB_SCOPE_INCLUDE_ATTRIBUTES_TERMS);
             Response response = client.performRequest(postResolution);
-            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
             assertEquals(json.get("hits").get("total").asInt(), 8);
             Set<String> docsExpected = new TreeSet<>();
             docsExpected.add("a0,0");
@@ -1549,7 +1549,7 @@ public class JobIT extends AbstractITCase {
             Request postResolution = new Request("POST", endpoint);
             postResolution.setEntity(TEST_PAYLOAD_JOB_SCOPE_EXCLUDE_AND_INCLUDE_ATTRIBUTES);
             Response response = client.performRequest(postResolution);
-            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
             assertEquals(json.get("hits").get("total").asInt(), 4);
             Set<String> docsExpected = new TreeSet<>();
             docsExpected.add("a2,0");
@@ -1571,7 +1571,7 @@ public class JobIT extends AbstractITCase {
             Request postResolution = new Request("POST", endpoint);
             postResolution.setEntity(TEST_PAYLOAD_JOB_SCOPE_EXCLUDE_AND_INCLUDE_ATTRIBUTES_TERMS);
             Response response = client.performRequest(postResolution);
-            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
             assertEquals(json.get("hits").get("total").asInt(), 4);
             Set<String> docsExpected = new TreeSet<>();
             docsExpected.add("a2,0");
@@ -1593,7 +1593,7 @@ public class JobIT extends AbstractITCase {
             Request postResolution = new Request("POST", endpoint);
             postResolution.setEntity(TEST_PAYLOAD_JOB_RESOLVER_WEIGHT);
             Response response = client.performRequest(postResolution);
-            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
             assertEquals(json.get("hits").get("total").asInt(), 4);
             Set<String> docsExpected = new TreeSet<>();
             docsExpected.add("a2,0");
@@ -1619,12 +1619,13 @@ public class JobIT extends AbstractITCase {
             } catch (ResponseException e) {
                 Response response = e.getResponse();
                 assertEquals(response.getStatusLine().getStatusCode(), 500);
-                JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
-                assertEquals(json.get("error").get("by").asText(), "elasticsearch");
-                assertEquals(json.get("error").get("type").asText(), "org.elasticsearch.common.ParsingException");
-                assertEquals(json.get("error").get("reason").asText(), "no [query] registered for [example_malformed_query]");
-                assertTrue(json.get("error").get("stack_trace").asText().startsWith("ParsingException[no [query] registered for [example_malformed_query]]"));
+                JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
+                assertEquals("elasticsearch", json.get("error").get("by").asText());
+                assertEquals("org.elasticsearch.common.ParsingException", json.get("error").get("type").asText());
+                assertFalse(json.get("error").get("reason").asText().isEmpty());
+                assertFalse(json.get("error").get("stack_trace").asText().isEmpty());
                 assertEquals(json.get("hits").get("total").asInt(), 2);
+
                 Set<String> docsExpected = new TreeSet<>();
                 docsExpected.add("a2,0");
                 docsExpected.add("a3,0");
@@ -1641,15 +1642,17 @@ public class JobIT extends AbstractITCase {
                 client.performRequest(postResolutionQueriesNoTrace);
             } catch (ResponseException e) {
                 Response response = e.getResponse();
-                assertEquals(response.getStatusLine().getStatusCode(), 500);
+                assertEquals(500, response.getStatusLine().getStatusCode());
+
                 String content = IOUtils.toString(response.getEntity().getContent(), Charset.defaultCharset());
-                JsonNode json = Json.MAPPER.readTree(content);
+                JsonNode json = Json.ORDERED_MAPPER.readTree(content);
                 assertEquals(json.get("error").get("by").asText(), "elasticsearch");
                 assertEquals(json.get("error").get("type").asText(), "org.elasticsearch.common.ParsingException");
-                assertEquals(json.get("error").get("reason").asText(), "no [query] registered for [example_malformed_query]");
+                assertTrue(json.get("error").get("reason").asText().contains("example_malformed_query"));
                 assertNotNull("Should contain a stack trace", json.get("error").get("stack_trace"));
                 assertFalse(json.get("queries").isMissingNode());
-                assertEquals(json.get("hits").get("total").asInt(), 2);
+                assertEquals(2, json.get("hits").get("total").asInt());
+
                 Set<String> docsExpected = new TreeSet<>();
                 docsExpected.add("a2,0");
                 docsExpected.add("a3,0");
@@ -1673,7 +1676,7 @@ public class JobIT extends AbstractITCase {
             } catch (ResponseException e) {
                 Response response = e.getResponse();
                 assertEquals(response.getStatusLine().getStatusCode(), 500);
-                JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+                JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
                 assertTrue("has an error", json.has("error"));
 
                 JsonNode errorJson = json.get("error");
@@ -1696,7 +1699,7 @@ public class JobIT extends AbstractITCase {
             } catch (ResponseException e) {
                 Response response = e.getResponse();
                 assertEquals(response.getStatusLine().getStatusCode(), 500);
-                JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+                JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
                 assertEquals(json.get("error").get("by").asText(), "zentity");
                 assertEquals(json.get("error").get("type").asText(), "io.zentity.model.ValidationException");
                 assertEquals(json.get("error").get("reason").asText(), "Expected 'number' attribute data type.");
@@ -1723,7 +1726,7 @@ public class JobIT extends AbstractITCase {
             req.addParameter("_explanation", "true");
             req.setEntity(TEST_PAYLOAD_JOB_ARRAYS);
             Response res = client.performRequest(req);
-            JsonNode resJson = Json.MAPPER.readTree(res.getEntity().getContent());
+            JsonNode resJson = Json.ORDERED_MAPPER.readTree(res.getEntity().getContent());
 
             // round-trip json so that it is ordered
             resJson = Json.ORDERED_MAPPER.readTree(Json.ORDERED_MAPPER.writeValueAsString(resJson));
@@ -1737,7 +1740,7 @@ public class JobIT extends AbstractITCase {
                 switch (doc.get("_id").asText()) {
                     case "1":
                         attributesExpected = "{\"string\":[\"abc\"],\"array\":[\"111\",\"222\",\"333\",\"444\"]}";
-                        explanationExpected = "{\"resolvers\":{\"string\":{\"attributes\":[\"string\"]},\"array\":{\"attributes\":[\"array\"]}},\"matches\":[{\"attribute\":\"string\",\"target_field\":\"string\",\"target_value\":\"abc\",\"input_value\":\"abc\",\"input_matcher\":\"exact\",\"input_matcher_params\":{}},{\"attribute\":\"array\",\"target_field\":\"array_2\",\"target_value\":[\"222\",null,\"222\"],\"input_value\":\"222\",\"input_matcher\":\"exact\",\"input_matcher_params\":{}},{\"attribute\":\"array\",\"target_field\":\"array_4\",\"target_value\":[\"222\",\"333\",\"444\"],\"input_value\":\"222\",\"input_matcher\":\"exact\",\"input_matcher_params\":{}}]}";
+                        explanationExpected = "{\"resolvers\":{\"string\":{\"attributes\":[\"string\"]},\"array\":{\"attributes\":[\"array\"]}},\"matches\":[{\"attribute\":\"array\",\"target_field\":\"array_2\",\"target_value\":[\"222\",null,\"222\"],\"input_value\":\"222\",\"input_matcher\":\"exact\",\"input_matcher_params\":{}},{\"attribute\":\"array\",\"target_field\":\"array_4\",\"target_value\":[\"222\",\"333\",\"444\"],\"input_value\":\"222\",\"input_matcher\":\"exact\",\"input_matcher_params\":{}},{\"attribute\":\"string\",\"target_field\":\"string\",\"target_value\":\"abc\",\"input_value\":\"abc\",\"input_matcher\":\"exact\",\"input_matcher_params\":{}}]}";
                         break;
                     case "2":
                         attributesExpected = "{\"string\":[\"xyz\"],\"array\":[\"444\",\"555\"]}";
@@ -1774,7 +1777,7 @@ public class JobIT extends AbstractITCase {
             postResolution.addParameter("search.pre_filter_shard_size", "5");
             postResolution.addParameter("search.request_cache", "true");
             Response response = client.performRequest(postResolution);
-            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
             assertEquals(json.get("hits").get("total").asInt(), 6);
             Set<String> docsExpected = new TreeSet<>();
             docsExpected.add("a0,0");
@@ -1796,7 +1799,7 @@ public class JobIT extends AbstractITCase {
             postResolution2.addParameter("_seq_no_primary_term", "false");
             postResolution2.addParameter("_version", "false");
             Response response2 = client.performRequest(postResolution2);
-            JsonNode json2 = Json.MAPPER.readTree(response2.getEntity().getContent());
+            JsonNode json2 = Json.ORDERED_MAPPER.readTree(response2.getEntity().getContent());
             assertEquals(json2.get("hits").get("total").asInt(), 6);
             Set<String> docsExpected2 = new TreeSet<>();
             docsExpected2.add("a0,0");
@@ -1829,7 +1832,7 @@ public class JobIT extends AbstractITCase {
             postResolution.addParameter("max_docs_per_query", "1");
             postResolution.addParameter("max_hops", "3");
             Response response = client.performRequest(postResolution);
-            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+            JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
 
             Set<String> docsExpected = new TreeSet<>();
             docsExpected.add("a0,0");

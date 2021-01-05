@@ -7,7 +7,6 @@ import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.client.node.NodeClient;
-import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentType;
@@ -15,11 +14,12 @@ import org.elasticsearch.plugin.zentity.exceptions.ForbiddenException;
 import org.elasticsearch.plugin.zentity.exceptions.NotImplementedException;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
-import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -59,9 +59,9 @@ public class SetupAction extends BaseRestHandler {
         "  \"doc\": " + INDEX_MAPPING + "\n" +
         "}";
 
-    @Inject
-    public SetupAction(RestController controller) {
-        controller.registerHandler(POST, "_zentity/_setup", this);
+    @Override
+    public List<Route> routes() {
+        return Collections.singletonList(new Route(POST, "_zentity/_setup"));
     }
 
     /**
