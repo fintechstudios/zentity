@@ -897,14 +897,13 @@ public class Job {
         List<String> termResolvers,
         FilterTree termResolversFilterTree
     ) throws ValidationException, IOException {
-        BoolQueryBuilder queryBuilder = new BoolQueryBuilder();
         List<QueryBuilder> queryMustNotClauses = new ArrayList<>();
         List<QueryBuilder> queryFilterClauses = new ArrayList<>();
 
         // Exclude docs by _id
         Set<String> docIds = this.docIds.get(indexName);
         if (!docIds.isEmpty()) {
-            queryBuilder.mustNot(new IdsQueryBuilder().addIds(docIds.toArray(new String[0])));
+            queryMustNotClauses.add(new IdsQueryBuilder().addIds(docIds.toArray(new String[0])));
         }
 
         // Create "scope.exclude.attributes" clauses. Combine them into a single "should" clause.
@@ -926,9 +925,6 @@ public class Job {
                 queryMustNotClauses.add(attributeClauses.get(0));
             }
         }
-
-        // Construct the top-level "must_not" clause.
-        queryMustNotClauses.forEach(queryBuilder::mustNot);
 
         // Construct "scope.include.attributes" clauses. Combine them into a single "filter" clause.
         if (!this.config.input.scope().include().attributes().isEmpty()) {
@@ -1118,7 +1114,7 @@ public class Job {
 
         // Combine the ids clause and resolvers clause in a "should" clause if necessary.
         if (idsQuery != null && resolversClause != null) {
-            BoolQueryBuilder combo = BoolQueryUtils.combineQueries(FILTER, idsQuery, resolversClause);
+            BoolQueryBuilder combo = BoolQueryUtils.combineQueries(SHOULD, idsQuery, resolversClause);
             queryFilterClauses.add(combo);
         } else if (idsQuery != null) {
             queryFilterClauses.add(idsQuery);
@@ -1126,10 +1122,39 @@ public class Job {
             queryFilterClauses.add(resolversClause);
         }
 
-        // Construct the top-level "filter" clause.
-        if (queryFilterClauses.size() > 0) {
-            queryFilterClauses.forEach(queryBuilder::filter);
+        // Construct the top-level "query" clause.
+        QueryBuilder queryBuilder;
+        if (!queryMustNotClauses.isEmpty() && !queryFilterClauses.isEmpty()) {
+            // Construct the top-level "filter" clause. Combine this clause and the top-level "must_not" clause
+            // in a "bool" clause and add it to the "query" field.
+            BoolQueryBuilder boolQuery = new BoolQueryBuilder();
+            queryMustNotClauses.forEach(boolQuery::mustNot);
+            queryFilterClauses.forEach(boolQuery::filter);
+
+            queryBuilder = boolQuery;
+        } else if (!queryMustNotClauses.isEmpty()) {
+            // Wrap only the top-level "must_not" clause in a "bool" clause and add it to the "query" field.
+            BoolQueryBuilder boolQuery = new BoolQueryBuilder();
+            queryMustNotClauses.forEach(boolQuery::mustNot);
+
+            queryBuilder = boolQuery;
+        } else if (!queryFilterClauses.isEmpty()) {
+            // Construct the top-level "filter" clause and add only this clause to the "query" field.
+            // This prevents a redundant "bool"."filter" wrapper clause when the top-level "must_not" clause
+            // does not exist.
+            if (queryFilterClauses.size() > 1) {
+                BoolQueryBuilder boolQuery = new BoolQueryBuilder();
+                queryFilterClauses.forEach(boolQuery::filter);
+
+                queryBuilder = boolQuery;
+            } else {
+                queryBuilder = queryFilterClauses.get(0);
+            }
+        } else {
+            // This should never be reached.
+            throw new IllegalStateException("No filter or mustNot clauses when building search query.");
         }
+
         return queryBuilder;
     }
 
