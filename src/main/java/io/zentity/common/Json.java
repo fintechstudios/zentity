@@ -1,15 +1,15 @@
 package io.zentity.common;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.io.JsonStringEncoder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.node.NumericNode;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.TreeMap;
 
 public class Json {
 
@@ -52,5 +52,9 @@ public class Json {
             throw new IllegalArgumentException("Can only convert JSON objects to maps");
         }
         return toStringMap(node.fields());
+    }
+
+    public static NumericNode parseNumberAsNode(String num) throws IOException {
+        return Json.MAPPER.readValue(num, NumericNode.class);
     }
 }

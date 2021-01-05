@@ -135,9 +135,8 @@ public class Term implements Comparable<Term> {
      */
     public NumberValue numberValue() throws IOException, ValidationException {
         if (this.numberValue == null) {
-            // TODO: might be able to remove this if we can determine if floating point vs integral values
-            //      matter for attribute values
-            JsonNode value = Json.MAPPER.readTree("{\"value\":" + this.term + "}").get("value");
+            JsonNode value = Json.parseNumberAsNode(this.term);
+
             this.numberValue = new NumberValue(value);
         }
         return this.numberValue;

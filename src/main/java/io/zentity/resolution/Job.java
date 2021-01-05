@@ -46,8 +46,6 @@ import org.elasticsearch.search.SearchModule;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -70,7 +68,6 @@ import java.util.stream.Collectors;
 import static io.zentity.common.CompletableFutureUtil.uncheckedBiFunction;
 import static io.zentity.common.CompletableFutureUtil.uncheckedFunction;
 import static io.zentity.common.CompletableFutureUtil.uncheckedSupplier;
-import static io.zentity.common.Patterns.COLON;
 import static io.zentity.resolution.BoolQueryUtils.BoolQueryCombiner.FILTER;
 import static io.zentity.resolution.BoolQueryUtils.BoolQueryCombiner.SHOULD;
 
@@ -99,12 +96,11 @@ public class Job {
     private final JobConfig config;
 
     // Job state
-    private AttributeIdConfidenceScoreMap attributeIdConfidenceScores = new AttributeIdConfidenceScoreMap();
-    private Map<String, Attribute> attributes = new HashMap<>();
-    private Map<String, Set<String>> docIds = new HashMap<>();
-    private List<JsonNode> hits = new ArrayList<>();
-    private List<LoggedQuery> queries = new ArrayList<>();
-    private boolean ran = false;
+    private AttributeIdConfidenceScoreMap attributeIdConfidenceScores;
+    private Map<String, Attribute> attributes;
+    private Map<String, Set<String>> docIds;
+    private List<JsonNode> hits;
+    private List<LoggedQuery> queries;
 
     public Job(NodeClient client, JobConfig config) {
         this.client = client;
@@ -420,8 +416,14 @@ public class Job {
                 QueryBuilder valueClause = buildMatcherClause(matcher, indexFieldName, value.serialized(), params);
                 if (namedFilters) {
                     // Name the clause to determine why any matching document matched
-                    String valueBase64 = Base64.getEncoder().encodeToString(value.serialized().getBytes());
-                    String name = attributeName + ":" + indexFieldName + ":" + matcherName + ":" + valueBase64 + ":" + nameIdCounter.getAndIncrement();
+                    QueryValue queryValue = new QueryValue(
+                        attributeName,
+                        indexFieldName,
+                        matcherName,
+                        value,
+                        nameIdCounter.getAndIncrement()
+                    );
+                    String name = queryValue.serialize();
                     valueClause = new BoolQueryBuilder()
                         .queryName(name)
                         .filter(valueClause);
@@ -731,7 +733,6 @@ public class Job {
         this.docIds = new HashMap<>();
         this.hits = new ArrayList<>();
         this.queries = new ArrayList<>();
-        this.ran = false;
     }
 
     /**
@@ -1263,24 +1264,23 @@ public class Job {
             ObjectNode docExpResolversObjNode = docExpObjNode.putObject("resolvers");
             ArrayNode docExpMatchesArrNode = docExpObjNode.putArray("matches");
             Set<String> expAttributes = new HashSet<>();
-            Set<String> matchedQueries = new HashSet<>();
-
-            // Remove the unique identifier from "_name" to remove duplicates.
-            for (JsonNode mqNode : docObjNode.get("matched_queries")) {
-                String[] nameParts = COLON.split(mqNode.asText());
-                nameParts = Arrays.copyOf(nameParts, nameParts.length - 1);
-                matchedQueries.add(String.join(":", nameParts));
-            }
+            Set<String> matchedQueryNames = new HashSet<>();
 
             // Create tuple-like objects that describe which attribute values matched which
             // index field values using which matchers and matcher parameters.
             Map<String, ArrayList<Double>> attributeIdentityConfidenceBaseScores = new HashMap<>();
-            for (String mq : matchedQueries) {
-                String[] nameParts = COLON.split(mq);
-                String attributeName = nameParts[0];
-                String indexFieldName = nameParts[1];
-                String matcherName = nameParts[2];
-                String attributeValueSerialized = new String(Base64.getDecoder().decode(nameParts[3]));
+            for (JsonNode mqNode : docObjNode.get("matched_queries")) {
+                String serializedName = mqNode.asText();
+                QueryValue queryValue = QueryValue.deserialize(serializedName);
+                // skip duplicates
+                if (!matchedQueryNames.add(queryValue.genericName())) {
+                    continue;
+                }
+
+                String attributeName = queryValue.attributeName;
+                String indexFieldName = queryValue.indexFieldName;
+                String matcherName = queryValue.matcherName;
+                String attributeValueSerialized = queryValue.serializedValue;
                 String attributeType = this.config.input.model().attributes().get(attributeName).type();
                 if (attributeType.equals("string") || attributeType.equals("date")) {
                     attributeValueSerialized = "\"" + attributeValueSerialized + "\"";

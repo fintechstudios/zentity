@@ -1,8 +1,6 @@
 package io.zentity.resolution.input.value;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.NullNode;
-import io.zentity.common.Json;
 import io.zentity.model.ValidationException;
 
 public abstract class Value implements ValueInterface {
