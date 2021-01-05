@@ -9,33 +9,33 @@ import io.zentity.model.ValidationException;
 import io.zentity.resolution.input.value.Value;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
 
 public class Attribute {
 
     private final String name;
-    private Map<String, String> params = new TreeMap<>();
-    private String type;
-    private Set<Value> values = new TreeSet<>();
+    private final String type;
+    private final Map<String, String> params = new HashMap<>();
+    private final Set<Value> values = new HashSet<>();
 
     public Attribute(String name, String type, JsonNode json) throws ValidationException, JsonProcessingException {
-        validateName(name);
-        validateType(type);
-        this.name = name;
-        this.type = type;
+        this(name, type);
         this.deserialize(json);
     }
 
     public Attribute(String name, String type, String json) throws ValidationException, IOException {
-        validateName(name);
-        validateType(type);
-        this.name = name;
-        this.type = type;
+        this(name, type);
         this.deserialize(json);
+    }
+
+    public Attribute(String name, String type, Map<String, String> params, Set<Value> values) throws ValidationException {
+        this(name, type);
+        this.params.putAll(params);
+        this.values.addAll(values);
     }
 
     public Attribute(String name, String type) throws ValidationException {
@@ -62,8 +62,9 @@ public class Attribute {
     }
 
     private void validateName(String value) throws ValidationException {
-        if (Patterns.EMPTY_STRING.matcher(value).matches())
+        if (Patterns.EMPTY_STRING.matcher(value).matches()) {
             throw new ValidationException("'attributes' has an attribute with empty name.");
+        }
     }
 
     /**
@@ -74,10 +75,12 @@ public class Attribute {
      * @throws ValidationException
      */
     private void validateType(String value) throws ValidationException {
-        if (Patterns.EMPTY_STRING.matcher(value).matches())
+        if (Patterns.EMPTY_STRING.matcher(value).matches()) {
             throw new ValidationException("'attributes." + this.name + ".type'' must not be empty.");
-        if (!io.zentity.model.Attribute.VALID_TYPES.contains(value))
+        }
+        if (!io.zentity.model.Attribute.VALID_TYPES.contains(value)) {
             throw new ValidationException("'attributes." + this.name + ".type' has an unrecognized type '" + value + "'.");
+        }
     }
 
     /**
@@ -126,11 +129,13 @@ public class Attribute {
      * @param json Attribute object of an entity model.
      * @throws ValidationException
      */
-    public void deserialize(JsonNode json) throws ValidationException, JsonProcessingException {
-        if (json.isNull())
+    private void deserialize(JsonNode json) throws ValidationException, JsonProcessingException {
+        if (json.isNull()) {
             return;
-        if (!json.isObject() && !json.isArray())
+        }
+        if (!json.isObject() && !json.isArray()) {
             throw new ValidationException("'attributes." + this.name + "' must be an object or array.");
+        }
 
         Iterator<JsonNode> valuesNode = ClassUtil.emptyIterator();
         Iterator<Map.Entry<String, JsonNode>> paramsNode = ClassUtil.emptyIterator();
@@ -138,20 +143,21 @@ public class Attribute {
         // Parse values from array
         if (json.isArray()) {
             valuesNode = json.elements();
-
         } else if (json.isObject()) {
 
             // Parse values from object
             if (json.has("values")) {
-                if (!json.get("values").isArray())
+                if (!json.get("values").isArray()) {
                     throw new ValidationException("'attributes." + this.name + ".values' must be an array.");
+                }
                 valuesNode = json.get("values").elements();
             }
 
             // Parse params from object
             if (json.has("params")) {
-                if (!json.get("params").isObject())
+                if (!json.get("params").isObject()) {
                     throw new ValidationException("'attributes." + this.name + ".params' must be an object.");
+                }
                 paramsNode = json.get("params").fields();
             }
         } else {
@@ -165,20 +171,10 @@ public class Attribute {
         }
 
         // Set any params that were specified in the input, with the values serialized as strings.
-        while (paramsNode.hasNext()) {
-            Map.Entry<String, JsonNode> paramNode = paramsNode.next();
-            String paramField = paramNode.getKey();
-            JsonNode paramValue = paramNode.getValue();
-            if (paramValue.isObject() || paramValue.isArray())
-                this.params().put(paramField, Json.MAPPER.writeValueAsString(paramValue));
-            else if (paramValue.isNull())
-                this.params().put(paramField, "null");
-            else
-                this.params().put(paramField, paramValue.asText());
-        }
+        this.params().putAll(Json.toStringMap(paramsNode));
     }
 
-    public void deserialize(String json) throws ValidationException, IOException {
+    private void deserialize(String json) throws ValidationException, IOException {
         deserialize(Json.MAPPER.readTree(json));
     }
 }

@@ -7,15 +7,16 @@ import io.zentity.common.Patterns;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 
 public class IndexField {
 
-    public static final Set<String> REQUIRED_FIELDS = new TreeSet<>(
-            Arrays.asList("attribute")
+    private static final Set<String> REQUIRED_FIELDS = new HashSet<>(
+        Collections.singletonList("attribute")
     );
 
     private final String index;
@@ -79,8 +80,9 @@ public class IndexField {
     private void nameToPaths(String name) {
         String[] parts = Patterns.PERIOD.split(name);
         this.path = JsonPointer.compile("/" + String.join("/", parts));
-        if (parts.length > 1)
+        if (parts.length > 1) {
             this.pathParent = JsonPointer.compile("/" + String.join("/", Arrays.copyOf(parts, parts.length - 1)));
+        }
     }
 
     public Double quality() {
@@ -93,36 +95,45 @@ public class IndexField {
     }
 
     private void validateName(String value) throws ValidationException {
-        if (Patterns.EMPTY_STRING.matcher(value).matches())
+        if (Patterns.EMPTY_STRING.matcher(value).matches()) {
             throw new ValidationException("'indices." + this.index + "' has a field with an empty name.");
+        }
     }
 
     private void validateAttribute(JsonNode value) throws ValidationException {
-        if (!value.isTextual())
+        if (!value.isTextual()) {
             throw new ValidationException("'indices." + this.index + "." + this.name + ".attribute' must be a string.");
-        if (Patterns.EMPTY_STRING.matcher(value.textValue()).matches())
+        }
+        if (Patterns.EMPTY_STRING.matcher(value.textValue()).matches()) {
             throw new ValidationException("'indices." + this.index + "." + this.name + ".attribute' must not be empty.");
+        }
     }
 
     private void validateMatcher(JsonNode value) throws ValidationException {
-        if (!value.isTextual())
+        if (!value.isTextual()) {
             throw new ValidationException("'indices." + this.index + "." + this.name + ".matcher' must be a string.");
-        if (Patterns.EMPTY_STRING.matcher(value.textValue()).matches())
+        }
+        if (Patterns.EMPTY_STRING.matcher(value.textValue()).matches()) {
             throw new ValidationException("'indices." + this.index + "." + this.name + ".matcher' must not be empty.");
+        }
     }
 
     private void validateObject(JsonNode object) throws ValidationException {
-        if (!object.isObject())
+        if (!object.isObject()) {
             throw new ValidationException("'indices." + this.index + "." + this.name + "' must be an object.");
-        if (object.size() == 0)
+        }
+        if (object.size() == 0) {
             throw new ValidationException("'indices." + this.index + "." + this.name + "' is empty.");
+        }
     }
 
     private void validateQuality(JsonNode value) throws ValidationException {
-        if (!value.isNull() && !value.isFloatingPointNumber())
+        if (!value.isNull() && !value.isFloatingPointNumber()) {
             throw new ValidationException("'indices." + this.index + "." + this.name + ".quality' must be a floating point number.");
-        if (value.isFloatingPointNumber() && (value.floatValue() < 0.0 || value.floatValue() > 1.0))
+        }
+        if (value.isFloatingPointNumber() && (value.floatValue() < 0.0 || value.floatValue() > 1.0)) {
             throw new ValidationException("'indices." + this.index + "." + this.name + ".quality' must be in the range of 0.0 - 1.0.");
+        }
     }
 
     /**
@@ -143,8 +154,9 @@ public class IndexField {
 
         // Validate the existence of required fields.
         for (String field : REQUIRED_FIELDS)
-            if (!json.has(field))
+            if (!json.has(field)) {
                 throw new ValidationException("'indices." + this.index + "." + this.name + "' is missing required field '" + field + "'.");
+            }
 
         // Validate and hold the state of fields.
         Iterator<Map.Entry<String, JsonNode>> fields = json.fields();

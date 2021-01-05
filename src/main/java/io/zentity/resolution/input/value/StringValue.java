@@ -18,8 +18,9 @@ public class StringValue extends Value {
      */
     @Override
     public String serialize(JsonNode value) {
-        if (value.isNull())
+        if (value.isNull()) {
             return "null";
+        }
         return value.textValue();
     }
 
@@ -31,7 +32,8 @@ public class StringValue extends Value {
      */
     @Override
     public void validate(JsonNode value) throws ValidationException {
-        if (!value.isTextual() && !value.isNull())
+        if (!value.isTextual() && !value.isNull()) {
             throw new ValidationException("Expected '" + this.type + "' attribute data type.");
+        }
     }
 }

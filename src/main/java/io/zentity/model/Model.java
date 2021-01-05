@@ -5,16 +5,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.zentity.common.Json;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.TreeMap;
 
 public class Model {
 
-    private Map<String, Attribute> attributes = new TreeMap<>();
-    private Map<String, Index> indices = new TreeMap<>();
-    private Map<String, Matcher> matchers = new TreeMap<>();
-    private Map<String, Resolver> resolvers = new TreeMap<>();
+    private final Map<String, Attribute> attributes = new HashMap<>();
+    private final Map<String, Index> indices = new HashMap<>();
+    private final Map<String, Matcher> matchers = new HashMap<>();
+    private final Map<String, Resolver> resolvers = new HashMap<>();
 
     public Model(JsonNode json) throws ValidationException, JsonProcessingException {
         this.deserialize(json);
@@ -48,10 +48,12 @@ public class Model {
      * @throws ValidationException
      */
     private void validateField(JsonNode json, String field) throws ValidationException {
-        if (!json.get(field).isObject())
+        if (!json.get(field).isObject()) {
             throw new ValidationException("'" + field + "' must be an object.");
-        if (json.get(field).size() == 0)
+        }
+        if (json.get(field).size() == 0) {
             throw new ValidationException("'" + field + "' must not be empty.");
+        }
     }
 
     /**
@@ -62,16 +64,19 @@ public class Model {
      * @throws ValidationException
      */
     private void validateObject(String field, JsonNode object) throws ValidationException {
-        if (!object.isObject())
+        if (!object.isObject()) {
             throw new ValidationException("'" + field + "' must be an object.");
-        if (object.size() == 0)
+        }
+        if (object.size() == 0) {
             throw new ValidationException("'" + field + "' is empty.");
+        }
 
     }
 
     public void deserialize(JsonNode json) throws ValidationException, JsonProcessingException {
-        if (!json.isObject())
+        if (!json.isObject()) {
             throw new ValidationException("Entity model must be an object.");
+        }
         Iterator<Map.Entry<String, JsonNode>> fields = json.fields();
         while (fields.hasNext()) {
             Map.Entry<String, JsonNode> field = fields.next();
@@ -103,14 +108,18 @@ public class Model {
             }
 
         }
-        if (this.attributes.size() == 0)
+        if (this.attributes.size() == 0) {
             throw new ValidationException("'attributes' is missing.");
-        if (this.resolvers.size() == 0)
+        }
+        if (this.resolvers.size() == 0) {
             throw new ValidationException("'resolvers' is missing.");
-        if (this.matchers.size() == 0)
+        }
+        if (this.matchers.size() == 0) {
             throw new ValidationException("'matchers' is missing.");
-        if (this.indices.size() == 0)
+        }
+        if (this.indices.size() == 0) {
             throw new ValidationException("'indices' is missing.");
+        }
     }
 
     public void deserialize(String json) throws ValidationException, IOException {

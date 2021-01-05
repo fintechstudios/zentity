@@ -2,15 +2,19 @@ package org.elasticsearch.plugin.zentity;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.zentity.common.Json;
-import io.zentity.resolution.AbstractITCase;
+import io.zentity.devtools.AbstractITCase;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
+import org.junit.Test;
 
 import java.util.Iterator;
 import java.util.Map;
 
+import static junit.framework.TestCase.assertTrue;
+
 public class ZentityPluginIT extends AbstractITCase {
 
+    @Test
     public void testPluginIsLoaded() throws Exception {
         Response response = client.performRequest(new Request("GET", "_nodes/plugins"));
         JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
@@ -26,7 +30,7 @@ public class ZentityPluginIT extends AbstractITCase {
                     break;
                 }
             }
-            assertTrue(pluginFound);
+            assertTrue("Plugin was not found", pluginFound);
         }
     }
 }

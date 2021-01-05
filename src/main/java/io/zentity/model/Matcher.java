@@ -6,25 +6,25 @@ import io.zentity.common.Json;
 import io.zentity.common.Patterns;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 public class Matcher {
 
-    public static final Set<String> REQUIRED_FIELDS = new TreeSet<>(
-            Arrays.asList("clause")
+    private static final Set<String> REQUIRED_FIELDS = new HashSet<>(
+        Collections.singletonList("clause")
     );
 
     private final String name;
     private String clause;
-    private Map<String, String> params = new TreeMap<>();
+    private final Map<String, String> params = new HashMap<>();
     private Double quality;
-    private Map<String, Pattern> variables = new TreeMap<>();
+    private Map<String, Pattern> variables = new HashMap<>();
 
     public Matcher(String name, JsonNode json) throws ValidationException, JsonProcessingException {
         validateName(name);
@@ -46,8 +46,9 @@ public class Matcher {
      * @return
      */
     public static Map<String, Pattern> parseVariables(String clause) {
+        // TODO: replace with Moustache lang parser
         java.util.regex.Matcher m = Patterns.VARIABLE.matcher(clause);
-        Map<String, Pattern> variables = new TreeMap<>();
+        Map<String, Pattern> variables = new HashMap<>();
         while (m.find()) {
             String variable = m.group(1);
             Pattern pattern = Pattern.compile("\\{\\{\\s*(" + Pattern.quote(variable) + ")\\s*}}");
@@ -88,29 +89,36 @@ public class Matcher {
     }
 
     private void validateName(String value) throws ValidationException {
-        if (Patterns.EMPTY_STRING.matcher(value).matches())
+        if (Patterns.EMPTY_STRING.matcher(value).matches()) {
             throw new ValidationException("'matchers' field has a matcher with an empty name.");
+        }
     }
 
     private void validateClause(JsonNode value) throws ValidationException {
-        if (!value.isObject())
+        if (!value.isObject()) {
             throw new ValidationException("'matchers." + this.name + ".clause' must be an object.");
-        if (value.size() == 0)
+        }
+        if (value.size() == 0) {
             throw new ValidationException("'matchers." + this.name + ".clause' is empty.");
+        }
     }
 
     private void validateObject(JsonNode object) throws ValidationException {
-        if (!object.isObject())
+        if (!object.isObject()) {
             throw new ValidationException("'matchers." + this.name + "' must be an object.");
-        if (object.size() == 0)
+        }
+        if (object.size() == 0) {
             throw new ValidationException("'matchers." + this.name + "' is empty.");
+        }
     }
 
     private void validateQuality(JsonNode value) throws ValidationException {
-        if (!value.isNull() && !value.isFloatingPointNumber())
+        if (!value.isNull() && !value.isFloatingPointNumber()) {
             throw new ValidationException("'matchers." + this.name + ".quality' must be a floating point number.");
-        if (value.isFloatingPointNumber() && (value.floatValue() < 0.0 || value.floatValue() > 1.0))
+        }
+        if (value.isFloatingPointNumber() && (value.floatValue() < 0.0 || value.floatValue() > 1.0)) {
             throw new ValidationException("'matchers." + this.name + ".quality' must be in the range of 0.0 - 1.0.");
+        }
     }
 
     /**
@@ -132,8 +140,9 @@ public class Matcher {
 
         // Validate the existence of required fields.
         for (String field : REQUIRED_FIELDS)
-            if (!json.has(field))
+            if (!json.has(field)) {
                 throw new ValidationException("'matchers." + this.name + "' is missing required field '" + field + "'.");
+            }
 
         // Validate and hold the state of fields.
         Iterator<Map.Entry<String, JsonNode>> fields = json.fields();
@@ -151,18 +160,7 @@ public class Matcher {
                         break;
                     if (!value.isObject())
                         throw new ValidationException("'matchers." + this.name + ".params' must be an object.");
-                    Iterator<Map.Entry<String, JsonNode>> paramsNode = value.fields();
-                    while (paramsNode.hasNext()) {
-                        Map.Entry<String, JsonNode> paramNode = paramsNode.next();
-                        String paramField = paramNode.getKey();
-                        JsonNode paramValue = paramNode.getValue();
-                        if (paramValue.isObject() || paramValue.isArray())
-                            this.params().put(paramField, Json.MAPPER.writeValueAsString(paramValue));
-                        else if (paramValue.isNull())
-                            this.params().put(paramField, "null");
-                        else
-                            this.params().put(paramField, paramValue.asText());
-                    }
+                    this.params().putAll(Json.toStringMap(value));
                     break;
                 case "quality":
                     this.quality(value);

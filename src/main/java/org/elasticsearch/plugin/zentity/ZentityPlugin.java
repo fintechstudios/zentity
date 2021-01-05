@@ -1,6 +1,5 @@
 package org.elasticsearch.plugin.zentity;
 
-import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
 import org.elasticsearch.common.settings.ClusterSettings;
@@ -19,45 +18,34 @@ import java.util.List;
 import java.util.Properties;
 import java.util.function.Supplier;
 
-class NotFoundException extends Exception {
-    public NotFoundException(String message) {
-        super(message);
-    }
-}
-
-class NotImplementedException extends Exception {
-    NotImplementedException(String message) {
-        super(message);
-    }
-}
-
-class ForbiddenException extends ElasticsearchSecurityException {
-    public ForbiddenException(String message) {
-        super(message);
-    }
-}
-
 public class ZentityPlugin extends Plugin implements ActionPlugin {
 
-    private static final Properties properties = new Properties();
+    private static final Properties PROPERTIES = new Properties();
 
-    public ZentityPlugin() throws IOException {
-        Properties zentityProperties = new Properties();
-        Properties pluginDescriptorProperties = new Properties();
-        InputStream zentityStream = this.getClass().getResourceAsStream("/zentity.properties");
-        InputStream pluginDescriptorStream = this.getClass().getResourceAsStream("/plugin-descriptor.properties");
-        zentityProperties.load(zentityStream);
-        pluginDescriptorProperties.load(pluginDescriptorStream);
-        properties.putAll(zentityProperties);
-        properties.putAll(pluginDescriptorProperties);
+    private static Properties loadPropertiesFromResources(String resourcePath) throws IOException {
+        Properties props = new Properties();
+        InputStream inputStream = ZentityPlugin.class.getResourceAsStream(resourcePath);
+        props.load(inputStream);
+        return props;
+    }
+
+    static {
+        try {
+            Properties zentityProperties = loadPropertiesFromResources("/zentity.properties");
+            Properties pluginDescriptorProperties = loadPropertiesFromResources("/plugin-descriptor.properties");
+            PROPERTIES.putAll(zentityProperties);
+            PROPERTIES.putAll(pluginDescriptorProperties);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     public static Properties properties() {
-        return properties;
+        return PROPERTIES;
     }
 
     public String version() {
-        return properties.getProperty("version");
+        return PROPERTIES.getProperty("version");
     }
 
     @Override
@@ -69,12 +57,11 @@ public class ZentityPlugin extends Plugin implements ActionPlugin {
             SettingsFilter settingsFilter,
             IndexNameExpressionResolver indexNameExpressionResolver,
             Supplier<DiscoveryNodes> nodesInCluster) {
-        List<RestHandler> handlers = new ArrayList<RestHandler>() {{
+        return new ArrayList<RestHandler>() {{
             new HomeAction(restController);
             new ModelsAction(restController);
             new ResolutionAction(restController);
             new SetupAction(restController);
         }};
-        return handlers;
     }
 }

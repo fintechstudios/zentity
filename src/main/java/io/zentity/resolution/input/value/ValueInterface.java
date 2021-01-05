@@ -3,6 +3,7 @@ package io.zentity.resolution.input.value;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.zentity.model.ValidationException;
 
+// TODO: is both an interface and an abstract class necessary, or can this be merged into the Value class?
 public interface ValueInterface extends Comparable<Value> {
 
     /**
@@ -20,21 +21,21 @@ public interface ValueInterface extends Comparable<Value> {
     /**
      * Return the attribute type.
      *
-     * @return
+     * @return The type.
      */
-    Object type();
+    String type();
 
     /**
      * Return the attribute value.
      *
-     * @return
+     * @return The raw value.
      */
     Object value();
 
     /**
      * Return the serialized attribute value.
      *
-     * @return
+     * @return The JSON string.
      */
     String serialized();
 

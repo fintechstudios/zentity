@@ -1,18 +1,23 @@
 package org.elasticsearch.plugin.zentity;
 
+import com.fasterxml.jackson.databind.ObjectWriter;
+import io.zentity.common.Json;
 import io.zentity.model.Model;
-import io.zentity.model.ValidationException;
 import io.zentity.resolution.Job;
 import io.zentity.resolution.input.Input;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.inject.Inject;
+import org.elasticsearch.plugin.zentity.exceptions.BadRequestException;
+import org.elasticsearch.plugin.zentity.exceptions.NotFoundException;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
 
+import static io.zentity.common.CompletableFutureUtil.uncheckedFunction;
+import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 
 public class ResolutionAction extends BaseRestHandler {
@@ -31,101 +36,93 @@ public class ResolutionAction extends BaseRestHandler {
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest restRequest, NodeClient client) {
 
-        String body = restRequest.content().utf8ToString();
+        final String body = restRequest.content().utf8ToString();
 
         // Parse the request params that will be passed to the job configuration
-        String entityType = restRequest.param("entity_type");
-        Boolean includeAttributes = restRequest.paramAsBoolean("_attributes", Job.DEFAULT_INCLUDE_ATTRIBUTES);
-        Boolean includeErrorTrace = restRequest.paramAsBoolean("error_trace", Job.DEFAULT_INCLUDE_ERROR_TRACE);
-        Boolean includeExplanation = restRequest.paramAsBoolean("_explanation", Job.DEFAULT_INCLUDE_EXPLANATION);
-        Boolean includeHits = restRequest.paramAsBoolean("hits", Job.DEFAULT_INCLUDE_HITS);
-        Boolean includeQueries = restRequest.paramAsBoolean("queries", Job.DEFAULT_INCLUDE_QUERIES);
-        Boolean includeScore = restRequest.paramAsBoolean("_score", Job.DEFAULT_INCLUDE_SCORE);
-        Boolean includeSeqNoPrimaryTerm = restRequest.paramAsBoolean("_seq_no_primary_term", Job.DEFAULT_INCLUDE_SEQ_NO_PRIMARY_TERM);
-        Boolean includeSource = restRequest.paramAsBoolean("_source", Job.DEFAULT_INCLUDE_SOURCE);
-        Boolean includeVersion = restRequest.paramAsBoolean("_version", Job.DEFAULT_INCLUDE_VERSION);
-        int maxDocsPerQuery = restRequest.paramAsInt("max_docs_per_query", Job.DEFAULT_MAX_DOCS_PER_QUERY);
-        int maxHops = restRequest.paramAsInt("max_hops", Job.DEFAULT_MAX_HOPS);
-        String maxTimePerQuery = restRequest.param("max_time_per_query", Job.DEFAULT_MAX_TIME_PER_QUERY);
-        Boolean pretty = restRequest.paramAsBoolean("pretty", Job.DEFAULT_PRETTY);
-        Boolean profile = restRequest.paramAsBoolean("profile", Job.DEFAULT_PROFILE);
+        final String entityType = restRequest.param("entity_type");
+        final boolean includeAttributes = restRequest.paramAsBoolean("_attributes", Job.DEFAULT_INCLUDE_ATTRIBUTES);
+        final boolean includeErrorTrace = restRequest.paramAsBoolean("error_trace", Job.DEFAULT_INCLUDE_ERROR_TRACE);
+        final boolean includeExplanation = restRequest.paramAsBoolean("_explanation", Job.DEFAULT_INCLUDE_EXPLANATION);
+        final boolean includeHits = restRequest.paramAsBoolean("hits", Job.DEFAULT_INCLUDE_HITS);
+        final boolean includeQueries = restRequest.paramAsBoolean("queries", Job.DEFAULT_INCLUDE_QUERIES);
+        final boolean includeScore = restRequest.paramAsBoolean("_score", Job.DEFAULT_INCLUDE_SCORE);
+        final boolean includeSeqNoPrimaryTerm = restRequest.paramAsBoolean("_seq_no_primary_term", Job.DEFAULT_INCLUDE_SEQ_NO_PRIMARY_TERM);
+        final boolean includeSource = restRequest.paramAsBoolean("_source", Job.DEFAULT_INCLUDE_SOURCE);
+        final boolean includeVersion = restRequest.paramAsBoolean("_version", Job.DEFAULT_INCLUDE_VERSION);
+        final int maxDocsPerQuery = restRequest.paramAsInt("max_docs_per_query", Job.DEFAULT_MAX_DOCS_PER_QUERY);
+        final int maxHops = restRequest.paramAsInt("max_hops", Job.DEFAULT_MAX_HOPS);
+        final String maxTimePerQuery = restRequest.param("max_time_per_query", Job.DEFAULT_MAX_TIME_PER_QUERY);
+        final boolean pretty = restRequest.paramAsBoolean("pretty", false);
+        final boolean profile = restRequest.paramAsBoolean("profile", Job.DEFAULT_PROFILE);
 
         // Parse any optional search parameters that will be passed to the job configuration.
         // Note: org.elasticsearch.rest.RestRequest doesn't allow null values as default values for integer parameters,
         // which is why the code below handles the integer parameters differently from the others.
-        Boolean searchAllowPartialSearchResults = restRequest.paramAsBoolean("search.allow_partial_search_results", Job.DEFAULT_SEARCH_ALLOW_PARTIAL_SEARCH_RESULTS);
-        Integer searchBatchedReduceSize = Job.DEFAULT_SEARCH_BATCHED_REDUCE_SIZE;
-        if (restRequest.hasParam("search.batched_reduce_size"))
-            searchBatchedReduceSize = Integer.parseInt(restRequest.param("search.batched_reduce_size"));
-        Integer searchMaxConcurrentShardRequests = Job.DEFAULT_SEARCH_MAX_CONCURRENT_SHARD_REQUESTS;
-        if (restRequest.hasParam("search.max_concurrent_shard_requests"))
-            searchMaxConcurrentShardRequests = Integer.parseInt(restRequest.param("search.max_concurrent_shard_requests"));
-        Integer searchPreFilterShardSize = Job.DEFAULT_SEARCH_PRE_FILTER_SHARD_SIZE;
-        if (restRequest.hasParam("search.pre_filter_shard_size"))
-            searchPreFilterShardSize = Integer.parseInt(restRequest.param("search.pre_filter_shard_size"));
-        String searchPreference = restRequest.param("search.preference", Job.DEFAULT_SEARCH_PREFERENCE);
-        Boolean searchRequestCache = restRequest.paramAsBoolean("search.request_cache", Job.DEFAULT_SEARCH_REQUEST_CACHE);
-        Integer finalSearchBatchedReduceSize = searchBatchedReduceSize;
-        Integer finalSearchMaxConcurrentShardRequests = searchMaxConcurrentShardRequests;
-        Integer finalSearchPreFilterShardSize = searchPreFilterShardSize;
+        final Boolean searchAllowPartialSearchResults = ParamsUtil.optBoolean(restRequest, "search.allow_partial_search_results");
+        final Integer searchBatchedReduceSize = ParamsUtil.optInteger(restRequest, "search.batched_reduce_size");
+        final Integer searchMaxConcurrentShardRequests = ParamsUtil.optInteger(restRequest, "search.max_concurrent_shard_requests");
+        final Integer searchPreFilterShardSize = ParamsUtil.optInteger(restRequest, "search.pre_filter_shard_size");
+        final Boolean searchRequestCache = ParamsUtil.optBoolean(restRequest, "search.request_cache");
+        final String searchPreference = restRequest.param("search.preference");
 
-        return channel -> {
-            try {
-
-                // Validate the request body.
-                if (body == null || body.equals(""))
-                    throw new ValidationException("Request body is missing.");
-
-                // Parse and validate the job input.
-                Input input;
-                if (entityType == null || entityType.equals("")) {
-                    input = new Input(body);
-                } else {
-                    GetResponse getResponse = ModelsAction.getEntityModel(entityType, client);
-                    if (!getResponse.isExists())
-                        throw new NotFoundException("Entity type '" + entityType + "' not found.");
-                    String model = getResponse.getSourceAsString();
-                    input = new Input(body, new Model(model));
-                }
-
-                // Prepare the entity resolution job.
-                Job job = new Job(client);
-                job.includeAttributes(includeAttributes);
-                job.includeErrorTrace(includeErrorTrace);
-                job.includeExplanation(includeExplanation);
-                job.includeHits(includeHits);
-                job.includeQueries(includeQueries);
-                job.includeScore(includeScore);
-                job.includeSeqNoPrimaryTerm(includeSeqNoPrimaryTerm);
-                job.includeSource(includeSource);
-                job.includeVersion(includeVersion);
-                job.maxDocsPerQuery(maxDocsPerQuery);
-                job.maxHops(maxHops);
-                job.maxTimePerQuery(maxTimePerQuery);
-                job.pretty(pretty);
-                job.profile(profile);
-                job.input(input);
-
-                // Optional search parameters
-                job.searchAllowPartialSearchResults(searchAllowPartialSearchResults);
-                job.searchBatchedReduceSize(finalSearchBatchedReduceSize);
-                job.searchMaxConcurrentShardRequests(finalSearchMaxConcurrentShardRequests);
-                job.searchPreFilterShardSize(finalSearchPreFilterShardSize);
-                job.searchPreference(searchPreference);
-                job.searchRequestCache(searchRequestCache);
-
-                // Run the entity resolution job.
-                String response = job.run();
-                if (job.failed())
-                    channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, "application/json", response));
-                else
-                    channel.sendResponse(new BytesRestResponse(RestStatus.OK, "application/json", response));
-
-            } catch (ValidationException e) {
-                channel.sendResponse(new BytesRestResponse(channel, RestStatus.BAD_REQUEST, e));
-            } catch (NotFoundException e) {
-                channel.sendResponse(new BytesRestResponse(channel, RestStatus.NOT_FOUND, e));
+        return errorHandlingConsumer(channel -> {
+            // Validate the request body.
+            if (body == null || body.equals("")) {
+                throw new BadRequestException("Request body is missing.");
             }
-        };
+
+            // Parse and validate the job input.
+            Input input;
+            if (entityType == null || entityType.equals("")) {
+                input = new Input(body);
+            } else {
+                GetResponse getResponse = ModelsAction.getEntityModel(entityType, client).get();
+                if (!getResponse.isExists()) {
+                    throw new NotFoundException("Entity type '" + entityType + "' not found.");
+                }
+                String model = getResponse.getSourceAsString();
+                input = new Input(body, new Model(model));
+            }
+
+            // Prepare the entity resolution job.
+            Job job = Job.newBuilder()
+                .client(client)
+                .includeAttributes(includeAttributes)
+                .includeErrorTrace(includeErrorTrace)
+                .includeExplanation(includeExplanation)
+                .includeHits(includeHits)
+                .includeQueries(includeQueries)
+                .includeScore(includeScore)
+                .includeSeqNoPrimaryTerm(includeSeqNoPrimaryTerm)
+                .includeSource(includeSource)
+                .includeVersion(includeVersion)
+                .maxDocsPerQuery(maxDocsPerQuery)
+                .maxHops(maxHops)
+                .maxTimePerQuery(maxTimePerQuery)
+                .profile(profile)
+                .input(input)
+                .searchAllowPartialSearchResults(searchAllowPartialSearchResults)
+                .searchBatchedReduceSize(searchBatchedReduceSize)
+                .searchMaxConcurrentShardRequests(searchMaxConcurrentShardRequests)
+                .searchPreFilterShardSize(searchPreFilterShardSize)
+                .searchPreference(searchPreference)
+                .searchRequestCache(searchRequestCache)
+                .build();
+
+            // Run the entity resolution job.
+            job.runAsync()
+                .thenApply(uncheckedFunction((res) -> {
+                    ObjectWriter writer = pretty
+                        ? Json.ORDERED_MAPPER.writerWithDefaultPrettyPrinter()
+                        : Json.MAPPER.writer();
+                    String responseJson = writer.writeValueAsString(res);
+
+                    RestStatus status = res.isFailure() ? RestStatus.INTERNAL_SERVER_ERROR : RestStatus.OK;
+
+                    channel.sendResponse(new BytesRestResponse(status, "application/json", responseJson));
+                    return null;
+                }))
+                .get();
+        });
     }
 }

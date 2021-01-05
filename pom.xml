@@ -21,8 +21,13 @@
         <jackson.databind.version>2.9.10.3</jackson.databind.version>
         <jdk.version>1.11</jdk.version>
         <log4j.version>2.9.1</log4j.version>
+        <slf4j.version>1.7.28</slf4j.version>
         <commons-io.version>2.6</commons-io.version>
+        <testcontainers.version>1.15.0</testcontainers.version>
+        <mockito.version>3.6.28</mockito.version>
+        <java-nio-tcp-proxy.version>1.5</java-nio-tcp-proxy.version>
         <!-- maven plugin versions -->
+        <maven.compiler.version>3.1</maven.compiler.version>
         <maven.assembly.version>2.6</maven.assembly.version>
         <maven.junit.version>2.5.3</maven.junit.version>
         <maven.surefire.version>2.20.1</maven.surefire.version>
@@ -30,8 +35,6 @@
         <skipTests>false</skipTests>
         <skipUnitTests>${skipTests}</skipUnitTests>
         <skipIntegTests>${skipTests}</skipIntegTests>
-        <integ.http.port>9400</integ.http.port>
-        <integ.transport.port>9500</integ.transport.port>
     </properties>
 
     <dependencies>
@@ -53,17 +56,18 @@
             <version>${jackson.databind.version}</version>
             <scope>compile</scope><!-- not provided by elasticsearch -->
         </dependency>
+
         <!-- test infrastructure -->
-        <dependency>
-            <groupId>org.elasticsearch.test</groupId>
-            <artifactId>framework</artifactId>
-            <version>${elasticsearch.version}</version>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
             <version>${log4j.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>${slf4j.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -72,6 +76,43 @@
             <version>${commons-io.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Testcontainers -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>elasticsearch</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- TCP Proxy -->
+        <dependency>
+            <groupId>com.github.terma</groupId>
+            <artifactId>javaniotcpproxy</artifactId>
+            <version>${java-nio-tcp-proxy.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- ES HTTP Client -->
+        <dependency>
+            <groupId>org.elasticsearch.client</groupId>
+            <artifactId>elasticsearch-rest-high-level-client</artifactId>
+            <version>${elasticsearch.version}</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -79,6 +120,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven.compiler.version}</version>
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>
@@ -123,6 +165,12 @@
                     <listeners>
                         <report-text/>
                     </listeners>
+                    <environmentVariables>
+                        <ELASTICSEARCH_VERSION>${elasticsearch.version}</ELASTICSEARCH_VERSION>
+                        <PLUGIN_BUILD_DIR>${project.build.directory}/releases/</PLUGIN_BUILD_DIR>
+                    </environmentVariables>
+                    <!-- disable security manager: https://discuss.elastic.co/t/integration-tests-fail-with-java-security-accesscontrolexception/69979 -->
+                    <argLine>-Dtests.security.manager=false</argLine>
                 </configuration>
                 <executions>
                     <execution>
@@ -157,46 +205,6 @@
                             <excludes>
                                 <exclude>**/*$*</exclude>
                             </excludes>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <version>1.8</version>
-                <executions>
-                    <!-- start up external cluster -->
-                    <execution>
-                        <id>integ-setup</id>
-                        <phase>pre-integration-test</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <skip>${skipIntegTests}</skip>
-                            <target>
-                                <ant antfile="src/test/ant/integration-tests.xml"
-                                     target="start-external-cluster-with-plugin">
-                                    <property name="elasticsearch.version" value="${elasticsearch.version}"/>
-                                </ant>
-                            </target>
-                        </configuration>
-                    </execution>
-                    <!-- shut down external cluster -->
-                    <execution>
-                        <id>integ-teardown</id>
-                        <phase>post-integration-test</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <skip>${skipIntegTests}</skip>
-                            <target>
-                                <ant antfile="src/test/ant/integration-tests.xml" target="stop-external-cluster">
-                                    <property name="elasticsearch.version" value="${elasticsearch.version}"/>
-                                </ant>
-                            </target>
                         </configuration>
                     </execution>
                 </executions>

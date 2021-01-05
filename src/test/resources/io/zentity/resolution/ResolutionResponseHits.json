@@ -1,0 +1,96 @@
+[
+  {
+    "_index": ".zentity-test-index",
+    "_id": 101,
+    "_hop": 7,
+    "_query": 4,
+    "_score": 0.6,
+    "_attributes": {
+      "city_name_attributes": [
+        "name",
+        "city"
+      ]
+    },
+    "_explanation": {
+      "resolvers": {
+        "city_name_resolver": {
+          "attributes": [
+            "name",
+            "city"
+          ]
+        }
+      },
+      "matches": [
+        {
+          "attribute": "name",
+          "target_field": "name_target",
+          "target_value": "Alice",
+          "input_value": "Alice",
+          "input_matcher": "name_exact_matcher",
+          "input_matcher_params": {},
+          "score": 0.5
+        },
+        {
+          "attribute": "city",
+          "target_field": "city_target",
+          "target_value": "New York",
+          "input_value": "New York",
+          "input_matcher": "city_exact_matcher",
+          "input_matcher_params": {},
+          "score": 0.7
+        }
+      ]
+    },
+    "_source": {
+      "name": "Alice",
+      "city": "New York"
+    }
+  },
+  {
+    "_index": ".zentity-test-index",
+    "_id": 102,
+    "_hop": 6,
+    "_query": 3,
+    "_score": 0.5,
+    "_attributes": {
+      "city_name_attributes": [
+        "name",
+        "city"
+      ]
+    },
+    "_explanation": {
+      "resolvers": {
+        "city_name_resolver": {
+          "attributes": [
+            "name",
+            "city"
+          ]
+        }
+      },
+      "matches": [
+        {
+          "attribute": "name",
+          "target_field": "name_target",
+          "target_value": "Alic",
+          "input_value": "Alice",
+          "input_matcher": "name_exact_matcher",
+          "input_matcher_params": {},
+          "score": 0.3
+        },
+        {
+          "attribute": "city",
+          "target_field": "city_target",
+          "target_value": "New York",
+          "input_value": "New York",
+          "input_matcher": "city_exact_matcher",
+          "input_matcher_params": {},
+          "score": 0.7
+        }
+      ]
+    },
+    "_source": {
+      "name": "Alic",
+      "city": "New York"
+    }
+  }
+]
