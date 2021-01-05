@@ -669,8 +669,8 @@ public class Job {
      */
     static Double calculateCompositeIdentityConfidenceScore(List<Double> attributeIdentityConfidenceScores) {
         Double compositeIdentityConfidenceScore = null;
-        ArrayList<Double> scores = new ArrayList<>();
-        ArrayList<Double> scoresInverse = new ArrayList<>();
+        List<Double> scores = new ArrayList<>();
+        List<Double> scoresInverse = new ArrayList<>();
         for (Double score : attributeIdentityConfidenceScores) {
             if (score != null) {
                 scores.add(score);
@@ -1293,7 +1293,7 @@ public class Job {
 
             // Create tuple-like objects that describe which attribute values matched which
             // index field values using which matchers and matcher parameters.
-            Map<String, ArrayList<Double>> attributeIdentityConfidenceBaseScores = new HashMap<>();
+            Map<String, List<Double>> attributeIdConfidenceBaseScores = new HashMap<>();
             for (JsonNode mqNode : docObjNode.get("matched_queries")) {
                 String serializedName = mqNode.asText();
                 QueryValue queryValue = QueryValue.deserialize(serializedName);
@@ -1301,18 +1301,24 @@ public class Job {
                 if (!matchedQueryNames.add(queryValue.genericName())) {
                     continue;
                 }
+                ObjectNode docExpDetailsObjNode = Json.ORDERED_MAPPER.createObjectNode();
 
                 String attributeName = queryValue.attributeName;
                 String indexFieldName = queryValue.indexFieldName;
-                String matcherName = queryValue.matcherName;
                 String attributeValueSerialized = queryValue.serializedValue;
                 String attributeType = this.config.input.model().attributes().get(attributeName).type();
+                docExpDetailsObjNode.put("attribute", attributeName);
+                docExpDetailsObjNode.put("target_field", indexFieldName);
+                docExpDetailsObjNode.set("target_value", docIndexFields.get(indexFieldName));
+
                 if (attributeType.equals("string") || attributeType.equals("date")) {
                     attributeValueSerialized = "\"" + attributeValueSerialized + "\"";
                 }
-                // TODO: manual json construction must go
-                JsonNode attributeValueNode = Json.MAPPER.readTree("{\"attribute_value\":" + attributeValueSerialized + "}").get("attribute_value");
+                // TODO: manual json parsing + construction should be replaced
+                JsonNode attributeValueNode = Json.MAPPER.readValue(attributeValueSerialized, JsonNode.class);
+                docExpDetailsObjNode.set("input_value", attributeValueNode);
 
+                String matcherName = queryValue.matcherName;
                 String matcherParamsJson;
                 if (this.config.input.attributes().containsKey(attributeName)) {
                     matcherParamsJson = Json.ORDERED_MAPPER.writeValueAsString(this.config.input.attributes().get(attributeName).params());
@@ -1322,24 +1328,19 @@ public class Job {
                     matcherParamsJson = "{}";
                 }
                 JsonNode matcherParamsNode = Json.ORDERED_MAPPER.readTree(matcherParamsJson);
+                docExpDetailsObjNode.put("input_matcher", matcherName);
+                docExpDetailsObjNode.putPOJO("input_matcher_params", matcherParamsNode);
 
                 // Calculate the attribute identity confidence score for this match.
                 Double attributeIdentityConfidenceScore = null;
                 if (this.config.includeScore) {
                     attributeIdentityConfidenceScore = this.getAttributeIdentityConfidenceScore(attributeName, matcherName, indexName, indexFieldName);
                     if (attributeIdentityConfidenceScore != null) {
-                        attributeIdentityConfidenceBaseScores.putIfAbsent(attributeName, new ArrayList<>());
-                        attributeIdentityConfidenceBaseScores.get(attributeName).add(attributeIdentityConfidenceScore);
+                        attributeIdConfidenceBaseScores.putIfAbsent(attributeName, new ArrayList<>());
+                        attributeIdConfidenceBaseScores.get(attributeName).add(attributeIdentityConfidenceScore);
                     }
                 }
 
-                ObjectNode docExpDetailsObjNode = Json.ORDERED_MAPPER.createObjectNode();
-                docExpDetailsObjNode.put("attribute", attributeName);
-                docExpDetailsObjNode.put("target_field", indexFieldName);
-                docExpDetailsObjNode.set("target_value", docIndexFields.get(indexFieldName));
-                docExpDetailsObjNode.set("input_value", attributeValueNode);
-                docExpDetailsObjNode.put("input_matcher", matcherName);
-                docExpDetailsObjNode.putPOJO("input_matcher_params", matcherParamsNode);
                 if (this.config.includeScore) {
                     if (attributeIdentityConfidenceScore == null) {
                         docExpDetailsObjNode.putNull("score");
@@ -1347,6 +1348,7 @@ public class Job {
                         docExpDetailsObjNode.put("score", attributeIdentityConfidenceScore);
                     }
                 }
+
                 docExpMatchesArrNode.add(docExpDetailsObjNode);
                 expAttributes.add(attributeName);
             }
@@ -1355,8 +1357,8 @@ public class Job {
 
                 // Deconflict multiple attribute confidence scores for the same attribute
                 // by selecting the highest score.
-                for (String attributeName : attributeIdentityConfidenceBaseScores.keySet()) {
-                    Double best = Collections.max(attributeIdentityConfidenceBaseScores.get(attributeName));
+                for (String attributeName : attributeIdConfidenceBaseScores.keySet()) {
+                    Double best = Collections.max(attributeIdConfidenceBaseScores.get(attributeName));
                     bestAttributeIdentityConfidenceScores.add(best);
                 }
 

@@ -8,10 +8,8 @@ import org.elasticsearch.client.Response;
 import org.elasticsearch.rest.RestStatus;
 import org.junit.Test;
 
-import java.util.Properties;
-
-import static junit.framework.Assert.assertFalse;
 import static junit.framework.TestCase.assertEquals;
+import static junit.framework.TestCase.assertFalse;
 import static junit.framework.TestCase.assertTrue;
 
 public class ModelsActionIT extends AbstractITCase {

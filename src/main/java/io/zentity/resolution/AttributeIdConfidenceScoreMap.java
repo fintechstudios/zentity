@@ -5,7 +5,7 @@ import java.util.HashMap;
 /**
  * A map to cache confidence scores of attribute identities.
  */
-public class AttributeIdConfidenceScoreMap extends HashMap<String, Double> {
+class AttributeIdConfidenceScoreMap extends HashMap<String, Double> {
     private static String makeKey(String attributeName, String matcherName, String indexName, String indexFieldName) {
         return attributeName + "/" + matcherName + "/" + indexName + "/" + indexFieldName;
     }
@@ -22,6 +22,7 @@ public class AttributeIdConfidenceScoreMap extends HashMap<String, Double> {
 
     Double setScore(String attributeName, String matcherName, String indexName, String indexFieldName, double score) {
         String key = makeKey(attributeName, matcherName, indexName, indexFieldName);
-        return this.put(key, score);
+        this.put(key, score);
+        return score;
     }
 }
