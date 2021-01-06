@@ -2,15 +2,15 @@ package org.elasticsearch.plugin.zentity;
 
 import io.zentity.common.XContentUtils;
 import org.elasticsearch.client.node.NodeClient;
-import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
-import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Properties;
 import java.util.function.UnaryOperator;
 
@@ -18,10 +18,11 @@ import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 
 public class HomeAction extends BaseRestHandler {
-
-    @Inject
-    public HomeAction(RestController controller) {
-        controller.registerHandler(GET, "_zentity", this);
+    @Override
+    public List<Route> routes() {
+        return Collections.singletonList(
+            new Route(GET, "_zentity")
+        );
     }
 
     @Override

@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.common.xcontent.XContentParseException;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -45,12 +46,18 @@ public class ResolutionResponse {
         public String type;
         public String reason;
 
+        static boolean isEsException(Throwable ex) {
+            return ex instanceof ElasticsearchException || ex instanceof XContentParseException;
+        }
+
         @JsonInclude(Include.NON_NULL)
         public String stackTrace = null;
 
         public SerializedException(Throwable ex, boolean includeStackTrace) {
-            by = (ex instanceof ElasticsearchException) ? "elasticsearch": "zentity";
+            by = isEsException(ex) ? "elasticsearch": "zentity";
             type = ex.getClass().getCanonicalName();
+            // TODO: support more info from parse exceptions
+            //       see: https://github.com/zentity-io/zentity/commit/44b908c89ea32386eb086b3cf86aaa8b05aa0b07#diff-f0157aff5b741656786bef437bb41ce170eaba293f8ba212ced5e1f4315ae6a8R1239
             reason = ex.getMessage();
             if (includeStackTrace) {
                 StringWriter traceWriter = new StringWriter();
