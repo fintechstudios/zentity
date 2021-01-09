@@ -13,6 +13,10 @@ zentity was developed in IntelliJ and uses Maven to manage dependencies, tests, 
 Indents are four spaces instead of tabs. Other code-style preferences are configured in
 the [`.editorconfig`](.editorconfig). Auto-reformatting code from your IDE is encouraged.
 
+### Java
+
+Zentity requires Java 11 to build and run.
+
 ### Integration Tests
 
 The project uses [testcontainers](https://testcontainers.org/) to spin up a local Docker Elasticsearch cluster
