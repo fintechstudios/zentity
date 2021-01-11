@@ -1,23 +1,18 @@
 package io.zentity.devtools;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.zentity.common.StreamUtils;
+import io.zentity.common.StreamUtil;
+import org.junit.ComparisonFailure;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class JsonUtils {
-    static List<JsonNode> listFromIterable(Iterable<JsonNode> iterable) {
-        return StreamUtils
-            .fromIterable(iterable)
-            .collect(Collectors.toList());
-    }
-
+public class JsonTestUtil {
     static List<JsonNode> sortedListFromIterable(Iterable<JsonNode> iterable) {
-        List<JsonNode> list = listFromIterable(iterable);
-        list.sort(UNORDERED_COMPARATOR);
-        return list;
+        return StreamUtil.fromIterable(iterable)
+            .sorted(UNORDERED_COMPARATOR)
+            .collect(Collectors.toList());
     }
 
     static Comparator<JsonNode> UNORDERED_COMPARATOR = new Comparator<JsonNode>() {
@@ -61,6 +56,10 @@ public class JsonUtils {
      * @return If the nodes are equal, once sorted.
      */
     public static boolean unorderedEquals(JsonNode node1, JsonNode node2) {
+        if (node1 == null || node2 == null) {
+            return node1 == null && node2 == null;
+        }
+
         if (node1.size() != node2.size()) {
             return false;
         }
@@ -79,5 +78,33 @@ public class JsonUtils {
         }
 
         return true;
+    }
+
+    /**
+     * Asserts that two JSON nodes are equal, independent of the order of their children.
+     *
+     * @param message An optional message in case of failure.
+     * @param expected Expected JSON.
+     * @param actual Actual JSON.
+     * @throws ComparisonFailure If the two nodes are not equal.
+     */
+    public static void assertUnorderedEquals(String message, JsonNode expected, JsonNode actual) {
+        if (unorderedEquals(expected, actual)) {
+            return;
+        }
+
+        String cleanMessage = message == null ? "" : message;
+        throw new ComparisonFailure(cleanMessage, String.valueOf(expected), String.valueOf(actual));
+    }
+
+    /**
+     * Asserts that two JSON nodes are equal, independent of the order of their children.
+     *
+     * @param expected Expected JSON.
+     * @param actual Actual JSON.
+     * @throws ComparisonFailure If the two nodes are not equal.
+     */
+    public static void assertUnorderedEquals(JsonNode expected, JsonNode actual) {
+        assertUnorderedEquals(null, expected, actual);
     }
 }
