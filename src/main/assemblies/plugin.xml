@@ -1,20 +1,41 @@
-<?xml version="1.0"?>
-<assembly>
+<!-- see: https://maven.apache.org/plugins/maven-assembly-plugin/descriptor-refs.html -->
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.1.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.1.0 http://maven.apache.org/xsd/assembly-2.1.0.xsd">
     <id>plugin</id>
     <formats>
         <format>zip</format>
     </formats>
     <includeBaseDirectory>false</includeBaseDirectory>
-    <files>
-        <file>
-            <source>${project.basedir}/src/main/resources/plugin-descriptor.properties</source>
-            <outputDirectory>.</outputDirectory>
+    <fileSets>
+        <fileSet>
+            <outputDirectory/>
+            <directory>${project.basedir}</directory>
+            <includes>
+                <include>LICENSE*</include>
+                <include>README*</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <outputDirectory/>
+            <directory>${project.basedir}/src/main/resources</directory>
+            <includes>
+                <include>plugin-descriptor.properties</include>
+                <include>plugin-security.policy</include>
+            </includes>
             <filtered>true</filtered>
-        </file>
-    </files>
+        </fileSet>
+        <fileSet>
+            <outputDirectory>config</outputDirectory>
+            <directory>${project.basedir}/src/main/config</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+        </fileSet>
+    </fileSets>
     <dependencySets>
         <dependencySet>
-            <outputDirectory>.</outputDirectory>
+            <outputDirectory/>
             <useProjectArtifact>true</useProjectArtifact>
             <useTransitiveFiltering>true</useTransitiveFiltering>
         </dependencySet>

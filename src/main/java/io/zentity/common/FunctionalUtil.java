@@ -1,8 +1,30 @@
 package io.zentity.common;
 
+import org.elasticsearch.common.CheckedBiFunction;
+import org.elasticsearch.common.CheckedConsumer;
+import org.elasticsearch.common.CheckedFunction;
+import org.elasticsearch.common.CheckedSupplier;
+
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 public class FunctionalUtil {
+    /**
+     * Throw a checked exception as an unchecked one.
+     *
+     * <p>The compiler sees the signature with the throws T inferred to a RuntimeException type, so it
+     * allows the unchecked exception to propagate.
+     *
+     * @see <a href="http://www.baeldung.com/java-sneaky-throws"></a>
+     */
+    @SuppressWarnings("unchecked")
+    public static <E extends Throwable> void sneakyThrow(Throwable ex) throws E {
+        throw (E) ex;
+    }
+
     /**
      * A "fixed point combinator" interface for functional recursion.
      *
@@ -11,7 +33,7 @@ public class FunctionalUtil {
      * @param <R> The result type.
      */
     @FunctionalInterface
-    interface Recursable<T, R> extends Function<T, R> {
+    public interface Recursable<T, R> extends Function<T, R> {
         /**
          * The recursive call handler.
          *
@@ -29,6 +51,98 @@ public class FunctionalUtil {
          */
         default R apply(T input) {
             return recurse(input, this);
+        }
+    }
+
+    @FunctionalInterface
+    public interface UnCheckedFunction<T, R, E extends Exception> extends Function<T, R> {
+        R applyThrows(T input) throws E;
+
+        default R apply(T input) {
+            try {
+                return this.applyThrows(input);
+            } catch (Exception ex) {
+                sneakyThrow(ex);
+                return null; // never reached
+            }
+        }
+
+        static <T, R, E extends Exception> UnCheckedFunction<T, R, E> from(CheckedFunction<T, R, E> f) {
+            return f::apply;
+        }
+    }
+
+
+
+    @FunctionalInterface
+    public interface UnCheckedUnaryOperator<T, E extends Exception> extends UnaryOperator<T> {
+        T applyThrows(T input) throws E;
+
+        default T apply(T input) {
+            try {
+                return this.applyThrows(input);
+            } catch (Exception ex) {
+                sneakyThrow(ex);
+                return null; // never reached
+            }
+        }
+
+        static <T, E extends Exception> UnCheckedUnaryOperator<T, E> from(CheckedFunction<T, T, E> f) {
+            return f::apply;
+        }
+    }
+
+    @FunctionalInterface
+    public interface UnCheckedConsumer<T, E extends Exception> extends Consumer<T> {
+        void acceptThrows(T input) throws E;
+
+        default void accept(T input) {
+            try {
+                this.acceptThrows(input);
+            } catch (Exception ex) {
+                sneakyThrow(ex);
+            }
+        }
+
+        static <T, E extends Exception> UnCheckedConsumer<T, E> from(CheckedConsumer<T, E> f) {
+            return f::accept;
+        }
+    }
+
+
+    @FunctionalInterface
+    public interface UnCheckedSupplier<T, E extends Exception> extends Supplier<T> {
+        T getThrows() throws E;
+
+        default T get() {
+            try {
+                return this.getThrows();
+            } catch (Exception ex) {
+                sneakyThrow(ex);
+                return null; // never reached
+            }
+        }
+
+        static <T, E extends Exception> UnCheckedSupplier<T, E> from(CheckedSupplier<T, E> f) {
+            return f::get;
+        }
+    }
+
+    @FunctionalInterface
+    public interface UnCheckedBiFunction<T, U, R, E extends Exception> extends BiFunction<T, U, R> {
+        R applyThrows(T var1, U var2) throws E;
+
+        default R apply(T var1, U var2) {
+            try {
+                return this.applyThrows(var1, var2);
+            } catch (Exception ex) {
+                sneakyThrow(ex);
+                return null; // never reached
+            }
+        }
+
+        static <T, U, R, E extends Exception> UnCheckedBiFunction<T, U, R, E> from(CheckedBiFunction<T, U, R, E> f) {
+            return f::apply;
         }
     }
 }

@@ -115,7 +115,7 @@ public class PluggableElasticsearchContainer extends ElasticsearchContainer {
     protected void configure() {
         super.configure();
         if (!plugins.isEmpty()) {
-            String installPluginCmd = "elasticsearch-plugin install "
+            String installPluginCmd = "elasticsearch-plugin install --batch "
                 + String.join(" ", plugins)
                 + " && elasticsearch";
             String[] cmdParts = {

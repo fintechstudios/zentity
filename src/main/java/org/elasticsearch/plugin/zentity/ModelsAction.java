@@ -2,7 +2,8 @@ package org.elasticsearch.plugin.zentity;
 
 import io.zentity.common.ActionRequestUtil;
 import io.zentity.common.CompletableFutureUtil;
-import io.zentity.common.XContentUtils;
+import io.zentity.common.FunctionalUtil.UnCheckedFunction;
+import io.zentity.common.XContentUtil;
 import io.zentity.model.Model;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.ActionRequestBuilder;
@@ -36,7 +37,6 @@ import java.util.concurrent.CompletionException;
 import java.util.function.UnaryOperator;
 
 import static io.zentity.common.CompletableFutureUtil.composeExceptionally;
-import static io.zentity.common.CompletableFutureUtil.uncheckedFunction;
 import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
 import static org.elasticsearch.rest.RestRequest.Method;
 import static org.elasticsearch.rest.RestRequest.Method.DELETE;
@@ -232,7 +232,7 @@ public class ModelsAction extends BaseRestHandler {
             }
 
             responseFuture
-                .thenApply(uncheckedFunction(res -> res.toXContent(XContentUtils.jsonBuilder(prettyPrintModifier), ToXContent.EMPTY_PARAMS)))
+                .thenApply(UnCheckedFunction.from(res -> res.toXContent(XContentUtil.jsonBuilder(prettyPrintModifier), ToXContent.EMPTY_PARAMS)))
                 .thenAccept((builder) -> channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder)))
                 .get();
         });

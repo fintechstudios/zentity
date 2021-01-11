@@ -1,6 +1,6 @@
 package io.zentity.resolution;
 
-import io.zentity.common.XContentUtils;
+import io.zentity.common.XContentUtil;
 import io.zentity.model.Matcher;
 import io.zentity.model.Model;
 import io.zentity.model.ValidationException;
@@ -56,7 +56,7 @@ public class JobTest {
         assertNotNull(resolversQuery);
 
         String expected = "{\"bool\":{\"should\":[{\"match\":{\"id\":{\"query\":\"1234567890\",\"operator\":\"OR\",\"fuzziness\":\"AUTO\",\"prefix_length\":0,\"max_expansions\":50,\"fuzzy_transpositions\":true,\"lenient\":false,\"zero_terms_query\":\"NONE\",\"auto_generate_synonyms_phrase_query\":true,\"boost\":1.0}}},{\"bool\":{\"filter\":[{\"bool\":{\"should\":[{\"term\":{\"name\":{\"value\":\"Alice Jones\",\"boost\":1.0}}},{\"term\":{\"name\":{\"value\":\"Alice Jones-Smith\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},{\"bool\":{\"should\":[{\"match\":{\"phone\":{\"query\":\"555-123-4567\",\"operator\":\"OR\",\"fuzziness\":\"2\",\"prefix_length\":0,\"max_expansions\":50,\"fuzzy_transpositions\":true,\"lenient\":false,\"zero_terms_query\":\"NONE\",\"auto_generate_synonyms_phrase_query\":true,\"boost\":1.0}}},{\"bool\":{\"filter\":[{\"term\":{\"street\":{\"value\":\"123 Main St\",\"boost\":1.0}}},{\"bool\":{\"should\":[{\"bool\":{\"filter\":[{\"term\":{\"city\":{\"value\":\"Beverly Hills\",\"boost\":1.0}}},{\"term\":{\"state\":{\"value\":\"CA\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}},{\"term\":{\"zip\":{\"value\":\"90210\",\"boost\":1.0}}}],\"adjust_pure_negative\":true,\"boost\":1.0}}],\"adjust_pure_negative\":true,\"boost\":1.0}}],\"adjust_pure_negative\":true,\"boost\":1.0}}],\"adjust_pure_negative\":true,\"boost\":1.0}}],\"adjust_pure_negative\":true,\"boost\":1.0}}";
-        String actual = XContentUtils.serializeAsJSON(resolversQuery);
+        String actual = XContentUtil.serializeAsJSON(resolversQuery);
         assertEquals(expected, actual);
     }
 
@@ -76,7 +76,7 @@ public class JobTest {
         Map<String, String> params = new HashMap<>();
         QueryBuilder matcherClause = Job.buildMatcherClause(matcher, "field_phone", "555-123-4567", params);
         String expected = "{\"match\":{\"field_phone\":{\"query\":\"555-123-4567\",\"operator\":\"OR\",\"prefix_length\":0,\"max_expansions\":50,\"fuzzy_transpositions\":true,\"lenient\":false,\"zero_terms_query\":\"NONE\",\"auto_generate_synonyms_phrase_query\":true,\"boost\":1.0}}}";
-        String actual = XContentUtils.serializeAsJSON(matcherClause);
+        String actual = XContentUtil.serializeAsJSON(matcherClause);
         assertEquals(expected, actual);
     }
 
@@ -97,7 +97,7 @@ public class JobTest {
         Map<String, String> params = new HashMap<>();
         params.put("foo", "bar");
         QueryBuilder matcherClause = Job.buildMatcherClause(matcher, "field_phone", "555-123-4567", params);
-        String actual = XContentUtils.serializeAsJSON(matcherClause);
+        String actual = XContentUtil.serializeAsJSON(matcherClause);
         String expected = "{\"match\":{\"field_phone\":{\"query\":\"555-123-4567\",\"operator\":\"OR\",\"prefix_length\":0,\"max_expansions\":50,\"fuzzy_transpositions\":true,\"lenient\":false,\"zero_terms_query\":\"NONE\",\"auto_generate_synonyms_phrase_query\":true,\"boost\":1.0}}}";
         assertEquals(expected, actual);
     }
@@ -168,7 +168,7 @@ public class JobTest {
         Matcher matcher = new Matcher("matcher_phone", matcherJson);
         Map<String, String> params = new HashMap<>();
         QueryBuilder matcherClause = Job.buildMatcherClause(matcher, "field_phone", "555-123-4567", params);
-        String actual = XContentUtils.serializeAsJSON(matcherClause);
+        String actual = XContentUtil.serializeAsJSON(matcherClause);
         String expected = "{\"match\":{\"field_phone\":{\"query\":\"555-123-4567\",\"operator\":\"OR\",\"fuzziness\":\"2\",\"prefix_length\":0,\"max_expansions\":50,\"fuzzy_transpositions\":true,\"lenient\":false,\"zero_terms_query\":\"NONE\",\"auto_generate_synonyms_phrase_query\":true,\"boost\":1.0}}}";
         assertEquals(expected, actual);
     }
@@ -219,7 +219,7 @@ public class JobTest {
         assertEquals(1, attributeQueries.size());
 
         String expected = "{\"match\":{\"field_phone\":{\"query\":\"555-123-4567\",\"operator\":\"OR\",\"fuzziness\":\"1\",\"prefix_length\":0,\"max_expansions\":50,\"fuzzy_transpositions\":true,\"lenient\":false,\"zero_terms_query\":\"NONE\",\"auto_generate_synonyms_phrase_query\":true,\"boost\":1.0}}}";
-        String actual = XContentUtils.serializeAsJSON(attributeQueries.get(0));
+        String actual = XContentUtil.serializeAsJSON(attributeQueries.get(0));
         assertEquals(expected, actual);
     }
 
@@ -272,7 +272,7 @@ public class JobTest {
         assertEquals(1, attributeClauses.size());
 
         String expected = "{\"match\":{\"field_phone\":{\"query\":\"555-123-4567\",\"operator\":\"OR\",\"fuzziness\":\"1\",\"prefix_length\":0,\"max_expansions\":50,\"fuzzy_transpositions\":true,\"lenient\":false,\"zero_terms_query\":\"NONE\",\"auto_generate_synonyms_phrase_query\":true,\"boost\":1.0}}}";
-        String actual = XContentUtils.serializeAsJSON(attributeClauses.get(0));
+        String actual = XContentUtil.serializeAsJSON(attributeClauses.get(0));
         assertEquals(expected, actual);
     }
 
@@ -324,7 +324,7 @@ public class JobTest {
         assertEquals(1, attributeClauses.size());
 
         String expected = "{\"match\":{\"field_phone\":{\"query\":\"555-123-4567\",\"operator\":\"OR\",\"fuzziness\":\"2\",\"prefix_length\":0,\"max_expansions\":50,\"fuzzy_transpositions\":true,\"lenient\":false,\"zero_terms_query\":\"NONE\",\"auto_generate_synonyms_phrase_query\":true,\"boost\":1.0}}}";
-        String actual = XContentUtils.serializeAsJSON(attributeClauses.get(0));
+        String actual = XContentUtil.serializeAsJSON(attributeClauses.get(0));
         assertEquals(expected, actual);
     }
 
@@ -382,7 +382,7 @@ public class JobTest {
         assertEquals(1, attributeClauses.size());
 
         String expected = "{\"range\":{\"field_timestamp\":{\"from\":\"123 Main St||-30m\",\"to\":\"123 Main St||+30m\",\"include_lower\":true,\"include_upper\":true,\"format\":\"yyyy-MM-dd'T'HH:mm:ss\",\"boost\":1.0}}}";
-        String actual = XContentUtils.serializeAsJSON(attributeClauses.get(0));
+        String actual = XContentUtil.serializeAsJSON(attributeClauses.get(0));
         assertEquals(expected, actual);
     }
 
@@ -444,7 +444,7 @@ public class JobTest {
         assertEquals(1, attributeClauses.size());
 
         String expected = "{\"range\":{\"field_timestamp\":{\"from\":\"123 Main St||-30m\",\"to\":\"123 Main St||+30m\",\"include_lower\":true,\"include_upper\":true,\"format\":\"yyyy-MM-dd'T'HH:mm:ss\",\"boost\":1.0}}}";
-        String actual = XContentUtils.serializeAsJSON(attributeClauses.get(0));
+        String actual = XContentUtil.serializeAsJSON(attributeClauses.get(0));
         assertEquals(expected, actual);
     }
 
@@ -508,7 +508,7 @@ public class JobTest {
             input.model(), "index", input.attributes(), FILTER, false, new AtomicInteger()
         );
         String expected = "{\"range\":{\"field_timestamp\":{\"from\":\"123 Main St||-15m\",\"to\":\"123 Main St||+15m\",\"include_lower\":true,\"include_upper\":true,\"format\":\"yyyy-MM-dd\",\"boost\":1.0}}}";
-        String actual = XContentUtils.serializeAsJSON(attributeClauses.get(0));
+        String actual = XContentUtil.serializeAsJSON(attributeClauses.get(0));
         assertEquals(expected, actual);
     }
 

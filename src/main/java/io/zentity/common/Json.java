@@ -54,6 +54,17 @@ public class Json {
         return toStringMap(node.fields());
     }
 
+    /**
+     * Converts an object JSON {@link String} to a {@link Map} of strings.
+     *
+     * @param jsonString The object node string.
+     * @return The node's map representation.
+     * @throws JsonProcessingException If the object cannot be written/ parsed as a string.
+     */
+    public static Map<String, String> toStringMap(String jsonString) throws JsonProcessingException {
+       return toStringMap(Json.MAPPER.readTree(jsonString));
+    }
+
     public static NumericNode parseNumberAsNode(String num) throws IOException {
         return Json.MAPPER.readValue(num, NumericNode.class);
     }

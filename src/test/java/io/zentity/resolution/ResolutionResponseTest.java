@@ -3,7 +3,7 @@ package io.zentity.resolution;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import io.zentity.common.StreamUtils;
+import io.zentity.common.StreamUtil;
 import org.apache.commons.io.IOUtils;
 import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.action.search.SearchAction;
@@ -100,7 +100,7 @@ public class ResolutionResponseTest {
 
         response.includeHits = true;
         ArrayNode hitsArr = (ArrayNode) MAPPER.readTree(readResourceFile("ResolutionResponseHits.json"));
-        response.hits = StreamUtils
+        response.hits = StreamUtil
             .fromIterator(hitsArr.iterator())
             .collect(Collectors.toList());
 

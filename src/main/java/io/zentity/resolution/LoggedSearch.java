@@ -7,15 +7,14 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
-import io.zentity.common.XContentUtils;
+import io.zentity.common.FunctionalUtil.UnCheckedUnaryOperator;
+import io.zentity.common.XContentUtil;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.xcontent.ToXContent;
 
 import java.io.IOException;
-
-import static io.zentity.common.XContentUtils.uncheckedModifier;
 
 @JsonSerialize(using = LoggedSearch.Serializer.class)
 public class LoggedSearch {
@@ -40,9 +39,9 @@ public class LoggedSearch {
 
         public SerializedElasticsearchException(final ElasticsearchException ex) throws IOException {
             // root_cause: [ { ...error } ]
-            rootCause = XContentUtils.serialize(
-              XContentUtils.jsonBuilder(
-                  uncheckedModifier((builder) -> {
+            rootCause = XContentUtil.serialize(
+              XContentUtil.jsonBuilder(
+                  UnCheckedUnaryOperator.from((builder) -> {
                       builder.startArray();
                       builder.startObject();
                       ex.toXContent(builder, ToXContent.EMPTY_PARAMS);
@@ -76,7 +75,7 @@ public class LoggedSearch {
             gen.writeStartObject();
 
             gen.writeFieldName("request");
-            gen.writeRawValue(XContentUtils.serializeAsJSON(value.searchRequest.request().source()));
+            gen.writeRawValue(XContentUtil.serializeAsJSON(value.searchRequest.request().source()));
 
             // write the response, either the error or the real response
             gen.writeFieldName("response");
@@ -90,7 +89,7 @@ public class LoggedSearch {
 
                 gen.writeEndObject();
             } else {
-                gen.writeRawValue(XContentUtils.serializeAsJSON(value.response));
+                gen.writeRawValue(XContentUtil.serializeAsJSON(value.response));
             }
 
             gen.writeEndObject();

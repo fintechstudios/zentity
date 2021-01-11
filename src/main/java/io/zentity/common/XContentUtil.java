@@ -1,17 +1,15 @@
 package io.zentity.common;
 
-import org.elasticsearch.common.CheckedFunction;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.UnaryOperator;
 
-public class XContentUtils {
+public class XContentUtil {
     public static String serialize(XContentBuilder builder) {
         return Strings.toString(builder);
     }
@@ -59,21 +57,5 @@ public class XContentUtils {
 
     public static XContentBuilder jsonBuilder(UnaryOperator<XContentBuilder> modifier) throws IOException {
         return modifier.apply(jsonBuilder());
-    }
-
-    /**
-     * Wrap a {@link CheckedFunction} into something that can be used as a builder modifier.
-     *
-     * @param checkedFunction The function that throws a checked exception.
-     * @return A wrapped function that re-throws any caught checked exceptions as {@link RuntimeException RuntimeExceptions}.
-     */
-    public static UnaryOperator<XContentBuilder> uncheckedModifier(CheckedFunction<XContentBuilder, XContentBuilder, ? extends Exception> checkedFunction) {
-        return (builder) -> {
-            try {
-                return checkedFunction.apply(builder);
-            } catch (Exception ex) {
-                throw new RuntimeException(ex);
-            }
-        };
     }
 }

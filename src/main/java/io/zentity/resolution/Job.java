@@ -6,6 +6,9 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.zentity.common.ActionRequestUtil;
 import io.zentity.common.CompletableFutureUtil;
+import io.zentity.common.FunctionalUtil.UnCheckedBiFunction;
+import io.zentity.common.FunctionalUtil.UnCheckedFunction;
+import io.zentity.common.FunctionalUtil.UnCheckedSupplier;
 import io.zentity.common.Json;
 import io.zentity.common.Patterns;
 import io.zentity.model.Index;
@@ -25,6 +28,7 @@ import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.CheckedFunction;
+import org.elasticsearch.common.CheckedSupplier;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.DeprecationHandler;
@@ -61,13 +65,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static io.zentity.common.CompletableFutureUtil.uncheckedBiFunction;
-import static io.zentity.common.CompletableFutureUtil.uncheckedFunction;
-import static io.zentity.common.CompletableFutureUtil.uncheckedSupplier;
 import static io.zentity.resolution.BoolQueryUtils.BoolQueryCombiner.FILTER;
 import static io.zentity.resolution.BoolQueryUtils.BoolQueryCombiner.SHOULD;
 
@@ -88,7 +88,7 @@ public class Job {
     public static final boolean DEFAULT_INCLUDE_VERSION = false;
     public static final int DEFAULT_MAX_DOCS_PER_QUERY = 1000;
     public static final int DEFAULT_MAX_HOPS = 100;
-    public static final String DEFAULT_MAX_TIME_PER_QUERY = "10s";
+    public static final TimeValue DEFAULT_MAX_TIME_PER_QUERY = TimeValue.parseTimeValue("10s", "default_max_time_per_query");
     public static final boolean DEFAULT_PROFILE = false;
 
     // Job configuration
@@ -1513,7 +1513,7 @@ public class Job {
             // Submit query to Elasticsearch.
             return ActionRequestUtil
                 .toCompletableFuture(searchReqBuilder)
-                .handle(uncheckedBiFunction((response, throwable) -> {
+                .handle(UnCheckedBiFunction.from((response, throwable) -> {
                     ElasticsearchException responseError = null;
                     boolean fatalError = false;
 
@@ -1607,7 +1607,7 @@ public class Job {
                 }));
         };
 
-        final Supplier<CompletableFuture<Void>> runTraversal = uncheckedSupplier(() -> {
+        final CheckedSupplier<CompletableFuture<Void>, IOException> runTraversal = () -> {
             nextInputAttributes.clear();
             queryCounter.set(0);
 
@@ -1633,7 +1633,7 @@ public class Job {
             Set<String> indices = this.config.input.model().indices().keySet();
             CompletableFuture<Void> completeFut = CompletableFuture.completedFuture(null);
             for (String indexName : indices) {
-                completeFut = completeFut.thenCompose(uncheckedFunction((res) -> runIndexSearch.apply(indexName)));
+                completeFut = completeFut.thenCompose(UnCheckedFunction.from((res) -> runIndexSearch.apply(indexName)));
             }
 
             return completeFut
@@ -1644,7 +1644,7 @@ public class Job {
                     hop.incrementAndGet();
                     return null;
                 });
-        });
+        };
 
         // Start timer and begin job
         final long startTime = System.nanoTime();
@@ -1652,7 +1652,7 @@ public class Job {
         Function<Void, CompletableFuture<Void>> traversalFunc = CompletableFutureUtil
             .recursiveLoopFunction(
                 shouldContinuePred.negate(),
-                runTraversal
+                UnCheckedSupplier.from(runTraversal)
             );
 
         return traversalFunc.apply(null)
@@ -1678,8 +1678,7 @@ public class Job {
      * @return A JSON string to be returned as the body of the response to a client.
      */
     public CompletableFuture<ResolutionResponse> runAsync() {
-        // TODO: move all state into something that can be passed or created in traverseAsync()
-        //       so that each call is isolated
+        // initialize the state in case this was run before
         this.initializeState();
         return this.traverseAsync();
     }
@@ -1709,7 +1708,7 @@ public class Job {
         private boolean includeVersion = DEFAULT_INCLUDE_VERSION;
         private int maxDocsPerQuery = DEFAULT_MAX_DOCS_PER_QUERY;
         private int maxHops = DEFAULT_MAX_HOPS;
-        private TimeValue maxTimePerQuery = TimeValue.parseTimeValue(DEFAULT_MAX_TIME_PER_QUERY, "timeout");
+        private TimeValue maxTimePerQuery = DEFAULT_MAX_TIME_PER_QUERY;
         private boolean profile = DEFAULT_PROFILE;
 
         // optional, nullable search parameters
@@ -1783,11 +1782,10 @@ public class Job {
             return this;
         }
 
-        public Builder maxTimePerQuery(String maxTimePerQuery) {
-            // TODO: wrap in validation exception?
-            this.config.maxTimePerQuery = maxTimePerQuery == null
-                ? null
-                : TimeValue.parseTimeValue(maxTimePerQuery, "timeout");
+        public Builder maxTimePerQuery(TimeValue maxTimePerQuery) {
+            if (maxTimePerQuery != null) {
+                this.config.maxTimePerQuery = maxTimePerQuery;
+            }
             return this;
         }
 
