@@ -86,7 +86,7 @@ public class ZentityPlugin extends Plugin implements ActionPlugin {
         return Arrays.asList(
             new HomeAction(),
             new ModelsAction(),
-            new ResolutionAction(),
+            new ResolutionAction(config),
             new SetupAction()
         );
     }
