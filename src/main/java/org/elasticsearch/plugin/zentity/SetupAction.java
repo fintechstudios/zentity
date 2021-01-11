@@ -2,7 +2,9 @@ package org.elasticsearch.plugin.zentity;
 
 import io.zentity.common.ActionRequestUtil;
 import io.zentity.common.CompletableFutureUtil;
-import io.zentity.common.XContentUtils;
+import io.zentity.common.FunctionalUtil.UnCheckedFunction;
+import io.zentity.common.FunctionalUtil.UnCheckedUnaryOperator;
+import io.zentity.common.XContentUtil;
 import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
@@ -20,12 +22,10 @@ import org.elasticsearch.rest.RestStatus;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.UnaryOperator;
 
-import static io.zentity.common.CompletableFutureUtil.uncheckedFunction;
 import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
 import static org.elasticsearch.rest.RestRequest.Method;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
@@ -55,9 +55,6 @@ public class SetupAction extends BaseRestHandler {
         "    }\n" +
         "  }\n" +
         "}";
-    public static final String INDEX_MAPPING_ELASTICSEARCH_6 = "{\n" +
-        "  \"doc\": " + INDEX_MAPPING + "\n" +
-        "}";
 
     @Override
     public List<Route> routes() {
@@ -74,24 +71,15 @@ public class SetupAction extends BaseRestHandler {
      */
     public static CompletableFuture<CreateIndexResponse> createIndex(NodeClient client, int numberOfShards, int numberOfReplicas) {
         // Elasticsearch 7.0.0+ removes mapping types
-        Properties props = ZentityPlugin.properties();
-
         CreateIndexRequestBuilder reqBuilder = client
             .admin()
             .indices()
             .prepareCreate(ModelsAction.INDEX_NAME)
+            .addMapping("doc", INDEX_MAPPING, XContentType.JSON)
             .setSettings(Settings.builder()
                 .put("index.number_of_shards", numberOfShards)
                 .put("index.number_of_replicas", numberOfReplicas)
             );
-
-        if (props.getProperty("elasticsearch.version").compareTo("7.") >= 0) {
-            reqBuilder
-                .addMapping("doc", INDEX_MAPPING, XContentType.JSON);
-        } else {
-            reqBuilder
-                .addMapping("doc", INDEX_MAPPING_ELASTICSEARCH_6, XContentType.JSON);
-        }
 
         return ActionRequestUtil.toCompletableFuture(reqBuilder)
             .exceptionally(ex -> {
@@ -135,14 +123,14 @@ public class SetupAction extends BaseRestHandler {
             return builder;
         };
 
-        final UnaryOperator<XContentBuilder> ackResponseModifier = XContentUtils.uncheckedModifier(
+        final UnaryOperator<XContentBuilder> ackResponseModifier = UnCheckedUnaryOperator.from(
             (builder) -> builder
                 .startObject()
                 .field("acknowledged", true)
                 .endObject()
         );
 
-        final UnaryOperator<XContentBuilder> composedModifier = XContentUtils.composeModifiers(
+        final UnaryOperator<XContentBuilder> composedModifier = XContentUtil.composeModifiers(
             Arrays.asList(
                 prettyPrintModifier,
                 ackResponseModifier
@@ -152,7 +140,7 @@ public class SetupAction extends BaseRestHandler {
         return errorHandlingConsumer(channel -> {
             if (method == POST) {
                 createIndex(client, numberOfShards, numberOfReplicas)
-                    .thenApply(uncheckedFunction(res -> XContentUtils.jsonBuilder(composedModifier)))
+                    .thenApply(UnCheckedFunction.from(res -> XContentUtil.jsonBuilder(composedModifier)))
                     .thenAccept(builder -> channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder)))
                     .get();
 

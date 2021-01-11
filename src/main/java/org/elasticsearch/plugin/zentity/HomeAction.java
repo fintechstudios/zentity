@@ -1,6 +1,7 @@
 package org.elasticsearch.plugin.zentity;
 
-import io.zentity.common.XContentUtils;
+import io.zentity.common.FunctionalUtil.UnCheckedUnaryOperator;
+import io.zentity.common.XContentUtil;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.rest.BaseRestHandler;
@@ -8,7 +9,6 @@ import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
@@ -33,7 +33,6 @@ public class HomeAction extends BaseRestHandler {
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest restRequest, NodeClient client) {
 
-        final Properties props = ZentityPlugin.properties();
         final boolean pretty = restRequest.paramAsBoolean("pretty", false);
 
         final UnaryOperator<XContentBuilder> prettyPrintModifier = (builder) -> {
@@ -43,8 +42,10 @@ public class HomeAction extends BaseRestHandler {
             return builder;
         };
 
-        final UnaryOperator<XContentBuilder> propsResponseModifier = XContentUtils.uncheckedModifier((builder) -> {
+        final UnaryOperator<XContentBuilder> propsResponseModifier = UnCheckedUnaryOperator.from((builder) -> {
             builder.startObject();
+
+            final Properties props = ZentityPlugin.properties();
 
             builder.field("name", props.getProperty("name"));
             builder.field("description", props.getProperty("description"));
@@ -60,15 +61,12 @@ public class HomeAction extends BaseRestHandler {
             return builder;
         });
 
-        final UnaryOperator<XContentBuilder> composedModifier = XContentUtils.composeModifiers(
-            Arrays.asList(
-                prettyPrintModifier,
-                propsResponseModifier
-            )
+        final UnaryOperator<XContentBuilder> composedModifier = XContentUtil.composeModifiers(
+            List.of(prettyPrintModifier, propsResponseModifier)
         );
 
         return errorHandlingConsumer(channel -> {
-            XContentBuilder contentBuilder = XContentUtils.jsonBuilder(composedModifier);
+            XContentBuilder contentBuilder = XContentUtil.jsonBuilder(composedModifier);
             channel.sendResponse(new BytesRestResponse(RestStatus.OK, contentBuilder));
         });
     }
