@@ -10,8 +10,13 @@ When preparing a release, a release-specific branch should be created from the `
 The release branches are named in the format `release/A.B`, where `A` is the major release number
 and `B` is the minor release number. These branches must be stable, as they hold the tagged releases of Zentity.
 
-The tags are in the format `A.B.C` where `A` is the major, `B` is the minor and `C` is the patch level of
-the released version.
+## Tags
+
+Tags must strictly follow [SemVer v2.0.0](https://semver.org/spec/v2.0.0.html).
+The only pre-release identifier is `rcX` where X is a number.
+
+Pre-release tags are in the format `A.B.C-rcX`, ex: `1.0.0-rc1`.
+Stable release tags are in the format `A.B.C`, ex: `1.0.0`.
 
 ## Releases
 
