@@ -1,0 +1,18 @@
+
+
+{
+  "categories": [
+    {
+      "title": "## 🚀 Features",
+      "labels": ["kind/feature"]
+    },
+    {
+      "title": "## 🐛 Bugs",
+      "labels": ["kind/bug"]
+    }
+  ],
+  "ignore_labels": [
+    "no-changelog"
+  ],
+  "template": "${{CHANGELOG}}\n${{UNCATEGORIZED}}",
+}
