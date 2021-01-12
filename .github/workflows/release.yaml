@@ -1,4 +1,4 @@
-name: Create Release
+name: Release
 on:
   push:
     tags:
@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-20.04
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
+      release_tag: ${{ steps.extract_tag.outputs.tag }}
     steps:
       # Generate the release changelog from commits since the last release
       - name: Build Changelog
@@ -17,6 +18,11 @@ jobs:
         uses: mikepenz/release-changelog-builder-action@v1.4.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Extract the tag
+      # see: https://stackoverflow.com/a/58178121/4705719
+      - name: Extract Release Tag
+        id: extract_tag
+        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
       # Create and upload assets to a release
       - name: Create Release
         id: create_release
@@ -33,6 +39,8 @@ jobs:
     name: Build and Upload Artifacts
     needs: create_release
     runs-on: ubuntu-20.04
+    env:
+      ZENTITY_VERSION: ${{ needs.create_release.outputs.release_tag }}
     strategy:
       matrix:
         elasticsearch:
@@ -62,9 +70,14 @@ jobs:
           ELASTICSEARCH_VERSION: ${{ matrix.elasticsearch }}
         run: |
           mvn --batch-mode clean package \
-              -Delasticsearch.version=${{ matrix.elasticsearch }} \
-              -Dzentity.version=${{ github.ref }} \
+              -Delasticsearch.version=${ELASTICSEARCH_VERSION} \
+              -Dzentity.version=${ZENTITY_VERSION} \
               --file pom.xml
+      - name: Set Artifact Name
+        id: set_artifact_name
+        env:
+          ELASTICSEARCH_VERSION: ${{ matrix.elasticsearch }}
+        run: echo ::set-output name=name::zentity-${ZENTITY_VERSION}-elasticsearch-${ELASTICSEARCH_VERSION}.zip
       - name: Upload Release Asset
         id: upload_release_asset
         uses: actions/upload-release-asset@v1
@@ -74,6 +87,6 @@ jobs:
           # Pull from the create_release job above, referencing it's ID to get its outputs object, which include a `upload_url`.
           # see: https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions#jobsjob_idoutputs
           upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ./target/releases/zentity-${{ github.ref }}-elasticsearch-${{ matrix.elasticsearch }}.zip
-          asset_name: zentity-${{ github.ref }}-elasticsearch-${{ matrix.elasticsearch }}.zip
+          asset_path: ./target/releases/${{ steps.set_artifact_name.outputs.name }}
+          asset_name: ${{ steps.set_artifact_name.outputs.name }}
           asset_content_type: application/zip
