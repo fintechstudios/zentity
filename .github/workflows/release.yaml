@@ -1,4 +1,4 @@
-name: Create Release
+name: Release
 on:
   push:
     tags:
@@ -77,10 +77,12 @@ jobs:
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ELASTICSEARCH_VERSION: ${{ matrix.elasticsearch }}
+          ZENTITY_VERSION: ${{ needs.create_release.outputs.release_tag }}
         with:
           # Pull from the create_release job above, referencing it's ID to get its outputs object, which include a `upload_url`.
           # see: https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions#jobsjob_idoutputs
           upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ./target/releases//zentity-${{ github.ref }}-elasticsearch-${{ matrix.elasticsearch }}.zip
-          asset_name: zentity-${{ github.ref }}-elasticsearch-${{ matrix.elasticsearch }}.zip
+          asset_path: ./target/releases//zentity-${ZENTITY_VERSION}-elasticsearch-${ELASTICSEARCH_VERSION}.zip
+          asset_name: zentity-${ZENTITY_VERSION}-elasticsearch-${ELASTICSEARCH_VERSION}.zip
           asset_content_type: application/zip
