@@ -1,10 +1,35 @@
 name: Create Release
 on:
   push:
-    branches: [master]
     tags: ['*']
 jobs:
-  build:
+  create_release:
+    name: Create Release
+    runs-on: ubuntu-20.04
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      # Generate the release changelog from commits since the last release
+      - name: Build Changelog
+        id: build_changelog
+        uses: mikepenz/release-changelog-builder-action@v1.4.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Create and upload assets to a release
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: ${{ contains('beta', github.ref) || contains('alpha', github.ref) }}
+          body: ${{ steps.build_changelog.outputs.changelog }}
+  build_and_upload_artifacts:
+    name: Build and Upload Artifacts
+    needs: create_release
     runs-on: ubuntu-20.04
     strategy:
       matrix:
@@ -39,32 +64,15 @@ jobs:
               -Dzentity.version=${{ github.ref }} \
               --file pom.xml
       - run: mkdir -p staging && cp target/releases/*.zip staging
-      # Generate the release changelog
-      - name: "Build Changelog"
-        id: build_changelog
-        uses: mikepenz/release-changelog-builder-action@v1.4.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-          body: ${{steps.build_changelog.outputs.changelog}}
       - name: Upload Release Asset
         id: upload_release_asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # Pull from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`.
-          # See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          # Pull from the create_release job above, referencing it's ID to get its outputs object, which include a `upload_url`.
+          # see: https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions#jobsjob_idoutputs
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
           asset_path: ./staging/zentity-${{ github.ref }}-elasticsearch-${{ matrix.elasticsearch }}.zip
           asset_name: zentity-${{ github.ref }}-elasticsearch-${{ matrix.elasticsearch }}.zip
           asset_content_type: application/zip
