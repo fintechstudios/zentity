@@ -14,7 +14,8 @@
         <zentity.author>Dave Moore</zentity.author>
         <zentity.classname>org.elasticsearch.plugin.zentity.ZentityPlugin</zentity.classname>
         <zentity.website>https://zentity.io</zentity.website>
-        <zentity.version>1.6.0</zentity.version>
+        <!-- Set dynamically through CLI -->
+        <zentity.version>0.0.0-development</zentity.version>
         <!-- dependency versions -->
         <elasticsearch.version>7.10.1</elasticsearch.version>
         <jackson.core.version>2.10.4</jackson.core.version>

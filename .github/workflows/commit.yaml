@@ -5,13 +5,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
         elasticsearch:
           - 7.10.1
+          - 7.10.0
+          - 7.9.3
+          - 7.9.2
           - 7.9.3
           - 7.8.1
+          - 7.8.0
           - 7.7.1
-    runs-on: ${{ matrix.os }}
+          - 7.7.0
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       - name: Set up JDK
