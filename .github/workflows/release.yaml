@@ -1,7 +1,9 @@
 name: Create Release
 on:
   push:
-    tags: ['*']
+    tags:
+      - '*.*.*'
+      - '*.*.*-rc*'
 jobs:
   create_release:
     name: Create Release
@@ -23,7 +25,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          release_name: ${{ github.ref }}
           draft: false
           prerelease: ${{ contains('rc', github.ref) }}
           body: ${{ steps.build_changelog.outputs.changelog }}
@@ -63,7 +65,6 @@ jobs:
               -Delasticsearch.version=${{ matrix.elasticsearch }} \
               -Dzentity.version=${{ github.ref }} \
               --file pom.xml
-      - run: mkdir -p staging && cp target/releases/*.zip staging
       - name: Upload Release Asset
         id: upload_release_asset
         uses: actions/upload-release-asset@v1
@@ -73,6 +74,6 @@ jobs:
           # Pull from the create_release job above, referencing it's ID to get its outputs object, which include a `upload_url`.
           # see: https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions#jobsjob_idoutputs
           upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ./staging/zentity-${{ github.ref }}-elasticsearch-${{ matrix.elasticsearch }}.zip
+          asset_path: ./target/releases//zentity-${{ github.ref }}-elasticsearch-${{ matrix.elasticsearch }}.zip
           asset_name: zentity-${{ github.ref }}-elasticsearch-${{ matrix.elasticsearch }}.zip
           asset_content_type: application/zip
