@@ -24,7 +24,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-public class ResolutionActionIT extends AbstractResolutionActionITCase {
+public class ResolutionActionIT extends AbstractActionITCase {
     private final StringEntity TEST_PAYLOAD_JOB_NO_SCOPE = new StringEntity("{\n" +
         "  \"attributes\": {\n" +
         "    \"attribute_a\": [ \"a_00\" ]\n" +

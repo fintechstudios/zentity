@@ -13,7 +13,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
 
-public abstract class AbstractResolutionActionITCase extends AbstractITCase {
+public abstract class AbstractActionITCase extends AbstractITCase {
     protected final int TEST_RESOURCES_A = 0;
     protected final int TEST_RESOURCES_B = 1;
     protected final int TEST_RESOURCES_ARRAYS = 3;
@@ -39,11 +39,11 @@ public abstract class AbstractResolutionActionITCase extends AbstractITCase {
         }
     }
 
-    private void destroyTestEntityModelA() throws IOException {
+    protected void destroyTestEntityModelA() throws IOException {
         client.performRequest(new Request("DELETE", "_zentity/models/zentity_test_entity_a"));
     }
 
-    private void destroyTestEntityModelB() throws IOException {
+    protected void destroyTestEntityModelB() throws IOException {
         client.performRequest(new Request("DELETE", "_zentity/models/zentity_test_entity_b"));
     }
 
@@ -80,15 +80,23 @@ public abstract class AbstractResolutionActionITCase extends AbstractITCase {
         }
     }
 
-    private void prepareTestEntityModelA() throws Exception {
-        ByteArrayEntity testEntityModelA = new ByteArrayEntity(readFile("TestEntityModelA.json"), ContentType.APPLICATION_JSON);
+    protected byte[] getTestEntityModelAJson() throws IOException {
+        return readFile("TestEntityModelA.json");
+    }
+
+    protected byte[] getTestEntityModelBJson() throws IOException {
+        return readFile("TestEntityModelB.json");
+    }
+
+    protected void prepareTestEntityModelA() throws Exception {
+        ByteArrayEntity testEntityModelA = new ByteArrayEntity(getTestEntityModelAJson(), ContentType.APPLICATION_JSON);
         Request postModelA = new Request("POST", "_zentity/models/zentity_test_entity_a");
         postModelA.setEntity(testEntityModelA);
         client.performRequest(postModelA);
     }
 
-    private void prepareTestEntityModelB() throws Exception {
-        ByteArrayEntity testEntityModelB = new ByteArrayEntity(readFile("TestEntityModelB.json"), ContentType.APPLICATION_JSON);
+    protected void prepareTestEntityModelB() throws Exception {
+        ByteArrayEntity testEntityModelB = new ByteArrayEntity(getTestEntityModelBJson(), ContentType.APPLICATION_JSON);
         Request postModelB = new Request("POST", "_zentity/models/zentity_test_entity_b");
         postModelB.setEntity(testEntityModelB);
         client.performRequest(postModelB);

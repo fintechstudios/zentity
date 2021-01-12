@@ -19,7 +19,6 @@ import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -131,7 +130,7 @@ public class SetupAction extends BaseRestHandler {
         );
 
         final UnaryOperator<XContentBuilder> composedModifier = XContentUtil.composeModifiers(
-            Arrays.asList(
+            List.of(
                 prettyPrintModifier,
                 ackResponseModifier
             )

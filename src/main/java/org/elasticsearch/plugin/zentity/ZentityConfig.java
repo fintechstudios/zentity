@@ -13,7 +13,7 @@ import java.util.List;
 public class ZentityConfig {
 
     private static final Setting<Integer> RESOLUTION_MAX_CONCURRENT_JOBS = Setting
-        .intSetting("resolution.max_concurrent_jobs", 1000, Setting.Property.NodeScope, Setting.Property.Dynamic);
+        .intSetting("resolution.max_concurrent_jobs", 10_000, Setting.Property.NodeScope, Setting.Property.Dynamic);
 
     private static final Setting<Integer> RESOLUTION_MAX_CONCURRENT_JOBS_PER_REQUEST = Setting
         .intSetting("resolution.max_concurrent_jobs_per_request", 100, Setting.Property.NodeScope, Setting.Property.Dynamic);

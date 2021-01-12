@@ -114,6 +114,7 @@ public class ResolutionAction extends BaseRestHandler {
                         if (!res.isExists()) {
                             throw new NotFoundException("Entity type '" + entityType + "' not found.");
                         }
+                        // TODO: build directly from response
                         String model = res.getSourceAsString();
                         return new Input(body, new Model(model));
                     }));
@@ -121,7 +122,8 @@ public class ResolutionAction extends BaseRestHandler {
     }
 
 
-    CompletableFuture<Job> buildJobAsync(NodeClient client, String entityType, String body, Map<String, String> params, Map<String, String> reqParams) {
+    CompletableFuture<Job> buildJobAsync(NodeClient client, String body, Map<String, String> params, Map<String, String> reqParams) {
+        final String entityType = ParamsUtil.optString(PARAM_ENTITY_TYPE, null, params, reqParams);
         return getInputAsync(client, entityType, body)
             .thenApply(
                 (input) -> {
@@ -141,8 +143,6 @@ public class ResolutionAction extends BaseRestHandler {
                     final boolean profile = ParamsUtil.optBoolean(PARAM_PROFILE, Job.DEFAULT_PROFILE, params, reqParams);
 
                     // Parse any optional search parameters that will be passed to the job configuration.
-                    // Note: org.elasticsearch.rest.RestRequest doesn't allow null values as default values for integer parameters,
-                    // which is why the code below handles the integer parameters differently from the others.
                     final Boolean searchAllowPartialSearchResults = ParamsUtil.optBoolean(PARAM_SEARCH_ALLOW_PARTIAL_SEARCH_RESULTS, null, params, reqParams);
                     final Integer searchBatchedReduceSize = ParamsUtil.optInteger(PARAM_SEARCH_BATCHED_REDUCE_SIZE, null, params, reqParams);
                     final Integer searchMaxConcurrentShardRequests = ParamsUtil.optInteger(PARAM_SEARCH_MAX_CONCURRENT_SHARD_REQUESTS, null, params, reqParams);
@@ -177,11 +177,11 @@ public class ResolutionAction extends BaseRestHandler {
             );
     }
 
-    CompletableFuture<ResolutionResponse> buildAndRunJobAsync(NodeClient client, String entityType, String body, Map<String, String> params, Map<String, String> reqParams) {
-        return buildJobAsync(client, entityType, body, params, reqParams).thenCompose(Job::runAsync);
+    CompletableFuture<ResolutionResponse> buildAndRunJobAsync(NodeClient client, String body, Map<String, String> params, Map<String, String> reqParams) {
+        return buildJobAsync(client, body, params, reqParams).thenCompose(Job::runAsync);
     }
 
-    CompletableFuture<RestResponse> handleBulkJobRequest(final NodeClient client, final ObjectWriter responseWriter, final String entityType, final String reqBody, final Map<String, String> reqParams) {
+    CompletableFuture<RestResponse> handleBulkJobRequest(final NodeClient client, final ObjectWriter responseWriter, final String reqBody, final Map<String, String> reqParams) {
         String[] lines = reqBody.split("\\n");
         if (lines.length % 2 != 0) {
             throw new BadRequestException("Bulk request must have repeating pairs of params and resolution body on separate lines.");
@@ -200,7 +200,7 @@ public class ResolutionAction extends BaseRestHandler {
                     }
                     final String body = tuple[1];
 
-                    return buildAndRunJobAsync(client, entityType, body, params, reqParams);
+                    return buildAndRunJobAsync(client, body, params, reqParams);
                 })
                 .collect(Collectors.toList());
 
@@ -223,8 +223,8 @@ public class ResolutionAction extends BaseRestHandler {
             }));
     }
 
-    CompletableFuture<RestResponse> handleSingleJobRequest(NodeClient client, ObjectWriter responseWriter, String entityType, String body, Map<String, String> reqParams) {
-        return buildAndRunJobAsync(client, entityType, body, reqParams, emptyMap())
+    CompletableFuture<RestResponse> handleSingleJobRequest(NodeClient client, ObjectWriter responseWriter, String body, Map<String, String> reqParams) {
+        return buildAndRunJobAsync(client, body, reqParams, emptyMap())
             .thenApply(UnCheckedFunction.from((res) -> {
                 String responseJson = responseWriter.writeValueAsString(res);
 
@@ -290,7 +290,6 @@ public class ResolutionAction extends BaseRestHandler {
         );
 
         // Parse the request params that govern the entire request/response
-        final String entityType = ParamsUtil.optString(PARAM_ENTITY_TYPE, null, reqParams, emptyMap());
         final boolean pretty = ParamsUtil.optBoolean(PARAM_PRETTY, false, reqParams, emptyMap());
 
         return errorHandlingConsumer(channel -> {
@@ -301,14 +300,11 @@ public class ResolutionAction extends BaseRestHandler {
             boolean isBulkRequest = restRequest.path().endsWith("_bulk");
 
             CompletableFuture<RestResponse> handleFut = isBulkRequest
-                ? handleBulkJobRequest(client, writer, entityType, body, reqParams)
-                : handleSingleJobRequest(client, writer, entityType, body, reqParams);
+                ? handleBulkJobRequest(client, writer, body, reqParams)
+                : handleSingleJobRequest(client, writer, body, reqParams);
 
             handleFut
-                .thenApply((r) -> {
-                    channel.sendResponse(r);
-                    return null;
-                })
+                .thenAccept(channel::sendResponse)
                 .get();
         });
     }
