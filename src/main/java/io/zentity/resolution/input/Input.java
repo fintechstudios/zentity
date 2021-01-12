@@ -106,15 +106,16 @@ public class Input {
      * @param model     The entity model.
      * @param resolvers Names of resolvers from "scope.include.resolvers" to include in the entity model.
      * @return Updated entity model.
-     * @throws ValidationException
      */
-    public static Model includeResolvers(Model model, Set<String> resolvers) throws ValidationException {
+    public static Model includeResolvers(Model model, Set<String> resolvers) {
         if (!resolvers.isEmpty()) {
             for (String resolver : resolvers) {
-                if (resolver == null || resolver.equals(""))
+                if (resolver == null || resolver.equals("")) {
                     continue;
-                if (!model.resolvers().containsKey(resolver))
+                }
+                if (!model.resolvers().containsKey(resolver)) {
                     throw new ValidationException("'" + resolver + "' is not in the 'resolvers' field of the entity model.");
+                }
             }
             model.resolvers().keySet().retainAll(resolvers);
         }
@@ -308,8 +309,9 @@ public class Input {
         this.ids = parseIds(json, this.model);
 
         // Ensure that either the "attributes" or "terms" or "ids" field exists and is valid.
-        if (this.attributes().isEmpty() && this.terms.isEmpty() && this.ids.isEmpty())
+        if (this.attributes().isEmpty() && this.terms.isEmpty() && this.ids.isEmpty()) {
             throw new ValidationException("The 'attributes', 'terms', and 'ids' fields are missing from the request body. At least one must exist.");
+        }
 
         // Parse and validate the "scope" field of the request body.
         if (json.has("scope")) {

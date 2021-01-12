@@ -15,7 +15,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class ResolutionActionBulkIT extends AbstractResolutionActionITCase {
+public class ResolutionActionBulkIT extends AbstractActionITCase {
 
     private static final ContentType NDJSON_TYPE = ContentType.create("application/x-ndjson", Consts.UTF_8);
 

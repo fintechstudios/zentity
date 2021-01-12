@@ -107,7 +107,7 @@ public class ModelsAction extends BaseRestHandler {
      * @param client The client that will communicate with Elasticsearch.
      * @return The response from Elasticsearch.
      */
-    static CompletableFuture<SearchResponse> getEntityModels(NodeClient client) {
+    static CompletableFuture<SearchResponse> listEntityModels(NodeClient client) {
         SearchRequestBuilder request = client.prepareSearch(INDEX_NAME);
         request.setSize(10000); // max request size
         return getResponseWithImplicitIndexCreation(client, request);
@@ -214,7 +214,7 @@ public class ModelsAction extends BaseRestHandler {
             // Handle request
             if (method == GET && (entityType == null || entityType.equals(""))) {
                 // GET _zentity/models
-                responseFuture = getEntityModels(client);
+                responseFuture = listEntityModels(client);
             } else if (method == GET) {
                 // GET _zentity/models/{entity_type}
                 responseFuture = getEntityModel(entityType, client);
