@@ -1,5 +1,3 @@
-
-
 {
   "categories": [
     {
@@ -22,5 +20,5 @@
   "ignore_labels": [
     "no-changelog"
   ],
-  "template": "${{CHANGELOG}}\n${{UNCATEGORIZED}}",
+  "template": "${{CHANGELOG}}\n${{UNCATEGORIZED}}"
 }
