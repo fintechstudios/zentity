@@ -35,7 +35,7 @@ jobs:
           tag_name: ${{ github.ref }}
           release_name: ${{ github.ref }}
           draft: false
-          prerelease: ${{ contains('rc', github.ref) }}
+          prerelease: ${{ contains(github.ref, 'rc') }}
           body: ${{ steps.build_changelog.outputs.changelog }}
   build_and_upload_artifacts:
     name: Build and Upload Artifacts
