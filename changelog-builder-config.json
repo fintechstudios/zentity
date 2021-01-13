@@ -20,5 +20,6 @@
   "ignore_labels": [
     "no-changelog"
   ],
-  "template": "${{CHANGELOG}}\n${{UNCATEGORIZED}}"
+  "pr_template": "- ${{TITLE}} (#${{NUMBER}}): @${{AUTHOR}}",
+  "template": "${{CHANGELOG}}\n## Other\n${{UNCATEGORIZED}}"
 }
