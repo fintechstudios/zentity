@@ -12,6 +12,7 @@ jobs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
       release_tag: ${{ steps.extract_tag.outputs.tag }}
     steps:
+      - uses: actions/checkout@v2
       # Generate the release changelog from commits since the last release
       - name: Build Changelog
         id: build_changelog

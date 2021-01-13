@@ -7,8 +7,16 @@
       "labels": ["kind/feature"]
     },
     {
+      "title": "## 📚 Docs",
+      "labels": ["kind/docs"]
+    },
+    {
       "title": "## 🐛 Bugs",
       "labels": ["kind/bug"]
+    },
+    {
+      "title": "## 💻 CI",
+      "labels": ["kind/ci"]
     }
   ],
   "ignore_labels": [
