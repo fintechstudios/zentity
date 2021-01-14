@@ -1,0 +1,14 @@
+# An example configuration file that should be placed in $ES_PATH_CONF/zentity.yml
+# see: https://www.elastic.co/guide/en/elasticsearch/reference/current/settings.html
+# see: https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-bundles-plugins.html
+
+# Where zentity stores system information
+index:
+  name: .zentity-models
+  default_number_of_shards: 1
+  default_number_of_replicas: 1
+
+# Concurrency control for resolution requests
+resolution:
+  max_concurrent_jobs: 10000
+  max_concurrent_jobs_per_request: 100

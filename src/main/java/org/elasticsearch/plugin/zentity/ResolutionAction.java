@@ -20,7 +20,6 @@ import org.elasticsearch.common.util.concurrent.EsExecutors;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.plugin.zentity.exceptions.BadRequestException;
 import org.elasticsearch.plugin.zentity.exceptions.NotFoundException;
-import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestResponse;
@@ -41,7 +40,7 @@ import static java.util.Collections.emptyMap;
 import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 
-public class ResolutionAction extends BaseRestHandler {
+public class ResolutionAction extends BaseZentityAction {
     private final Executor resolutionExecutor;
 
     // All parameters known to the request
@@ -67,11 +66,8 @@ public class ResolutionAction extends BaseRestHandler {
     private static final String PARAM_SEARCH_REQUEST_CACHE = "search.request_cache";
     private static final String PARAM_SEARCH_PREFERENCE = "search.preference";
 
-    private final ZentityConfig config;
-
     public ResolutionAction(ZentityConfig config) {
-        super();
-        this.config = config;
+        super(config);
         // setup a scaling executor that always keeps a few threads hand but can
         // increase as the load increases
         this.resolutionExecutor = EsExecutors.newScaling(
@@ -105,7 +101,7 @@ public class ResolutionAction extends BaseRestHandler {
                 if (input != null) {
                     return CompletableFuture.completedFuture(input);
                 }
-                return ModelsAction
+                return new ModelsAction(config)
                     .getEntityModel(entityType, client)
                     .thenApply(UnCheckedFunction.from(
                         // cast needed to appease the compiler for the thrown checked exceptions

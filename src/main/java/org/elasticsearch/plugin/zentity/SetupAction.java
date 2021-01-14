@@ -14,7 +14,6 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.plugin.zentity.exceptions.ForbiddenException;
 import org.elasticsearch.plugin.zentity.exceptions.NotImplementedException;
-import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
@@ -29,10 +28,8 @@ import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
 import static org.elasticsearch.rest.RestRequest.Method;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 
-public class SetupAction extends BaseRestHandler {
+public class SetupAction extends BaseZentityAction {
 
-    public static final int DEFAULT_NUMBER_OF_SHARDS = 1;
-    public static final int DEFAULT_NUMBER_OF_REPLICAS = 1;
     public static final String INDEX_MAPPING = "{\n" +
         "  \"dynamic\": \"strict\",\n" +
         "  \"properties\": {\n" +
@@ -55,6 +52,10 @@ public class SetupAction extends BaseRestHandler {
         "  }\n" +
         "}";
 
+    public SetupAction(ZentityConfig config) {
+        super(config);
+    }
+
     @Override
     public List<Route> routes() {
         return Collections.singletonList(new Route(POST, "_zentity/_setup"));
@@ -68,12 +69,11 @@ public class SetupAction extends BaseRestHandler {
      * @param numberOfReplicas The value of index.number_of_replicas.
      * @return A completable future that completes when the index is created.
      */
-    public static CompletableFuture<CreateIndexResponse> createIndex(NodeClient client, int numberOfShards, int numberOfReplicas) {
-        // Elasticsearch 7.0.0+ removes mapping types
+    CompletableFuture<CreateIndexResponse> createIndex(NodeClient client, int numberOfShards, int numberOfReplicas) {
         CreateIndexRequestBuilder reqBuilder = client
             .admin()
             .indices()
-            .prepareCreate(ModelsAction.INDEX_NAME)
+            .prepareCreate(config.getModelsIndexName())
             .addMapping("doc", INDEX_MAPPING, XContentType.JSON)
             .setSettings(Settings.builder()
                 .put("index.number_of_shards", numberOfShards)
@@ -97,8 +97,8 @@ public class SetupAction extends BaseRestHandler {
      * @param client The client that will communicate with Elasticsearch.
      * @return A completable future that completes when the index is created.
      */
-    public static CompletableFuture<CreateIndexResponse> createIndex(NodeClient client) {
-        return createIndex(client, DEFAULT_NUMBER_OF_SHARDS, DEFAULT_NUMBER_OF_REPLICAS);
+    public CompletableFuture<CreateIndexResponse> createIndex(NodeClient client) {
+        return createIndex(client, config.getModelsIndexDefaultNumberOfShards(), config.getModelsIndexDefaultNumberOfReplicas());
     }
 
     @Override
@@ -111,8 +111,8 @@ public class SetupAction extends BaseRestHandler {
 
         // Parse request
         final boolean pretty = restRequest.paramAsBoolean("pretty", false);
-        final int numberOfShards = restRequest.paramAsInt("number_of_shards", 1);
-        final int numberOfReplicas = restRequest.paramAsInt("number_of_replicas", 1);
+        final int numberOfShards = restRequest.paramAsInt("number_of_shards", config.getModelsIndexDefaultNumberOfShards());
+        final int numberOfReplicas = restRequest.paramAsInt("number_of_replicas", config.getModelsIndexDefaultNumberOfReplicas());
         final Method method = restRequest.method();
 
         final UnaryOperator<XContentBuilder> prettyPrintModifier = (builder) -> {
@@ -142,7 +142,6 @@ public class SetupAction extends BaseRestHandler {
                     .thenApply(UnCheckedFunction.from(res -> XContentUtil.jsonBuilder(composedModifier)))
                     .thenAccept(builder -> channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder)))
                     .get();
-
             } else {
                 throw new NotImplementedException("Method and endpoint not implemented.");
             }

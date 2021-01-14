@@ -20,7 +20,6 @@ import java.io.InputStream;
 import java.nio.file.Path;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.function.Supplier;
@@ -83,11 +82,11 @@ public class ZentityPlugin extends Plugin implements ActionPlugin {
         SettingsFilter settingsFilter,
         IndexNameExpressionResolver indexNameExpressionResolver,
         Supplier<DiscoveryNodes> nodesInCluster) {
-        return Arrays.asList(
-            new HomeAction(),
-            new ModelsAction(),
+        return List.of(
+            new HomeAction(config),
+            new ModelsAction(config),
             new ResolutionAction(config),
-            new SetupAction()
+            new SetupAction(config)
         );
     }
 

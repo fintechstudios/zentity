@@ -25,7 +25,6 @@ import org.elasticsearch.index.IndexNotFoundException;
 import org.elasticsearch.plugin.zentity.exceptions.BadRequestException;
 import org.elasticsearch.plugin.zentity.exceptions.ForbiddenException;
 import org.elasticsearch.plugin.zentity.exceptions.NotImplementedException;
-import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
@@ -44,9 +43,13 @@ import static org.elasticsearch.rest.RestRequest.Method.GET;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
-public class ModelsAction extends BaseRestHandler {
+public class ModelsAction extends BaseZentityAction {
 
     public static final String INDEX_NAME = ".zentity-models";
+
+    public ModelsAction(ZentityConfig config) {
+        super(config);
+    }
 
     @Override
     public List<Route> routes() {
@@ -64,12 +67,15 @@ public class ModelsAction extends BaseRestHandler {
      *
      * @param client The client that will communicate with Elasticsearch.
      */
-    static CompletableFuture<Void> ensureIndex(NodeClient client) {
-        IndicesExistsRequestBuilder request = client.admin().indices().prepareExists(INDEX_NAME);
+    CompletableFuture<Void> ensureIndex(NodeClient client) {
+        IndicesExistsRequestBuilder request = client.admin()
+            .indices()
+            .prepareExists(config.getModelsIndexName());
+
         return ActionRequestUtil.toCompletableFuture(request)
             .thenCompose((res) -> {
                 if (!res.isExists()) {
-                    return SetupAction.createIndex(client).thenApply((val) -> null);
+                    return new SetupAction(config).createIndex(client).thenApply((val) -> null);
                 }
                 return CompletableFuture.completedFuture(null);
             });
@@ -85,7 +91,7 @@ public class ModelsAction extends BaseRestHandler {
      * @return The response from Elasticsearch.
      * @throws ForbiddenException If the user is not authorized to create the .zentity-models index.
      */
-    static <ReqT extends ActionRequest, ResT extends ActionResponse> CompletableFuture<ResT>
+    <ReqT extends ActionRequest, ResT extends ActionResponse> CompletableFuture<ResT>
     getResponseWithImplicitIndexCreation(NodeClient client, ActionRequestBuilder<ReqT, ResT> builder) {
         return composeExceptionally(
             ActionRequestUtil.toCompletableFuture(builder),
@@ -94,7 +100,7 @@ public class ModelsAction extends BaseRestHandler {
                 if (!(cause instanceof IndexNotFoundException)) {
                     throw new CompletionException(cause);
                 }
-                return SetupAction
+                return new SetupAction(config)
                     .createIndex(client)
                     .thenCompose(res -> ActionRequestUtil.toCompletableFuture(builder));
             }
@@ -107,8 +113,8 @@ public class ModelsAction extends BaseRestHandler {
      * @param client The client that will communicate with Elasticsearch.
      * @return The response from Elasticsearch.
      */
-    static CompletableFuture<SearchResponse> listEntityModels(NodeClient client) {
-        SearchRequestBuilder request = client.prepareSearch(INDEX_NAME);
+    CompletableFuture<SearchResponse> listEntityModels(NodeClient client) {
+        SearchRequestBuilder request = client.prepareSearch(config.getModelsIndexName());
         request.setSize(10000); // max request size
         return getResponseWithImplicitIndexCreation(client, request);
     }
@@ -120,8 +126,8 @@ public class ModelsAction extends BaseRestHandler {
      * @param client     The client that will communicate with Elasticsearch.
      * @return The response from Elasticsearch.
      */
-    static CompletableFuture<GetResponse> getEntityModel(String entityType, NodeClient client) {
-        GetRequestBuilder request = client.prepareGet(INDEX_NAME, "doc", entityType);
+    CompletableFuture<GetResponse> getEntityModel(String entityType, NodeClient client) {
+        GetRequestBuilder request = client.prepareGet(config.getModelsIndexName(), "doc", entityType);
         return getResponseWithImplicitIndexCreation(client, request);
     }
 
@@ -133,10 +139,10 @@ public class ModelsAction extends BaseRestHandler {
      * @param client      The client that will communicate with Elasticsearch.
      * @return The response from Elasticsearch.
      */
-    static CompletableFuture<IndexResponse> indexEntityModel(String entityType, String requestBody, NodeClient client) {
+    CompletableFuture<IndexResponse> indexEntityModel(String entityType, String requestBody, NodeClient client) {
         return ensureIndex(client)
             .thenCompose((nil) -> {
-                IndexRequestBuilder request = client.prepareIndex(INDEX_NAME, "doc", entityType);
+                IndexRequestBuilder request = client.prepareIndex(config.getModelsIndexName(), "doc", entityType);
                 request.setSource(requestBody, XContentType.JSON).setCreate(true).setRefreshPolicy("wait_for");
                 return ActionRequestUtil.toCompletableFuture(request);
             });
@@ -150,10 +156,10 @@ public class ModelsAction extends BaseRestHandler {
      * @param client      The client that will communicate with Elasticsearch.
      * @return The response from Elasticsearch.
      */
-    static CompletableFuture<IndexResponse> updateEntityModel(String entityType, String requestBody, NodeClient client) {
+    CompletableFuture<IndexResponse> updateEntityModel(String entityType, String requestBody, NodeClient client) {
         return ensureIndex(client)
             .thenCompose((nil) -> {
-                IndexRequestBuilder request = client.prepareIndex(INDEX_NAME, "doc", entityType);
+                IndexRequestBuilder request = client.prepareIndex(config.getModelsIndexName(), "doc", entityType);
                 request
                     .setSource(requestBody, XContentType.JSON)
                     .setCreate(false)
@@ -169,8 +175,8 @@ public class ModelsAction extends BaseRestHandler {
      * @param client     The client that will communicate with Elasticsearch.
      * @return The response from Elasticsearch.
      */
-    static CompletableFuture<DeleteResponse> deleteEntityModel(String entityType, NodeClient client) {
-        DeleteRequestBuilder request = client.prepareDelete(INDEX_NAME, "doc", entityType);
+    CompletableFuture<DeleteResponse> deleteEntityModel(String entityType, NodeClient client) {
+        DeleteRequestBuilder request = client.prepareDelete(config.getModelsIndexName(), "doc", entityType);
         request.setRefreshPolicy("wait_for");
         return getResponseWithImplicitIndexCreation(client, request);
     }

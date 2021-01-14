@@ -18,6 +18,15 @@ public class ZentityConfig {
     private static final Setting<Integer> RESOLUTION_MAX_CONCURRENT_JOBS_PER_REQUEST = Setting
         .intSetting("resolution.max_concurrent_jobs_per_request", 100, Setting.Property.NodeScope, Setting.Property.Dynamic);
 
+    private static final Setting<String> MODELS_INDEX_NAME = Setting
+        .simpleString("index.name", ".zentity-models", Setting.Property.NodeScope, Setting.Property.Final);
+
+    private static final Setting<Integer> MODELS_INDEX_DEFAULT_NUMBER_OF_SHARDS = Setting
+        .intSetting("index.default_number_of_shards", 1, Setting.Property.NodeScope, Setting.Property.Final);
+
+    private static final Setting<Integer> MODELS_INDEX_DEFAULT_NUMBER_OF_REPLICAS = Setting
+        .intSetting("index.default_number_of_replicas", 1, Setting.Property.NodeScope, Setting.Property.Final);
+
     private final Settings settings;
 
     public ZentityConfig(Environment env) {
@@ -47,10 +56,25 @@ public class ZentityConfig {
         return RESOLUTION_MAX_CONCURRENT_JOBS.get(settings);
     }
 
+    public String getModelsIndexName() {
+        return MODELS_INDEX_NAME.get(settings);
+    }
+
+    public int getModelsIndexDefaultNumberOfShards() {
+        return MODELS_INDEX_DEFAULT_NUMBER_OF_SHARDS.get(settings);
+    }
+
+    public int getModelsIndexDefaultNumberOfReplicas() {
+        return MODELS_INDEX_DEFAULT_NUMBER_OF_REPLICAS.get(settings);
+    }
+
     public List<Setting<?>> getSettings() {
         return Arrays.asList(
             RESOLUTION_MAX_CONCURRENT_JOBS,
-            RESOLUTION_MAX_CONCURRENT_JOBS_PER_REQUEST
+            RESOLUTION_MAX_CONCURRENT_JOBS_PER_REQUEST,
+            MODELS_INDEX_NAME,
+            MODELS_INDEX_DEFAULT_NUMBER_OF_SHARDS,
+            MODELS_INDEX_DEFAULT_NUMBER_OF_REPLICAS
         );
     }
 }

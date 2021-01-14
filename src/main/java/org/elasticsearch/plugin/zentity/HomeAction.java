@@ -4,12 +4,10 @@ import io.zentity.common.FunctionalUtil.UnCheckedUnaryOperator;
 import io.zentity.common.XContentUtil;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.rest.BaseRestHandler;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.function.UnaryOperator;
@@ -17,12 +15,15 @@ import java.util.function.UnaryOperator;
 import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 
-public class HomeAction extends BaseRestHandler {
+public class HomeAction extends BaseZentityAction {
+    public HomeAction(ZentityConfig config) {
+        super(config);
+    }
+
     @Override
     public List<Route> routes() {
-        return Collections.singletonList(
-            new Route(GET, "_zentity")
-        );
+        // TODO: add DELETE route
+        return List.of(new Route(GET, "_zentity"));
     }
 
     @Override
@@ -50,6 +51,7 @@ public class HomeAction extends BaseRestHandler {
             builder.field("name", props.getProperty("name"));
             builder.field("description", props.getProperty("description"));
             builder.field("website", props.getProperty("zentity.website"));
+            builder.field("index_name", config.getModelsIndexName());
 
             builder.startObject("version");
             builder.field("zentity", props.getProperty("zentity.version"));
@@ -61,12 +63,12 @@ public class HomeAction extends BaseRestHandler {
             return builder;
         });
 
-        final UnaryOperator<XContentBuilder> composedModifier = XContentUtil.composeModifiers(
+        final UnaryOperator<XContentBuilder> responseBuilderFunc = XContentUtil.composeModifiers(
             List.of(prettyPrintModifier, propsResponseModifier)
         );
 
         return errorHandlingConsumer(channel -> {
-            XContentBuilder contentBuilder = XContentUtil.jsonBuilder(composedModifier);
+            XContentBuilder contentBuilder = XContentUtil.jsonBuilder(responseBuilderFunc);
             channel.sendResponse(new BytesRestResponse(RestStatus.OK, contentBuilder));
         });
     }
