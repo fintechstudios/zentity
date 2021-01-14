@@ -7,7 +7,7 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.TreeMap;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertEquals;
 
 public class JsonTest {
     @Test
@@ -17,7 +17,7 @@ public class JsonTest {
         FilterTree root = new FilterTree();
         root.put("name", nameTree);
         String serialized = Json.ORDERED_MAPPER.writeValueAsString(root);
-        assertNotNull(serialized);
+        assertEquals("{\"name\":{\"street\":{}}}", serialized);
     }
 
     @Test
@@ -25,6 +25,6 @@ public class JsonTest {
         TreeMap<Integer, FilterTree> nestedTree = new TreeMap<>(Collections.reverseOrder());
         nestedTree.put(0, new FilterTree());
         String serialized = Json.ORDERED_MAPPER.writeValueAsString(nestedTree);
-        assertNotNull(serialized);
+        assertEquals("{\"0\":{}}", serialized);
     }
 }

@@ -26,6 +26,23 @@ public class FunctionalUtil {
     }
 
     /**
+     * Wrap a potentially erroneous function to throw checked exception as an unchecked one.
+     *
+     * @param supplier The function to wrap.
+     * @param <T> The return type.
+     * @param <E> The error type.
+     * @return The result, if no error occurs.
+     */
+    public static <T, E extends Exception> T sneakyWrap(CheckedSupplier<T, E> supplier) {
+        try {
+            return supplier.get();
+        } catch (Exception ex) {
+            sneakyThrow(ex);
+            return null;
+        }
+    }
+
+    /**
      * A "fixed point combinator" interface for functional recursion.
      *
      * @see <a href="https://stackoverflow.com/a/35997193/4705719"></a>
@@ -59,12 +76,7 @@ public class FunctionalUtil {
         R applyThrows(T input) throws E;
 
         default R apply(T input) {
-            try {
-                return this.applyThrows(input);
-            } catch (Exception ex) {
-                sneakyThrow(ex);
-                return null; // never reached
-            }
+            return sneakyWrap(() -> this.applyThrows(input));
         }
 
         static <T, R, E extends Exception> UnCheckedFunction<T, R, E> from(CheckedFunction<T, R, E> f) {
@@ -72,19 +84,12 @@ public class FunctionalUtil {
         }
     }
 
-
-
     @FunctionalInterface
     public interface UnCheckedUnaryOperator<T, E extends Exception> extends UnaryOperator<T> {
         T applyThrows(T input) throws E;
 
         default T apply(T input) {
-            try {
-                return this.applyThrows(input);
-            } catch (Exception ex) {
-                sneakyThrow(ex);
-                return null; // never reached
-            }
+            return sneakyWrap(() -> this.applyThrows(input));
         }
 
         static <T, E extends Exception> UnCheckedUnaryOperator<T, E> from(CheckedFunction<T, T, E> f) {
@@ -97,11 +102,10 @@ public class FunctionalUtil {
         void acceptThrows(T input) throws E;
 
         default void accept(T input) {
-            try {
+            sneakyWrap(() -> {
                 this.acceptThrows(input);
-            } catch (Exception ex) {
-                sneakyThrow(ex);
-            }
+                return null;
+            });
         }
 
         static <T, E extends Exception> UnCheckedConsumer<T, E> from(CheckedConsumer<T, E> f) {
@@ -115,12 +119,7 @@ public class FunctionalUtil {
         T getThrows() throws E;
 
         default T get() {
-            try {
-                return this.getThrows();
-            } catch (Exception ex) {
-                sneakyThrow(ex);
-                return null; // never reached
-            }
+            return sneakyWrap(this::getThrows);
         }
 
         static <T, E extends Exception> UnCheckedSupplier<T, E> from(CheckedSupplier<T, E> f) {
@@ -133,12 +132,7 @@ public class FunctionalUtil {
         R applyThrows(T var1, U var2) throws E;
 
         default R apply(T var1, U var2) {
-            try {
-                return this.applyThrows(var1, var2);
-            } catch (Exception ex) {
-                sneakyThrow(ex);
-                return null; // never reached
-            }
+            return sneakyWrap(() -> this.applyThrows(var1, var2));
         }
 
         static <T, U, R, E extends Exception> UnCheckedBiFunction<T, U, R, E> from(CheckedBiFunction<T, U, R, E> f) {

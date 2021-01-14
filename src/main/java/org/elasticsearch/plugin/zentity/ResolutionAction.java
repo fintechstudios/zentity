@@ -1,10 +1,12 @@
 package org.elasticsearch.plugin.zentity;
 
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import io.zentity.common.CompletableFutureUtil;
 import io.zentity.common.FunctionalUtil.UnCheckedFunction;
 import io.zentity.common.FunctionalUtil.UnCheckedSupplier;
 import io.zentity.common.Json;
+import io.zentity.common.SecurityUtil;
 import io.zentity.common.StreamUtil;
 import io.zentity.model.Model;
 import io.zentity.resolution.BulkResolutionResponse;
@@ -14,6 +16,7 @@ import io.zentity.resolution.input.Input;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.CheckedFunction;
+import org.elasticsearch.common.CheckedSupplier;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.util.concurrent.EsExecutors;
@@ -31,6 +34,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -68,7 +72,7 @@ public class ResolutionAction extends BaseZentityAction {
 
     public ResolutionAction(ZentityConfig config) {
         super(config);
-        // setup a scaling executor that always keeps a few threads hand but can
+        // setup a scaling executor that always keeps a few threads on hand but can
         // increase as the load increases
         this.resolutionExecutor = EsExecutors.newScaling(
             "zentity-resolution",
@@ -106,17 +110,23 @@ public class ResolutionAction extends BaseZentityAction {
                     .thenApply(UnCheckedFunction.from(
                         // cast needed to appease the compiler for the thrown checked exceptions
                         (CheckedFunction<GetResponse, Input, IOException>)
-                        (res) -> {
-                        if (!res.isExists()) {
-                            throw new NotFoundException("Entity type '" + entityType + "' not found.");
-                        }
-                        // TODO: build directly from response
-                        String model = res.getSourceAsString();
-                        return new Input(body, new Model(model));
-                    }));
+                            (res) -> {
+                                if (!res.isExists()) {
+                                    throw new NotFoundException("Entity type '" + entityType + "' not found.");
+                                }
+                                // TODO: build directly from response
+                                String model = res.getSourceAsString();
+                                return new Input(body, new Model(model));
+                            }));
+            })
+            .exceptionally((ex) -> {
+                Throwable cause = CompletableFutureUtil.getCause(ex);
+                if (cause instanceof JsonParseException) {
+                    throw new BadRequestException("Invalid JSON body", cause);
+                }
+                throw new CompletionException(cause);
             });
     }
-
 
     CompletableFuture<Job> buildJobAsync(NodeClient client, String body, Map<String, String> params, Map<String, String> reqParams) {
         final String entityType = ParamsUtil.optString(PARAM_ENTITY_TYPE, null, params, reqParams);
@@ -190,7 +200,7 @@ public class ResolutionAction extends BaseZentityAction {
                     final String paramsStr = tuple[0];
                     Map<String, String> params;
                     try {
-                        params = Json.toStringMap(tuple[0]);
+                        params = Json.toStringMap(paramsStr);
                     } catch (Exception ex) {
                         throw new BadRequestException("Could not parse parameters: " + paramsStr);
                     }
@@ -213,7 +223,10 @@ public class ResolutionAction extends BaseZentityAction {
                 response.items = jobResponses;
                 response.tookMs = Duration.ofNanos(System.nanoTime() - startTime).toMillis();
 
-                String responseJson = responseWriter.writeValueAsString(response);
+                // Jackson needs reflection access, which requires escalated security
+                String responseJson = SecurityUtil.doPrivileged(
+                    (CheckedSupplier<String, ?>) () -> responseWriter.writeValueAsString(response)
+                );
 
                 return new BytesRestResponse(RestStatus.OK, "application/json", responseJson);
             }));
@@ -222,7 +235,10 @@ public class ResolutionAction extends BaseZentityAction {
     CompletableFuture<RestResponse> handleSingleJobRequest(NodeClient client, ObjectWriter responseWriter, String body, Map<String, String> reqParams) {
         return buildAndRunJobAsync(client, body, reqParams, emptyMap())
             .thenApply(UnCheckedFunction.from((res) -> {
-                String responseJson = responseWriter.writeValueAsString(res);
+                // Jackson needs reflection access, which requires escalated security
+                String responseJson = SecurityUtil.doPrivileged((
+                    CheckedSupplier<String, ?>) () -> responseWriter.writeValueAsString(res)
+                );
 
                 RestStatus status = res.isFailure() ? RestStatus.INTERNAL_SERVER_ERROR : RestStatus.OK;
 

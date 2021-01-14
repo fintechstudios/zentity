@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class ResolutionActionIT extends AbstractActionITCase {
     private final StringEntity TEST_PAYLOAD_JOB_NO_SCOPE = new StringEntity("{\n" +
@@ -1426,14 +1427,20 @@ public class ResolutionActionIT extends AbstractActionITCase {
             postResolution.setEntity(TEST_PAYLOAD_JOB_ERROR);
             try {
                 client.performRequest(postResolution);
+                fail("expected failure");
             } catch (ResponseException e) {
                 Response response = e.getResponse();
                 assertEquals(response.getStatusLine().getStatusCode(), 500);
                 JsonNode json = Json.ORDERED_MAPPER.readTree(response.getEntity().getContent());
-                assertEquals("elasticsearch", json.get("error").get("by").asText());
-                assertEquals("org.elasticsearch.common.ParsingException", json.get("error").get("type").asText());
-                assertFalse(json.get("error").get("reason").asText().isEmpty());
-                assertFalse(json.get("error").get("stack_trace").asText().isEmpty());
+
+                assertTrue("error object field exists", json.has("error") && json.get("error").isObject());
+                JsonNode errorObj = json.get("error");
+                assertEquals("elasticsearch", errorObj.get("by").asText());
+                assertEquals("org.elasticsearch.common.ParsingException", errorObj.get("type").asText());
+                assertFalse(errorObj.get("reason").asText().isEmpty());
+                assertFalse(errorObj.get("stack_trace").asText().isEmpty());
+
+                assertTrue("hits object field exists", json.has("hits") && json.get("hits").isObject());
                 assertEquals(json.get("hits").get("total").asInt(), 2);
 
                 Set<String> docsExpected = new TreeSet<>();
@@ -1450,16 +1457,22 @@ public class ResolutionActionIT extends AbstractActionITCase {
             postResolutionQueriesNoTrace.setEntity(TEST_PAYLOAD_JOB_ERROR);
             try {
                 client.performRequest(postResolutionQueriesNoTrace);
+                fail("expected failure");
             } catch (ResponseException e) {
                 Response response = e.getResponse();
                 assertEquals(500, response.getStatusLine().getStatusCode());
 
                 String content = IOUtils.toString(response.getEntity().getContent(), Charset.defaultCharset());
                 JsonNode json = Json.ORDERED_MAPPER.readTree(content);
-                assertEquals(json.get("error").get("by").asText(), "elasticsearch");
-                assertEquals(json.get("error").get("type").asText(), "org.elasticsearch.common.ParsingException");
-                assertTrue(json.get("error").get("reason").asText().contains("example_malformed_query"));
-                assertNotNull("Should contain a stack trace", json.get("error").get("stack_trace"));
+
+                assertTrue("error object field exists", json.has("error") && json.get("error").isObject());
+                JsonNode errorObj = json.get("error");
+                assertTrue("has 'by' field", errorObj.has("by") && errorObj.get("by").isTextual());
+                assertEquals(errorObj.get("by").asText(), "elasticsearch");
+                assertEquals(errorObj.get("type").asText(), "org.elasticsearch.common.ParsingException");
+                assertTrue(errorObj.get("reason").asText().contains("example_malformed_query"));
+                assertNotNull("Should contain a stack trace", errorObj.get("stack_trace"));
+
                 assertFalse(json.get("queries").isMissingNode());
                 assertEquals(2, json.get("hits").get("total").asInt());
 
@@ -1483,6 +1496,7 @@ public class ResolutionActionIT extends AbstractActionITCase {
             postResolution.setEntity(TEST_PAYLOAD_JOB_ERROR);
             try {
                 client.performRequest(postResolution);
+                fail("expected failure");
             } catch (ResponseException e) {
                 Response response = e.getResponse();
                 assertEquals(response.getStatusLine().getStatusCode(), 500);
@@ -1506,6 +1520,7 @@ public class ResolutionActionIT extends AbstractActionITCase {
             postResolutionQueriesNoTrace.setEntity(TEST_PAYLOAD_JOB_ERROR);
             try {
                 client.performRequest(postResolutionQueriesNoTrace);
+                fail("expected failure");
             } catch (ResponseException e) {
                 Response response = e.getResponse();
                 assertEquals(response.getStatusLine().getStatusCode(), 500);

@@ -22,11 +22,11 @@ import io.zentity.resolution.input.Attribute;
 import io.zentity.resolution.input.Input;
 import io.zentity.resolution.input.Term;
 import io.zentity.resolution.input.value.Value;
-import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.search.SearchAction;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.node.NodeClient;
+import org.elasticsearch.common.CheckedBiFunction;
 import org.elasticsearch.common.CheckedFunction;
 import org.elasticsearch.common.CheckedSupplier;
 import org.elasticsearch.common.settings.Settings;
@@ -126,7 +126,7 @@ public class Job {
         String indexName,
         SearchRequestBuilder searchRequest,
         SearchResponse response,
-        ElasticsearchException responseError,
+        Throwable responseError,
         List<String> resolvers,
         Map<Integer, FilterTree> groupedResolversFilterTree,
         List<String> termResolvers,
@@ -1513,8 +1513,10 @@ public class Job {
             // Submit query to Elasticsearch.
             return ActionRequestUtil
                 .toCompletableFuture(searchReqBuilder)
-                .handle(UnCheckedBiFunction.from((response, throwable) -> {
-                    ElasticsearchException responseError = null;
+                .handle(UnCheckedBiFunction.from(
+                    (CheckedBiFunction<? super SearchResponse, Throwable, Void, ? extends Exception>)
+                    (response, throwable) -> {
+                    Throwable responseError = null;
                     boolean fatalError = false;
 
                     if (throwable != null) {
@@ -1526,9 +1528,8 @@ public class Job {
                             missingIndices.add(idxEx.getIndex().getName());
                             responseError = idxEx;
                         } else {
-                            // TODO: maybe just throw this error?
                             fatalError = true;
-                            responseError = (ElasticsearchException) cause;
+                            responseError = cause;
                         }
                     }
 
@@ -1552,7 +1553,7 @@ public class Job {
 
                     // Stop traversing if there was an error not due to a missing index.
                     if (fatalError) {
-                        throw responseError;
+                        throw (Exception) responseError;
                     }
 
                     // Read response from Elasticsearch.
