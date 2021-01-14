@@ -12,7 +12,11 @@ zentity is developed in IntelliJ IDEA and uses Maven to manage dependencies, tes
 
 1. Install [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 2. Install [IntelliJ IDEA](https://www.jetbrains.com/idea/download/)
-3. Install [JDK 11](https://www.oracle.com/java/technologies/javase-jdk11-downloads.html)
+3. Install `JDK 11`
+3.1 [Zulu/OpenJDK](https://www.azul.com/downloads/zulu-community/?package=jdk) (recommended)
+3.2 [Oracle](https://www.oracle.com/java/technologies/javase-jdk11-downloads.html)
+4. Install [Docker](https://docs.docker.com/get-docker/)
+4.1 [Docker Compose](https://docs.docker.com/compose/install/) (optional)
 
 #### Create the project on IntelliJ IDEA
 
@@ -58,6 +62,29 @@ on the Elasticsearch container that can be attached to, for example via IntelliJ
 * `DEBUGGER_PORT` - What local port to expose the debugger on, default: a random port.
 * `DEBUGGER_SLEEP` - Duration to sleep in milliseconds for after starting the debugger,
 so it can be attached to before tests run, default: `5000`.
+
+### Docker Compose
+
+A [`docker-compose.yml`](docker-compose.yml) file is also provided to spin up an Elasticsearch and Kibana instance
+with the locally-built plugin installed. This is helpful for playing around with local builds before publishing changes.
+
+Ex:
+```shell script
+mvn clean package -DskipTests=true # build the plugin
+
+docker-compose up # Run both Elasticsearch and Kibana
+docker-compose down # Tear down Elasticsearch and Kibana
+
+# Run Elasticsearch@7.10.0 with a debugger exposed on localhost port 5050
+# and Kibana@7.10.0
+export DEBUGGER_PORT=5050
+export ELASTICSEARCH_VERSION=7.10.0
+export KIBANA_VERSION=7.10.0
+docker-compose up
+```
+
+
+
 
 ### Important files
 

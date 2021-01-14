@@ -20,7 +20,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          configuration: "changelog-builder-config.json"
+          configuration: ".github/changelog-builder-config.json"
       # Extract the tag
       # see: https://stackoverflow.com/a/58178121/4705719
       - name: Extract Release Tag

@@ -1,0 +1,47 @@
+version: '3'
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:${ES_VERSION:-7.10.1}
+    ports:
+      - "9200:9200" # http
+      - "${DEBUGGER_PORT:-5050}:5050" # debugger
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    user: "elasticsearch"
+    restart: always
+    volumes:
+    - ./target/releases/:/plugins
+    # install all plugins in mounted /plugin directory and start the elasticsearch server
+    command:
+       - /bin/bash
+       - -c
+       - ls /plugins/*.zip | xargs -n 1 echo 'file://' | tr -d " " | xargs elasticsearch-plugin install --batch && elasticsearch
+    environment:
+      - cluster.name=docker-cluster
+      - network.host=0.0.0.0
+      # minimum_master_nodes need to be explicitly set when bound on a public IP
+      # set to 1 to allow single node clusters
+      # Details: https://github.com/elastic/elasticsearch/pull/17288
+      - discovery.zen.minimum_master_nodes=1
+      # Reduce virtual memory requirements, see https://github.com/docker/for-win/issues/5202#issuecomment-637782971
+      - bootstrap.memory_lock=false
+      - "ES_JAVA_OPTS=-Xms1500m -Xmx1500m -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:5050"
+      - discovery.type=single-node
+  kibana:
+    image: docker.elastic.co/kibana/kibana-oss:${KIBANA_VERSION:-7.10.1}
+    hostname: kibana
+    links:
+      - elasticsearch
+    ports:
+      - "5601:5601"
+    environment:
+      - server.host=0.0.0.0
+      - elasticsearch.url=http://elasticsearch:9200
+      - elasticsearch.requestTimeout=500000
+      - xpack.security.enabled=false
+      - xpack.monitoring.enabled=false
+      - xpack.watcher.enabled=false
+      - xpack.graph.enabled=false
+      - xpack.security.useDefaultEsCredentials=true

@@ -14,7 +14,6 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
@@ -36,7 +35,7 @@ public abstract class AbstractITCase {
 
     private static final String DEFAULT_TAG = Optional
         .ofNullable(System.getenv("ELASTICSEARCH_VERSION"))
-        .orElse("latest");
+        .orElse("7.10.1");
 
     private static final DockerImageName DEFAULT_IMAGE = DockerImageName
         .parse("docker.elastic.co/elasticsearch/elasticsearch-oss")
