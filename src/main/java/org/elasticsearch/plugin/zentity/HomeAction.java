@@ -13,7 +13,11 @@ import java.util.Properties;
 import java.util.function.UnaryOperator;
 
 import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
+import static org.elasticsearch.rest.RestRequest.Method.DELETE;
 import static org.elasticsearch.rest.RestRequest.Method.GET;
+import static org.elasticsearch.rest.RestRequest.Method.PATCH;
+import static org.elasticsearch.rest.RestRequest.Method.POST;
+import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
 public class HomeAction extends BaseZentityAction {
     public HomeAction(ZentityConfig config) {
@@ -22,8 +26,13 @@ public class HomeAction extends BaseZentityAction {
 
     @Override
     public List<Route> routes() {
-        // TODO: add DELETE route
-        return List.of(new Route(GET, "_zentity"));
+        return List.of(
+            new Route(GET, "_zentity"),
+            new DeprecatedRoute(POST, "_zentity", "Only GET requests will be supported in future versions"),
+            new DeprecatedRoute(PUT, "_zentity", "Only GET requests will be supported in future versions"),
+            new DeprecatedRoute(DELETE, "_zentity", "Only GET requests will be supported in future versions"),
+            new DeprecatedRoute(PATCH, "_zentity", "Only GET requests will be supported in future versions")
+        );
     }
 
     @Override
@@ -51,7 +60,6 @@ public class HomeAction extends BaseZentityAction {
             builder.field("name", props.getProperty("name"));
             builder.field("description", props.getProperty("description"));
             builder.field("website", props.getProperty("zentity.website"));
-            builder.field("index_name", config.getModelsIndexName());
 
             builder.startObject("version");
             builder.field("zentity", props.getProperty("zentity.version"));
