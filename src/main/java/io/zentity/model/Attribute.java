@@ -6,8 +6,8 @@ import io.zentity.common.Json;
 import io.zentity.common.Patterns;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -16,7 +16,7 @@ import java.util.TreeSet;
 public class Attribute {
 
     public static final Set<String> VALID_TYPES = new TreeSet<>(
-            Arrays.asList("boolean", "date", "number", "string")
+        List.of("boolean", "date", "number", "string")
     );
 
     private final String name;

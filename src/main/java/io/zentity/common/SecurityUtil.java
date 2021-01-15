@@ -1,7 +1,9 @@
 package io.zentity.common;
 
+import io.zentity.common.FunctionalUtil.UnCheckedRunnable;
 import io.zentity.common.FunctionalUtil.UnCheckedSupplier;
 import org.elasticsearch.SpecialPermission;
+import org.elasticsearch.common.CheckedRunnable;
 import org.elasticsearch.common.CheckedSupplier;
 
 import java.security.AccessController;
@@ -36,5 +38,26 @@ public class SecurityUtil {
      */
     public static <T> T doPrivileged(CheckedSupplier<T, ?> func) {
         return doPrivileged(UnCheckedSupplier.from(func));
+    }
+
+    /**
+     * Run something with escalated privileges.
+     *
+     * @param runnable The runnable to run.
+     */
+    public static void doPrivileged(Runnable runnable) {
+        doPrivileged((Supplier<Void>) () -> {
+            runnable.run();
+            return null;
+        });
+    }
+
+    /**
+     * Run something, that might throw a checked exception, with escalated privileges.
+     *
+     * @param runnable The runnable to run.
+     */
+    public static void doPrivileged(CheckedRunnable<?> runnable) {
+        doPrivileged(UnCheckedRunnable.from(runnable));
     }
 }

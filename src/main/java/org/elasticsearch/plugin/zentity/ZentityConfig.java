@@ -7,7 +7,6 @@ import org.elasticsearch.env.Environment;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 
 public class ZentityConfig {
@@ -69,7 +68,7 @@ public class ZentityConfig {
     }
 
     public List<Setting<?>> getSettings() {
-        return Arrays.asList(
+        return List.of(
             RESOLUTION_MAX_CONCURRENT_JOBS,
             RESOLUTION_MAX_CONCURRENT_JOBS_PER_REQUEST,
             MODELS_INDEX_NAME,

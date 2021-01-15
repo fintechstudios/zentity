@@ -17,7 +17,7 @@ import org.elasticsearch.action.search.SearchResponseSections;
 import org.elasticsearch.action.search.ShardSearchFailure;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
-import org.elasticsearch.common.CheckedSupplier;
+import org.elasticsearch.common.CheckedRunnable;
 import org.elasticsearch.common.settings.ClusterSettings;
 import org.elasticsearch.common.settings.IndexScopedSettings;
 import org.elasticsearch.common.settings.Setting;
@@ -66,7 +66,7 @@ public class ZentityPlugin extends Plugin implements SystemIndexPlugin {
 
         // Initializing Jackson requires reflection permissions
         // see: https://github.com/elastic/elasticsearch/blob/fc5725597189a4ee36b265a8fb75fa616b63e41b/plugins/discovery-ec2/src/main/java/org/elasticsearch/discovery/ec2/Ec2DiscoveryPlugin.java#L60-L74
-        SecurityUtil.doPrivileged((CheckedSupplier<?, ?>) () -> {
+        SecurityUtil.doPrivileged((CheckedRunnable<?>) () -> {
             // kick jackson to do some static caching of declared members info
             // Maybe move this to another place, but it is very hacky so maybe ok to leave here?
             Json.MAPPER.readTree("{}");
@@ -143,7 +143,6 @@ public class ZentityPlugin extends Plugin implements SystemIndexPlugin {
                 Json.MAPPER.writeValueAsString(obj);
                 Json.ORDERED_MAPPER.writeValueAsString(obj);
             }));
-            return null;
         });
     }
 

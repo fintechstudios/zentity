@@ -45,12 +45,9 @@ public class HomeAction extends BaseZentityAction {
 
         final boolean pretty = restRequest.paramAsBoolean("pretty", false);
 
-        final UnaryOperator<XContentBuilder> prettyPrintModifier = (builder) -> {
-            if (pretty) {
-                return builder.prettyPrint();
-            }
-            return builder;
-        };
+        final UnaryOperator<XContentBuilder> prettyPrintModifier = pretty
+            ? XContentBuilder::prettyPrint
+            : UnaryOperator.identity();
 
         final UnaryOperator<XContentBuilder> propsResponseModifier = UnCheckedUnaryOperator.from((builder) -> {
             builder.startObject();

@@ -3,6 +3,8 @@ package io.zentity.resolution.input.value;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.zentity.model.ValidationException;
 
+import java.util.Objects;
+
 public abstract class Value implements ValueInterface {
 
     protected final String type = "value";
@@ -15,6 +17,7 @@ public abstract class Value implements ValueInterface {
      * @param value Attribute value.
      */
     Value(JsonNode value) throws ValidationException {
+        Objects.requireNonNull(value, "Value node cannot be null");
         this.validate(value);
         this.value = value;
     }
@@ -78,9 +81,22 @@ public abstract class Value implements ValueInterface {
     }
 
     @Override
-    public boolean equals(Object o) { return this.hashCode() == o.hashCode(); }
+    public boolean equals(Object o) {
+        if (o == null) {
+            return false;
+        }
+
+        if (o.getClass() != this.getClass()) {
+            return false;
+        }
+
+        Value otherVal = (Value) o;
+
+        return serialized().equals(otherVal.serialized());
+    }
 
     @Override
-    public int hashCode() { return this.serialized().hashCode(); }
-
+    public int hashCode() {
+        return this.serialized().hashCode();
+    }
 }

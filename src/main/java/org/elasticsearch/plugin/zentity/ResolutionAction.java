@@ -236,8 +236,8 @@ public class ResolutionAction extends BaseZentityAction {
         return buildAndRunJobAsync(client, body, reqParams, emptyMap())
             .thenApply(UnCheckedFunction.from((res) -> {
                 // Jackson needs reflection access, which requires escalated security
-                String responseJson = SecurityUtil.doPrivileged((
-                    CheckedSupplier<String, ?>) () -> responseWriter.writeValueAsString(res)
+                String responseJson = SecurityUtil.doPrivileged(
+                    (CheckedSupplier<String, ?>) () -> responseWriter.writeValueAsString(res)
                 );
 
                 RestStatus status = res.isFailure() ? RestStatus.INTERNAL_SERVER_ERROR : RestStatus.OK;

@@ -14,6 +14,7 @@ import io.zentity.resolution.input.value.StringValue;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Objects;
 
 public class Term implements Comparable<Term> {
 
@@ -56,6 +57,7 @@ public class Term implements Comparable<Term> {
     }
 
     private void validateTerm(String term) throws ValidationException {
+        Objects.requireNonNull(term, "term cannot be null");
         if (Patterns.EMPTY_STRING.matcher(term).matches()) {
             throw new ValidationException("A term must be a non-empty string.");
         }
@@ -150,7 +152,7 @@ public class Term implements Comparable<Term> {
      */
     public StringValue stringValue() throws ValidationException {
         if (this.stringValue == null) {
-            this.stringValue = new StringValue(new TextNode(this.term));
+            this.stringValue = new StringValue(TextNode.valueOf(this.term));
         }
         return this.stringValue;
     }
@@ -166,7 +168,19 @@ public class Term implements Comparable<Term> {
     }
 
     @Override
-    public boolean equals(Object o) { return this.hashCode() == o.hashCode(); }
+    public boolean equals(Object o) {
+        if (o == null) {
+            return false;
+        }
+
+        if (o.getClass() != this.getClass()) {
+            return false;
+        }
+
+        Term otherTerm = (Term) o;
+
+        return otherTerm.term.equals(term);
+    }
 
     @Override
     public int hashCode() { return this.term.hashCode(); }

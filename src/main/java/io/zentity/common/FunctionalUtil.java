@@ -3,6 +3,7 @@ package io.zentity.common;
 import org.elasticsearch.common.CheckedBiFunction;
 import org.elasticsearch.common.CheckedConsumer;
 import org.elasticsearch.common.CheckedFunction;
+import org.elasticsearch.common.CheckedRunnable;
 import org.elasticsearch.common.CheckedSupplier;
 
 import java.util.function.BiFunction;
@@ -137,6 +138,22 @@ public class FunctionalUtil {
 
         static <T, U, R, E extends Exception> UnCheckedBiFunction<T, U, R, E> from(CheckedBiFunction<T, U, R, E> f) {
             return f::apply;
+        }
+    }
+
+    @FunctionalInterface
+    public interface UnCheckedRunnable<E extends Exception> extends Runnable {
+        void runThrows() throws E;
+
+        default void run() {
+            sneakyWrap(() -> {
+                this.runThrows();
+                return null;
+            });
+        }
+
+        static <E extends Exception> UnCheckedRunnable<E> from(CheckedRunnable<E> runnable) {
+            return runnable::run;
         }
     }
 }

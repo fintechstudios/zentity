@@ -45,8 +45,6 @@ import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
 public class ModelsAction extends BaseZentityAction {
 
-    public static final String INDEX_NAME = ".zentity-models";
-
     public ModelsAction(ZentityConfig config) {
         super(config);
     }
@@ -202,12 +200,9 @@ public class ModelsAction extends BaseZentityAction {
         Method method = restRequest.method();
         String requestBody = restRequest.content().utf8ToString();
 
-        final UnaryOperator<XContentBuilder> prettyPrintModifier = (builder) -> {
-            if (pretty) {
-                return builder.prettyPrint();
-            }
-            return builder;
-        };
+        final UnaryOperator<XContentBuilder> prettyPrintModifier = pretty
+            ? XContentBuilder::prettyPrint
+            : UnaryOperator.identity();
 
         return errorHandlingConsumer(channel -> {
             // Validate input
