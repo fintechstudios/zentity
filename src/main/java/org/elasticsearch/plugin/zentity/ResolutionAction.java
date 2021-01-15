@@ -262,6 +262,11 @@ public class ResolutionAction extends BaseZentityAction {
     }
 
     @Override
+    public boolean allowSystemIndexAccessByDefault() {
+        return true;
+    }
+
+    @Override
     protected RestChannelConsumer prepareRequest(RestRequest restRequest, NodeClient client) {
         if (!restRequest.hasContent()) {
             // Validate the request body.

@@ -2,7 +2,7 @@ package org.elasticsearch.plugin.zentity;
 
 import io.zentity.common.ActionRequestUtil;
 import io.zentity.common.CompletableFutureUtil;
-import io.zentity.common.FunctionalUtil;
+import io.zentity.common.FunctionalUtil.UnCheckedFunction;
 import io.zentity.common.FunctionalUtil.UnCheckedUnaryOperator;
 import io.zentity.common.XContentUtil;
 import org.elasticsearch.ElasticsearchSecurityException;
@@ -92,8 +92,10 @@ public class SetupAction extends BaseZentityAction {
             .exceptionally(ex -> {
                 Throwable cause = CompletableFutureUtil.getCause(ex);
                 if (cause instanceof ElasticsearchSecurityException) {
-                    cause = new ForbiddenException("The " + config.getModelsIndexName() + " index does not exist and you do not have the 'create_index' privilege. An authorized user must create the index by submitting: POST _zentity/_setup");
-                    cause.initCause(ex);
+                    String message = "The " + config.getModelsIndexName() + " index does not exist" +
+                        " and you do not have the 'create_index' privilege." +
+                        " An authorized user must create the index by submitting: POST _zentity/_setup";
+                    cause = new ForbiddenException(message, cause);
                 }
                 throw new CompletionException(cause);
             });
@@ -136,25 +138,29 @@ public class SetupAction extends BaseZentityAction {
     }
 
     @Override
-    protected RestChannelConsumer prepareRequest(RestRequest restRequest, NodeClient client) {
+    public boolean allowSystemIndexAccessByDefault() {
+        return true;
+    }
 
+    @Override
+    protected RestChannelConsumer prepareRequest(RestRequest restRequest, NodeClient client) {
         // Parse request
         final boolean pretty = restRequest.paramAsBoolean("pretty", false);
         final int numberOfShards = restRequest.paramAsInt("number_of_shards", config.getModelsIndexDefaultNumberOfShards());
         final int numberOfReplicas = restRequest.paramAsInt("number_of_replicas", config.getModelsIndexDefaultNumberOfReplicas());
         final Method method = restRequest.method();
 
-        final UnaryOperator<XContentBuilder> prettyPrintModifier = (builder) -> {
-            if (pretty) {
-                return builder.prettyPrint();
-            }
-            return builder;
-        };
+        // Configure an XContentBuilder to use pretty print if the request says to
+        final UnaryOperator<XContentBuilder> prettyPrintModifier = pretty
+            ? XContentBuilder::prettyPrint
+            : UnaryOperator.identity();
 
+        // Build the AcknowledgedResponse given an XContentBuilder
         final UnaryOperator<XContentBuilder> ackResponseModifier = UnCheckedUnaryOperator.from(
             (builder) -> new AcknowledgedResponse(true).toXContent(builder, ToXContent.EMPTY_PARAMS)
         );
 
+        // Put together the pretty-printer and the ack response builder
         final UnaryOperator<XContentBuilder> responseBuilderFunc = XContentUtil.composeModifiers(
             List.of(prettyPrintModifier, ackResponseModifier)
         );
@@ -169,7 +175,7 @@ public class SetupAction extends BaseZentityAction {
                 throw new NotImplementedException("Method and endpoint not implemented.");
             }
 
-            fut.thenApply(FunctionalUtil.UnCheckedFunction.from(res -> XContentUtil.jsonBuilder(responseBuilderFunc)))
+            fut.thenApply(UnCheckedFunction.from(res -> XContentUtil.jsonBuilder(responseBuilderFunc)))
                 .thenAccept(builder -> channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder)))
                 .get();
         });

@@ -187,7 +187,14 @@ public class ModelsAction extends BaseZentityAction {
     }
 
     @Override
+    public boolean allowSystemIndexAccessByDefault() {
+        return true;
+    }
+
+    @Override
     protected RestChannelConsumer prepareRequest(RestRequest restRequest, NodeClient client) {
+        // Allow access the model system index
+        client.threadPool().getThreadContext().markAsSystemContext();
 
         // Parse request
         String entityType = restRequest.param("entity_type");

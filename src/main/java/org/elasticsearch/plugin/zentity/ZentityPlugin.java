@@ -25,8 +25,9 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.SettingsFilter;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.plugins.ActionPlugin;
+import org.elasticsearch.indices.SystemIndexDescriptor;
 import org.elasticsearch.plugins.Plugin;
+import org.elasticsearch.plugins.SystemIndexPlugin;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestHandler;
 import org.elasticsearch.rest.RestStatus;
@@ -47,7 +48,7 @@ import java.util.Properties;
 import java.util.TreeMap;
 import java.util.function.Supplier;
 
-public class ZentityPlugin extends Plugin implements ActionPlugin {
+public class ZentityPlugin extends Plugin implements SystemIndexPlugin {
 
     private static final Properties PROPERTIES = new Properties();
 
@@ -188,5 +189,19 @@ public class ZentityPlugin extends Plugin implements ActionPlugin {
     @Override
     public List<Setting<?>> getSettings() {
         return config.getSettings();
+    }
+
+    /**
+     * Returns a {@link Collection} of {@link SystemIndexDescriptor}s that describe this plugin's system indices, including
+     * name, mapping, and settings.
+     *
+     * @param settings The node's settings.
+     * @return Descriptions of the system indices managed by this plugin.
+     */
+    @Override
+    public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings) {
+        return List.of(
+            new SystemIndexDescriptor(config.getModelsIndexName(), "The main index for storing Zentity Models")
+        );
     }
 }
