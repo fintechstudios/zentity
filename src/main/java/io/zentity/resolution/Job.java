@@ -52,8 +52,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -112,7 +110,7 @@ public class Job {
         Map<String, Resolver> resolverMap,
         List<String> resolverNames
     ) {
-        Map<String, Collection<String>> attributeSummary = new HashMap<>();
+        Map<String, Collection<String>> attributeSummary = new TreeMap<>();
         for (String resolverName : resolverNames) {
             attributeSummary.put(resolverName, resolverMap.get(resolverName).attributes());
         }
@@ -133,7 +131,7 @@ public class Job {
         FilterTree termResolversFilterTree
     ) {
         // structure the filters
-        Map<String, LoggedFilter> filters = new HashMap<>();
+        Map<String, LoggedFilter> filters = new TreeMap<>();
 
         LoggedFilter attrFilter = null;
         if (!resolvers.isEmpty() && !groupedResolversFilterTree.isEmpty()) {
@@ -147,7 +145,7 @@ public class Job {
         if (!resolvers.isEmpty() && !groupedResolversFilterTree.isEmpty()) {
             termsFilter = new LoggedFilter();
             termsFilter.resolverAttributes = buildResolverAttributeSummary(input.model().resolvers(), termResolvers);
-            Map<Integer, FilterTree> groupedTermsFilterTree = new HashMap<>();
+            Map<Integer, FilterTree> groupedTermsFilterTree = new TreeMap<>();
             groupedTermsFilterTree.put(0, termResolversFilterTree);
             termsFilter.groupedTree = groupedTermsFilterTree;
         }
@@ -221,7 +219,7 @@ public class Job {
         // Make the "script" clause
         String scriptCode = "DateFormat df = new SimpleDateFormat(params.format); df.setTimeZone(TimeZone.getTimeZone('UTC')); return df.format(doc[params.field].value.toInstant().toEpochMilli())";
 
-        Map<String, Object> params = new HashMap<>();
+        Map<String, Object> params = new TreeMap<>();
         params.put("field", indexFieldName);
         params.put("format", format);
 
@@ -245,7 +243,7 @@ public class Job {
         // Find any index fields that need to be included in the "script_fields" clause.
         // Currently this includes any index field that is associated with a "date" attribute,
         // which requires the "_source" value to be reformatted to a normalized format.
-        Map<String, Script> scriptMap = new HashMap<>();
+        Map<String, Script> scriptMap = new TreeMap<>();
 
         Index index = input.model().indices().get(indexName);
         for (String attributeName : index.attributeIndexFieldsMap().keySet()) {
@@ -399,7 +397,7 @@ public class Job {
             // Order of precedence:
             //  - Input attribute params override model attribute params
             //  - Model attribute params override matcher attribute params
-            Map<String, String> params = new HashMap<>();
+            Map<String, String> params = new TreeMap<>();
             params.putAll(matcher.params());
             params.putAll(model.attributes().get(attributeName).params());
             params.putAll(attributes.get(attributeName).params());
@@ -626,7 +624,7 @@ public class Job {
      * @return For each attribute, the number of resolvers it appears in.
      */
     static Map<String, Integer> countAttributesAcrossResolvers(Model model, List<String> resolvers) {
-        Map<String, Integer> counts = new HashMap<>();
+        Map<String, Integer> counts = new TreeMap<>();
         for (String resolverName : resolvers) {
             for (String attributeName : model.resolvers().get(resolverName).attributes()) {
                 counts.put(attributeName, counts.getOrDefault(attributeName, 0) + 1);
@@ -729,8 +727,8 @@ public class Job {
      */
     private void initializeState() {
         this.attributeIdConfidenceScores = new AttributeIdConfidenceScoreMap();
-        this.attributes = new HashMap<>(this.config.input.attributes());
-        this.docIds = new HashMap<>();
+        this.attributes = new TreeMap<>(this.config.input.attributes());
+        this.docIds = new TreeMap<>();
         this.hits = new ArrayList<>();
         this.queries = new ArrayList<>();
     }
@@ -785,7 +783,7 @@ public class Job {
     }
 
     private Map<String, Set<Value>> buildTermValuesMap(String indexName, Set<String> resolverAttributes) {
-        Map<String, Set<Value>> termValues = new HashMap<>();
+        Map<String, Set<Value>> termValues = new TreeMap<>();
         for (String attributeName : resolverAttributes) {
             String attributeType = this.config.input.model().attributes().get(attributeName).type();
             for (Term term : this.config.input.terms()) {
@@ -793,7 +791,7 @@ public class Job {
                     switch (attributeType) {
                         case "boolean":
                             if (term.isBoolean()) {
-                                termValues.putIfAbsent(attributeName, new HashSet<>());
+                                termValues.putIfAbsent(attributeName, new TreeSet<>());
                                 termValues.get(attributeName).add(term.booleanValue());
                             }
                             break;
@@ -806,7 +804,7 @@ public class Job {
                                 && !this.config.input.attributes().get(attributeName).params().get("format").equals("null") && !Patterns.EMPTY_STRING.matcher(this.config.input.attributes().get(attributeName).params().get("format")).matches()) {
                                 String format = this.config.input.attributes().get(attributeName).params().get("format");
                                 if (term.isDate(format)) {
-                                    termValues.putIfAbsent(attributeName, new HashSet<>());
+                                    termValues.putIfAbsent(attributeName, new TreeSet<>());
                                     termValues.get(attributeName).add(term.dateValue());
                                 }
                             } else {
@@ -815,7 +813,7 @@ public class Job {
                                 if (params.containsKey("format") && !params.get("format").equals("null") && !Patterns.EMPTY_STRING.matcher(params.get("format")).matches()) {
                                     String format = params.get("format");
                                     if (term.isDate(format)) {
-                                        termValues.putIfAbsent(attributeName, new HashSet<>());
+                                        termValues.putIfAbsent(attributeName, new TreeSet<>());
                                         termValues.get(attributeName).add(term.dateValue());
                                     }
                                 } else {
@@ -828,7 +826,7 @@ public class Job {
                                         if (params.containsKey("format") && !params.get("format").equals("null") && !Patterns.EMPTY_STRING.matcher(params.get("format")).matches()) {
                                             String format = params.get("format");
                                             if (term.isDate(format)) {
-                                                termValues.putIfAbsent(attributeName, new HashSet<>());
+                                                termValues.putIfAbsent(attributeName, new TreeSet<>());
                                                 termValues.get(attributeName).add(term.dateValue());
                                             }
                                         }
@@ -841,12 +839,12 @@ public class Job {
                             break;
                         case "number":
                             if (term.isNumber()) {
-                                termValues.putIfAbsent(attributeName, new HashSet<>());
+                                termValues.putIfAbsent(attributeName, new TreeSet<>());
                                 termValues.get(attributeName).add(term.numberValue());
                             }
                             break;
                         case "string":
-                            termValues.putIfAbsent(attributeName, new HashSet<>());
+                            termValues.putIfAbsent(attributeName, new TreeSet<>());
                             termValues.get(attributeName).add(term.stringValue());
                             break;
                         default:
@@ -863,7 +861,7 @@ public class Job {
         if (!this.attributes.isEmpty()) {
             for (String attributeName : this.attributes.keySet()) {
                 for (Value value : this.attributes.get(attributeName).values()) {
-                    termValues.putIfAbsent(attributeName, new HashSet<>());
+                    termValues.putIfAbsent(attributeName, new TreeSet<>());
                     termValues.get(attributeName).add(value);
                 }
             }
@@ -873,7 +871,7 @@ public class Job {
     }
 
     private Map<String, Attribute> buildAttributeMap(Map<String, Set<Value>> termValues) throws ValidationException {
-        Map<String, Attribute> termAttributes = new HashMap<>();
+        Map<String, Attribute> termAttributes = new TreeMap<>();
         for (String attributeName : termValues.keySet()) {
             String attributeType = this.config.input.model().attributes().get(attributeName).type();
             Set<Value> values = termValues.get(attributeName);
@@ -1062,7 +1060,7 @@ public class Job {
         // unlike structured attribute search where the attributes are assumed be known.
         if (canQueryTerms) {
             // Get the names of each attribute of each in-scope resolver.
-            Set<String> resolverAttributes = new HashSet<>();
+            Set<String> resolverAttributes = new TreeSet<>();
             for (String resolverName : this.config.input.model().resolvers().keySet()) {
                 resolverAttributes.addAll(this.config.input.model().resolvers().get(resolverName).attributes());
             }
@@ -1167,7 +1165,7 @@ public class Job {
     ) throws ValidationException {
         Value value = Value.create(attributeType, valueNode);
         if (!docAttributes.containsKey(attributeName)) {
-            docAttributes.put(attributeName, new HashSet<>());
+            docAttributes.put(attributeName, new TreeSet<>());
         }
         if (!nextInputAttributes.containsKey(attributeName)) {
             nextInputAttributes.put(attributeName, new Attribute(attributeName, attributeType));
@@ -1288,12 +1286,12 @@ public class Job {
             ObjectNode docExpObjNode = docObjNode.putObject("_explanation");
             ObjectNode docExpResolversObjNode = docExpObjNode.putObject("resolvers");
             ArrayNode docExpMatchesArrNode = docExpObjNode.putArray("matches");
-            Set<String> expAttributes = new HashSet<>();
-            Set<String> matchedQueryNames = new HashSet<>();
+            Set<String> expAttributes = new TreeSet<>();
+            Set<String> matchedQueryNames = new TreeSet<>();
 
             // Create tuple-like objects that describe which attribute values matched which
             // index field values using which matchers and matcher parameters.
-            Map<String, List<Double>> attributeIdConfidenceBaseScores = new HashMap<>();
+            Map<String, List<Double>> attributeIdConfidenceBaseScores = new TreeMap<>();
             for (JsonNode mqNode : docObjNode.get("matched_queries")) {
                 String serializedName = mqNode.asText();
                 QueryValue queryValue = QueryValue.deserialize(serializedName);
@@ -1444,8 +1442,8 @@ public class Job {
         final AtomicInteger hop = new AtomicInteger(0);
         final AtomicInteger maxHops = new AtomicInteger(this.config.maxHops <= -1 ? Integer.MAX_VALUE : this.config.maxHops);
         final AtomicBoolean namedFilters = new AtomicBoolean(this.config.includeExplanation || this.config.includeScore);
-        final Set<String> missingIndices = Collections.synchronizedSet(new HashSet<>());
-        final Map<String, Attribute> nextInputAttributes = Collections.synchronizedMap(new HashMap<>());
+        final Set<String> missingIndices = Collections.synchronizedSet(new TreeSet<>());
+        final Map<String, Attribute> nextInputAttributes = Collections.synchronizedMap(new TreeMap<>());
         final AtomicInteger queryCounter = new AtomicInteger(0);
 
         final CompletableFuture<Void> emptyResultFut = CompletableFuture.completedFuture(null);
@@ -1460,7 +1458,7 @@ public class Job {
 
             // Track _ids for this index.
             if (!this.docIds.containsKey(indexName)) {
-                this.docIds.put(indexName, new HashSet<>());
+                this.docIds.put(indexName, new TreeSet<>());
             }
 
             // "_explanation" uses named queries, and each value of the "_name" fields must be unique.
@@ -1585,8 +1583,8 @@ public class Job {
 
                         // Gather attributes from the doc. Store them in the "_attributes" field of the doc,
                         // and include them in the attributes for subsequent queries.
-                        Map<String, Set<Value>> docAttributes = new HashMap<>();
-                        Map<String, JsonNode> docIndexFields = new HashMap<>();
+                        Map<String, Set<Value>> docAttributes = new TreeMap<>();
+                        Map<String, JsonNode> docIndexFields = new TreeMap<>();
 
                         parseDocHit(doc, indexName, nextInputAttributes, docAttributes, docIndexFields);
 

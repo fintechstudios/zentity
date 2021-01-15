@@ -8,8 +8,8 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 public class LoggedFilter {
     // resolvers
@@ -33,9 +33,9 @@ public class LoggedFilter {
         @Override
         public void serialize(Map<String, Collection<String>> value, JsonGenerator gen, SerializerProvider provider) throws IOException {
             // nest the collection under each resolver into an "attributes" key
-            final Map<String, Map<String, Collection<String>>> finalMap = new HashMap<>();
+            final Map<String, Map<String, Collection<String>>> finalMap = new TreeMap<>();
             value.forEach((key, attributes) -> {
-                Map<String, Collection<String>> nested = new HashMap<>();
+                Map<String, Collection<String>> nested = new TreeMap<>();
                 nested.put("attributes", attributes);
                 finalMap.put(key, nested);
             });

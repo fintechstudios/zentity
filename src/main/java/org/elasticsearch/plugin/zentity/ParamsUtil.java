@@ -5,9 +5,9 @@ import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.plugin.zentity.exceptions.BadRequestException;
 import org.elasticsearch.rest.RestRequest;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.function.Function;
 
 public class ParamsUtil {
@@ -79,7 +79,7 @@ public class ParamsUtil {
      * @return A map from the parameter name to the parameter value in the request.
      */
     public static Map<String, String> readAll(RestRequest req, String ...params) {
-        Map<String, String> paramsMap = new HashMap<>();
+        Map<String, String> paramsMap = new TreeMap<>();
 
         for (String param : params) {
             paramsMap.put(param, req.param(param));

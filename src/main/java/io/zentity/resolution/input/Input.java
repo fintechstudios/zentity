@@ -10,19 +10,19 @@ import io.zentity.model.ValidationException;
 import io.zentity.resolution.input.scope.Scope;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 public class Input {
 
-    private Map<String, Attribute> attributes = new HashMap<>();
-    private Map<String, Set<String>> ids = new HashMap<>();
+    private Map<String, Attribute> attributes = new TreeMap<>();
+    private Map<String, Set<String>> ids = new TreeMap<>();
     private Model model;
     private final Scope scope = new Scope();
-    private Set<Term> terms = new HashSet<>();
+    private Set<Term> terms = new TreeSet<>();
 
     public Input(String json, Model model) throws ValidationException, IOException {
         this.model = model;
@@ -131,7 +131,7 @@ public class Input {
      * @throws ValidationException
      */
     public static Map<String, Set<String>> parseIds(JsonNode requestBody, Model model) throws ValidationException {
-        Map<String, Set<String>> indexToIdsMap = new HashMap<>();
+        Map<String, Set<String>> indexToIdsMap = new TreeMap<>();
         if (!requestBody.has("ids") || requestBody.get("ids").size() == 0) {
             return indexToIdsMap;
         }
@@ -149,7 +149,7 @@ public class Input {
             }
 
             // Parse the id values.
-            Set<String> validIds = new HashSet<>();
+            Set<String> validIds = new TreeSet<>();
             if (!idsValues.isNull() && !idsValues.isArray()) {
                 throw new ValidationException("'ids." + indexName + "' must be an array.");
             }
@@ -180,7 +180,7 @@ public class Input {
      * @throws JsonProcessingException
      */
     public static Map<String, Attribute> parseAttributes(JsonNode requestBody, Model model) throws ValidationException, JsonProcessingException {
-        Map<String, Attribute> attributesObj = new HashMap<>();
+        Map<String, Attribute> attributesObj = new TreeMap<>();
         if (!requestBody.has("attributes") || requestBody.get("attributes").size() == 0) {
             return attributesObj;
         }
@@ -209,7 +209,7 @@ public class Input {
      * @throws ValidationException
      */
     public static Set<Term> parseTerms(JsonNode requestBody) throws ValidationException {
-        Set<Term> terms = new HashSet<>();
+        Set<Term> terms = new TreeSet<>();
         if (!requestBody.has("terms") || requestBody.get("terms").size() == 0) {
             return terms;
         }
@@ -350,7 +350,7 @@ public class Input {
         // For example, 'date' attributes require the 'format' field to be specified in the matcher params,
         // the model attribute params, or the input attribute params so that the dates can be queried and returned
         // in a normalized fashion. Currently this only applies to 'date' attribute types.
-        Set<String> paramsValidated = new HashSet<>();
+        Set<String> paramsValidated = new TreeSet<>();
         for (String indexName : this.model.indices().keySet()) {
             Index index = this.model.indices().get(indexName);
             for (String attributeName : index.attributeIndexFieldsMap().keySet()) {
@@ -363,7 +363,7 @@ public class Input {
                 switch (this.model.attributes().get(attributeName).type()) {
                     case "date":
                         // Check if the required params are defined in the input attribute.
-                        Map<String, String> params = new HashMap<>();
+                        Map<String, String> params = new TreeMap<>();
                         if (this.attributes.containsKey(attributeName)) {
                             params = this.attributes.get(attributeName).params();
                         }

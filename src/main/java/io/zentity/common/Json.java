@@ -7,9 +7,9 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.NumericNode;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.TreeMap;
 
 public class Json {
 
@@ -24,7 +24,7 @@ public class Json {
      * @throws JsonProcessingException If the object cannot be written as a string.
      */
     public static Map<String, String> toStringMap(Iterator<Map.Entry<String, JsonNode>> iterator) throws JsonProcessingException {
-        Map<String, String> map = new HashMap<>();
+        Map<String, String> map = new TreeMap<>();
         while (iterator.hasNext()) {
             Map.Entry<String, JsonNode> paramNode = iterator.next();
             String paramField = paramNode.getKey();

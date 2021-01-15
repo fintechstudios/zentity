@@ -9,18 +9,18 @@ import io.zentity.model.ValidationException;
 import io.zentity.resolution.input.value.Value;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 public class Attribute {
 
     private final String name;
     private final String type;
-    private final Map<String, String> params = new HashMap<>();
-    private final Set<Value> values = new HashSet<>();
+    private final Map<String, String> params = new TreeMap<>();
+    private final Set<Value> values = new TreeSet<>();
 
     public Attribute(String name, String type, JsonNode json) throws ValidationException, JsonProcessingException {
         this(name, type);

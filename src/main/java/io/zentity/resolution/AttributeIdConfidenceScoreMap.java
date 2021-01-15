@@ -1,11 +1,11 @@
 package io.zentity.resolution;
 
-import java.util.HashMap;
+import java.util.TreeMap;
 
 /**
  * A map to cache confidence scores of attribute identities.
  */
-class AttributeIdConfidenceScoreMap extends HashMap<String, Double> {
+class AttributeIdConfidenceScoreMap extends TreeMap<String, Double> {
     private static String makeKey(String attributeName, String matcherName, String indexName, String indexFieldName) {
         return attributeName + "/" + matcherName + "/" + indexName + "/" + indexFieldName;
     }

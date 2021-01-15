@@ -8,17 +8,17 @@ import io.zentity.model.ValidationException;
 import io.zentity.resolution.input.Attribute;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 public abstract class ScopeField {
 
-    protected Map<String, Attribute> attributes = new HashMap<>();
-    protected Set<String> indices = new HashSet<>();
-    protected Set<String> resolvers = new HashSet<>();
+    protected Map<String, Attribute> attributes = new TreeMap<>();
+    protected Set<String> indices = new TreeSet<>();
+    protected Set<String> resolvers = new TreeSet<>();
 
     public ScopeField() {
     }
@@ -34,7 +34,7 @@ public abstract class ScopeField {
      * @throws JsonProcessingException
      */
     public static Map<String, Attribute> parseAttributes(String scopeType, Model model, JsonNode scopeAttributes) throws ValidationException, JsonProcessingException {
-        Map<String, Attribute> attributesMap = new HashMap<>();
+        Map<String, Attribute> attributesMap = new TreeMap<>();
         if (scopeAttributes.isNull()) {
             return attributesMap;
         }
@@ -70,7 +70,7 @@ public abstract class ScopeField {
      * @throws ValidationException
      */
     public static Set<String> parseIndices(String scopeType, JsonNode scopeIndices) throws ValidationException {
-        Set<String> indices = new HashSet<>();
+        Set<String> indices = new TreeSet<>();
         if (scopeIndices.isNull()) {
             return indices;
         }
@@ -106,7 +106,7 @@ public abstract class ScopeField {
      * @throws ValidationException
      */
     public static Set<String> parseResolvers(String scopeType, JsonNode scopeResolvers) throws ValidationException {
-        Set<String> resolvers = new HashSet<>();
+        Set<String> resolvers = new TreeSet<>();
         if (scopeResolvers.isNull()) {
             return resolvers;
         }

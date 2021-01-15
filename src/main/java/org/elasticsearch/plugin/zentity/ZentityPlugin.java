@@ -41,10 +41,10 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.TreeMap;
 import java.util.function.Supplier;
 
 public class ZentityPlugin extends Plugin implements ActionPlugin {
@@ -74,10 +74,10 @@ public class ZentityPlugin extends Plugin implements ActionPlugin {
             // it must be serialized here to initialize the jackson reflection cache
 
             LoggedFilter filter = new LoggedFilter();
-            Map<String, Collection<String>> resolverAttrs = new HashMap<>();
+            Map<String, Collection<String>> resolverAttrs = new TreeMap<>();
             resolverAttrs.put("init", Collections.singleton("attr"));
             filter.resolverAttributes = resolverAttrs;
-            Map<Integer, FilterTree> groupedTree = new HashMap<>();
+            Map<Integer, FilterTree> groupedTree = new TreeMap<>();
             FilterTree filterTree = new FilterTree();
             filterTree.put("init", new FilterTree());
             groupedTree.put(0, filterTree);
@@ -93,7 +93,7 @@ public class ZentityPlugin extends Plugin implements ActionPlugin {
                 new Suggest(Collections.emptyList()),
                 false,
                 null,
-                new SearchProfileShardResults(new HashMap<>()),
+                new SearchProfileShardResults(new TreeMap<>()),
                 1
             );
             search.response = new SearchResponse(
@@ -109,7 +109,7 @@ public class ZentityPlugin extends Plugin implements ActionPlugin {
             search.responseError = new ElasticsearchStatusException("This was not found", RestStatus.NOT_FOUND);
 
             LoggedQuery query = new LoggedQuery();
-            Map<String, LoggedFilter> filters = new HashMap<>();
+            Map<String, LoggedFilter> filters = new TreeMap<>();
             filters.put("init", filter);
             query.filters = filters;
             query.hop = 1;

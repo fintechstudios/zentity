@@ -8,14 +8,14 @@ import io.zentity.common.Patterns;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 public class IndexField {
 
-    private static final Set<String> REQUIRED_FIELDS = new HashSet<>(
+    private static final Set<String> REQUIRED_FIELDS = new TreeSet<>(
         Collections.singletonList("attribute")
     );
 
@@ -153,10 +153,11 @@ public class IndexField {
         validateObject(json);
 
         // Validate the existence of required fields.
-        for (String field : REQUIRED_FIELDS)
+        for (String field : REQUIRED_FIELDS) {
             if (!json.has(field)) {
                 throw new ValidationException("'indices." + this.index + "." + this.name + "' is missing required field '" + field + "'.");
             }
+        }
 
         // Validate and hold the state of fields.
         Iterator<Map.Entry<String, JsonNode>> fields = json.fields();

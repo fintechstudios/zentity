@@ -6,7 +6,6 @@ import io.zentity.common.Patterns;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -15,7 +14,7 @@ import java.util.TreeSet;
 
 public class Index {
 
-    private static final Set<String> REQUIRED_FIELDS = new HashSet<>(
+    private static final Set<String> REQUIRED_FIELDS = new TreeSet<>(
         Collections.singletonList("fields")
     );
 
