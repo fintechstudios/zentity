@@ -10,13 +10,13 @@ zentity is developed in IntelliJ IDEA and uses Maven to manage dependencies, tes
 
 ### Setting up the development environment
 
-1. Install [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
-2. Install [IntelliJ IDEA](https://www.jetbrains.com/idea/download/)
-3. Install `JDK 11`
-3.1 [Zulu/OpenJDK](https://www.azul.com/downloads/zulu-community/?package=jdk) (recommended)
-3.2 [Oracle](https://www.oracle.com/java/technologies/javase-jdk11-downloads.html)
-4. Install [Docker](https://docs.docker.com/get-docker/)
-4.1 [Docker Compose](https://docs.docker.com/compose/install/) (optional)
+1. Install [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)  
+2. Install [IntelliJ IDEA](https://www.jetbrains.com/idea/download/)  
+3. Install `JDK 11`  
+3.1 [Zulu/OpenJDK](https://www.azul.com/downloads/zulu-community/?package=jdk) (recommended)  
+3.2 [Oracle](https://www.oracle.com/java/technologies/javase-jdk11-downloads.html)  
+4. Install [Docker](https://docs.docker.com/get-docker/)  
+4.1 [Docker Compose](https://docs.docker.com/compose/install/) (optional)  
 
 #### Create the project on IntelliJ IDEA
 
@@ -79,11 +79,14 @@ docker-compose down # Tear down Elasticsearch and Kibana
 # and Kibana@7.10.0
 export DEBUGGER_PORT=5050
 export ELASTICSEARCH_VERSION=7.10.0
+export ELASTICSEARCH_PORT=9200
 export KIBANA_VERSION=7.10.0
+export KIBANA_PORT=5601
 docker-compose up
 ```
 
-
+There is also a [`docker-compose.cluster.yml`](docker-compose.cluster.yml) that replicates a 3 node cluster with one
+primary node and two data nodes. The available environment variables are identical to the single-node docker-compose file.
 
 
 ### Important files

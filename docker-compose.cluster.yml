@@ -1,0 +1,110 @@
+version: '3.7'
+
+x-plugin-volume: &plugin-volume "./target/releases/:/plugins"
+
+x-base-env: &base-env
+  cluster.name: docker-cluster
+  network.host: 0.0.0.0
+  # minimum_master_nodes need to be explicitly set when bound on a public IP
+  # set to 1 to allow single node clusters
+  # Details: https://github.com/elastic/elasticsearch/pull/17288
+  discovery.zen.minimum_master_nodes: "1"
+  # Reduce virtual memory requirements, see https://github.com/docker/for-win/issues/5202#issuecomment-637782971
+  bootstrap.memory_lock: "false"
+  ES_JAVA_OPTS: "-Xms512m -Xmx512m -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:5050"
+  http.cors.enabled: "true"
+  http.cors.allow-origin: "*"
+  cluster.initial_master_nodes: primary
+
+x-base-es: &base-es
+  image: docker.elastic.co/elasticsearch/elasticsearch-oss:${ES_VERSION:-7.10.1}
+  user: "elasticsearch"
+  # install all plugins in mounted /plugin directory and start the elasticsearch server
+  command:
+    - /bin/bash
+    - -c
+    - ls /plugins/*.zip | xargs -n 1 echo 'file://' | tr -d " " | xargs elasticsearch-plugin install --batch && elasticsearch
+  ulimits:
+    nofile:
+      soft: 65536
+      hard: 65536
+    memlock:
+      soft: -1
+      hard: -1
+  environment:
+    <<: *base-env
+  networks:
+    - elastic
+
+x-base-primary-node: &base-primary-node
+  <<: *base-es
+  environment:
+    <<: *base-env
+    node.name: primary
+    node.master: "true"
+    node.data: "false"
+    node.ingest: "false"
+
+x-base-data-node: &base-data-node
+  <<: *base-es
+  environment:
+    <<: *base-env
+    discovery.zen.ping.unicast.hosts: elasticsearch
+    node.master: "false"
+    node.data: "true"
+    node.ingest: "true"
+
+services:
+  elasticsearch:
+    <<: *base-primary-node
+    hostname: elasticsearch
+    container_name: elasticsearch
+    volumes:
+      - *plugin-volume
+      - es-primary:/usr/share/elasticsearch/data
+    ports:
+      - "${ES_PORT:-9200}:9200" # http
+      - "${DEBUGGER_PORT:-5050}:5050" # debugger
+
+  es-data-1:
+    <<: *base-data-node
+    hostname: es-data-1
+    container_name: es-data-1
+    volumes:
+      - *plugin-volume
+      - es-data-1:/usr/share/elasticsearch/data
+
+  es-data-2:
+    <<: *base-data-node
+    hostname: es-data-2
+    container_name: es-data-2
+    volumes:
+      - *plugin-volume
+      - es-data-2:/usr/share/elasticsearch/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana-oss:${KIBANA_VERSION:-7.10.1}
+    hostname: kibana
+    container_name: kibana
+    logging:
+      driver: none
+    environment:
+      - server.host=0.0.0.0
+      - server.name=kibana.local
+      - elasticsearch.url=http://elasticsearch:9200
+    ports:
+      - '${KIBANA_PORT:-5601}:5601'
+    networks:
+      - elastic
+
+
+volumes:
+  es-primary:
+    driver: local
+  es-data-1:
+    driver: local
+  es-data-2:
+    driver: local
+
+networks:
+  elastic:
