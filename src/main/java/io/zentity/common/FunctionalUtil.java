@@ -13,6 +13,11 @@ import java.util.function.UnaryOperator;
 
 public class FunctionalUtil {
     /**
+     * A {@link Consumer} that does nothing.
+     */
+    public static final Consumer<Object> NOOP_CONSUMER = (ignored) -> {};
+
+    /**
      * Throw a checked exception as an unchecked one.
      *
      * <p>The compiler sees the signature with the throws T inferred to a RuntimeException type, so it

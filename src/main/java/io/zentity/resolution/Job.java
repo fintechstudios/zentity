@@ -22,6 +22,8 @@ import io.zentity.resolution.input.Attribute;
 import io.zentity.resolution.input.Input;
 import io.zentity.resolution.input.Term;
 import io.zentity.resolution.input.value.Value;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.elasticsearch.action.search.SearchAction;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
@@ -59,6 +61,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -73,6 +76,7 @@ import static io.zentity.resolution.BoolQueryUtils.BoolQueryCombiner.SHOULD;
  * A {@link Job} runs the resolution work.
  */
 public class Job {
+    private static final Logger LOG = LogManager.getLogger(Job.class);
 
     // Constants
     public static final boolean DEFAULT_INCLUDE_ATTRIBUTES = true;
@@ -92,6 +96,7 @@ public class Job {
     // Job configuration
     private final NodeClient client;
     private final JobConfig config;
+    private final Executor asyncExecutor;
 
     // Job state
     private AttributeIdConfidenceScoreMap attributeIdConfidenceScores;
@@ -100,10 +105,10 @@ public class Job {
     private List<JsonNode> hits;
     private List<LoggedQuery> queries;
 
-    public Job(NodeClient client, JobConfig config) {
+    Job(NodeClient client, JobConfig config, Executor executor) {
         this.client = client;
         this.config = config;
-        initializeState();
+        this.asyncExecutor = executor;
     }
 
     private static Map<String, Collection<String>> buildResolverAttributeSummary(
@@ -1510,100 +1515,100 @@ public class Job {
 
             // Submit query to Elasticsearch.
             return ActionRequestUtil
-                .toCompletableFuture(searchReqBuilder)
-                .handle(UnCheckedBiFunction.from(
-                    (CheckedBiFunction<? super SearchResponse, Throwable, Void, ? extends Exception>)
+                .toCompletableFuture(searchReqBuilder, asyncExecutor)
+                .handle(UnCheckedBiFunction.from((CheckedBiFunction<? super SearchResponse, Throwable, Void, ? extends Exception>)
                     (response, throwable) -> {
-                    Throwable responseError = null;
-                    boolean fatalError = false;
+                        Throwable responseError = null;
+                        boolean fatalError = false;
 
-                    if (throwable != null) {
-                        Throwable cause = CompletableFutureUtil.getCause(throwable);
+                        if (throwable != null) {
+                            Throwable cause = CompletableFutureUtil.getCause(throwable);
 
-                        if (cause instanceof IndexNotFoundException) {
-                            IndexNotFoundException idxEx = (IndexNotFoundException) cause;
-                            // Don't fail the job if an index was missing.
-                            missingIndices.add(idxEx.getIndex().getName());
-                            responseError = idxEx;
-                        } else {
-                            fatalError = true;
-                            responseError = cause;
+                            if (cause instanceof IndexNotFoundException) {
+                                IndexNotFoundException idxEx = (IndexNotFoundException) cause;
+                                // Don't fail the job if an index was missing.
+                                missingIndices.add(idxEx.getIndex().getName());
+                                responseError = idxEx;
+                            } else {
+                                fatalError = true;
+                                responseError = cause;
+                            }
                         }
-                    }
 
-                    // Log queries.
-                    if (config.includeQueries || config.profile) {
-                        LoggedQuery logged = buildLoggedQuery(
-                            config.input,
-                            hop.get(),
-                            queryCounter.get(),
-                            indexName,
-                            searchReqBuilder,
-                            response,
-                            responseError,
-                            resolvers,
-                            resolversFilterTreeGrouped,
-                            termResolvers,
-                            termResolversFilterTree
-                        );
-                        queries.add(logged);
-                    }
-
-                    // Stop traversing if there was an error not due to a missing index.
-                    if (fatalError) {
-                        throw (Exception) responseError;
-                    }
-
-                    // Read response from Elasticsearch.
-                    JsonNode responseData = null;
-                    if (response != null) {
-                        responseData = Json.ORDERED_MAPPER.readTree(response.toString());
-                    }
-
-                    // Read the hits
-                    if (responseData == null) {
-                        return null;
-                    }
-                    if (!responseData.has("hits")) {
-                        return null;
-                    }
-                    if (!responseData.get("hits").has("hits")) {
-                        return null;
-                    }
-
-                    // TODO: don't parse response as JSON, use SearchHit from response.getHits().getHits()
-                    for (JsonNode doc : responseData.get("hits").get("hits")) {
-                        // Skip doc if already fetched. Otherwise mark doc as fetched and then proceed.
-                        String id = doc.get("_id").textValue();
-                        Set<String> indexDocIds = docIds.get(indexName);
-                        if (indexDocIds.contains(id)) {
-                            continue;
-                        }
-                        indexDocIds.add(id);
-
-                        // Gather attributes from the doc. Store them in the "_attributes" field of the doc,
-                        // and include them in the attributes for subsequent queries.
-                        Map<String, Set<Value>> docAttributes = new TreeMap<>();
-                        Map<String, JsonNode> docIndexFields = new TreeMap<>();
-
-                        parseDocHit(doc, indexName, nextInputAttributes, docAttributes, docIndexFields);
-
-                        // Modify doc metadata.
-                        if (config.includeHits) {
-                            modifyDocMetadata(
-                                (ObjectNode) doc,
-                                indexName,
+                        // Log queries.
+                        if (config.includeQueries || config.profile) {
+                            LoggedQuery logged = buildLoggedQuery(
+                                config.input,
                                 hop.get(),
                                 queryCounter.get(),
-                                namedFilters.get(),
-                                docAttributes,
-                                docIndexFields
+                                indexName,
+                                searchReqBuilder,
+                                response,
+                                responseError,
+                                resolvers,
+                                resolversFilterTreeGrouped,
+                                termResolvers,
+                                termResolversFilterTree
                             );
+                            queries.add(logged);
                         }
-                    }
-                    queryCounter.incrementAndGet();
-                    return null;
-                }));
+
+                        // Stop traversing if there was an error not due to a missing index.
+                        if (fatalError) {
+                            throw (Exception) responseError;
+                        }
+
+                        // Read response from Elasticsearch.
+                        JsonNode responseData = null;
+                        if (response != null) {
+                            responseData = Json.ORDERED_MAPPER.readTree(response.toString());
+                        }
+
+                        // Read the hits
+                        if (responseData == null) {
+                            return null;
+                        }
+                        if (!responseData.has("hits")) {
+                            return null;
+                        }
+                        if (!responseData.get("hits").has("hits")) {
+                            return null;
+                        }
+
+                        // TODO: don't parse response as JSON, use SearchHit from response.getHits().getHits()
+                        for (JsonNode doc : responseData.get("hits").get("hits")) {
+                            // Skip doc if already fetched. Otherwise mark doc as fetched and then proceed.
+                            String id = doc.get("_id").textValue();
+                            Set<String> indexDocIds = docIds.get(indexName);
+                            if (indexDocIds.contains(id)) {
+                                continue;
+                            }
+                            indexDocIds.add(id);
+
+                            // Gather attributes from the doc. Store them in the "_attributes" field of the doc,
+                            // and include them in the attributes for subsequent queries.
+                            Map<String, Set<Value>> docAttributes = new TreeMap<>();
+                            Map<String, JsonNode> docIndexFields = new TreeMap<>();
+
+                            parseDocHit(doc, indexName, nextInputAttributes, docAttributes, docIndexFields);
+
+                            // Modify doc metadata.
+                            if (config.includeHits) {
+                                modifyDocMetadata(
+                                    (ObjectNode) doc,
+                                    indexName,
+                                    hop.get(),
+                                    queryCounter.get(),
+                                    namedFilters.get(),
+                                    docAttributes,
+                                    docIndexFields
+                                );
+                            }
+                        }
+                        queryCounter.incrementAndGet();
+                        return null;
+                    })
+                );
         };
 
         final CheckedSupplier<CompletableFuture<Void>, IOException> runTraversal = () -> {
@@ -1677,6 +1682,7 @@ public class Job {
      * @return A JSON string to be returned as the body of the response to a client.
      */
     public CompletableFuture<ResolutionResponse> runAsync() {
+        LOG.info("Running job in thread {}", Thread.currentThread().getName());
         // initialize the state in case this was run before
         this.initializeState();
         return this.traverseAsync();
@@ -1724,6 +1730,7 @@ public class Job {
      */
     public static class Builder {
         private NodeClient client;
+        private Executor asyncExecutor;
         private final JobConfig config = new JobConfig();
 
         public Builder includeAttributes(boolean includeAttributes) {
@@ -1833,11 +1840,21 @@ public class Job {
             return this;
         }
 
+        public Builder executor(Executor executor) {
+            this.asyncExecutor = executor;
+            return this;
+        }
+
         public Job build() {
-            if (this.client == null) {
+            if (client == null) {
                 throw new IllegalStateException("Must set client");
             }
-            return new Job(client, config);
+
+            if (asyncExecutor == null) {
+                throw new IllegalStateException("Must set executor");
+            }
+
+            return new Job(client, config, asyncExecutor);
         }
     }
 }

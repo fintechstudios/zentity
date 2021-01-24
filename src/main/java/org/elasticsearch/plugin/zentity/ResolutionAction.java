@@ -17,16 +17,14 @@ import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.CheckedFunction;
 import org.elasticsearch.common.CheckedSupplier;
-import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.util.concurrent.EsExecutors;
-import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.plugin.zentity.exceptions.BadRequestException;
 import org.elasticsearch.plugin.zentity.exceptions.NotFoundException;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.rest.RestStatus;
+import org.elasticsearch.threadpool.ThreadPool;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -35,8 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -45,8 +41,6 @@ import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 
 public class ResolutionAction extends BaseZentityAction {
-    private final Executor resolutionExecutor;
-
     // All parameters known to the request
     private static final String PARAM_ENTITY_TYPE = "entity_type";
     private static final String PARAM_PRETTY = "pretty";
@@ -72,17 +66,6 @@ public class ResolutionAction extends BaseZentityAction {
 
     public ResolutionAction(ZentityConfig config) {
         super(config);
-        // setup a scaling executor that always keeps a few threads on hand but can
-        // increase as the load increases
-        this.resolutionExecutor = EsExecutors.newScaling(
-            "zentity-resolution",
-            3,
-            this.config.getResolutionMaxConcurrentJobs(),
-            60,
-            TimeUnit.SECONDS,
-            EsExecutors.daemonThreadFactory("zentity-resolution"),
-            new ThreadContext(Settings.EMPTY)
-        );
     }
 
     CompletableFuture<Input> getInputAsync(NodeClient client, String entityType, String body) {
@@ -100,7 +83,7 @@ public class ResolutionAction extends BaseZentityAction {
                     }
                     return null;
                 }),
-                resolutionExecutor
+                client.threadPool().executor(ThreadPool.Names.SEARCH)
             ).thenCompose((input) -> {
                 if (input != null) {
                     return CompletableFuture.completedFuture(input);
@@ -158,6 +141,7 @@ public class ResolutionAction extends BaseZentityAction {
 
                     return Job.newBuilder()
                         .client(client)
+                        .executor(config.threadPool().resolution())
                         .includeAttributes(includeAttributes)
                         .includeErrorTrace(includeErrorTrace)
                         .includeExplanation(includeExplanation)

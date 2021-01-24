@@ -7,7 +7,6 @@ import org.elasticsearch.env.Environment;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 
 public class ZentityConfig {
@@ -27,7 +26,11 @@ public class ZentityConfig {
     private static final Setting<Integer> MODELS_INDEX_DEFAULT_NUMBER_OF_REPLICAS = Setting
         .intSetting("index.default_number_of_replicas", 1, Setting.Property.NodeScope, Setting.Property.Final);
 
-    private final Settings settings;
+    private final Settings zentitySettings;
+
+    private final Environment environment;
+
+    private final ThreadPool threadPool;
 
     public ZentityConfig(Environment env) {
         // Elasticsearch config directory
@@ -37,6 +40,7 @@ public class ZentityConfig {
         final Path settingsYamlFile = configDir.resolve("zentity.yml");
 
         final Settings.Builder settingsBuilder = Settings.builder();
+
         if (settingsYamlFile.toFile().exists()) {
             try {
                 settingsBuilder.loadFromPath(settingsYamlFile);
@@ -45,31 +49,41 @@ public class ZentityConfig {
             }
         }
 
-        settings = settingsBuilder.build();
+        environment = env;
+        zentitySettings = settingsBuilder.build();
+        threadPool = new ThreadPool(this);
+    }
+
+    public Environment getEnvironment() {
+        return environment;
     }
 
     public int getResolutionMaxConcurrentJobsPerRequest() {
-        return RESOLUTION_MAX_CONCURRENT_JOBS_PER_REQUEST.get(settings);
+        return RESOLUTION_MAX_CONCURRENT_JOBS_PER_REQUEST.get(zentitySettings);
     }
 
     public int getResolutionMaxConcurrentJobs() {
-        return RESOLUTION_MAX_CONCURRENT_JOBS.get(settings);
+        return RESOLUTION_MAX_CONCURRENT_JOBS.get(zentitySettings);
     }
 
     public String getModelsIndexName() {
-        return MODELS_INDEX_NAME.get(settings);
+        return MODELS_INDEX_NAME.get(zentitySettings);
     }
 
     public int getModelsIndexDefaultNumberOfShards() {
-        return MODELS_INDEX_DEFAULT_NUMBER_OF_SHARDS.get(settings);
+        return MODELS_INDEX_DEFAULT_NUMBER_OF_SHARDS.get(zentitySettings);
     }
 
     public int getModelsIndexDefaultNumberOfReplicas() {
-        return MODELS_INDEX_DEFAULT_NUMBER_OF_REPLICAS.get(settings);
+        return MODELS_INDEX_DEFAULT_NUMBER_OF_REPLICAS.get(zentitySettings);
     }
 
-    public List<Setting<?>> getSettings() {
-        return Arrays.asList(
+    public ThreadPool threadPool() {
+        return threadPool;
+    }
+
+    public List<Setting<?>> getAllSettings() {
+        return List.of(
             RESOLUTION_MAX_CONCURRENT_JOBS,
             RESOLUTION_MAX_CONCURRENT_JOBS_PER_REQUEST,
             MODELS_INDEX_NAME,

@@ -2,10 +2,12 @@ package org.elasticsearch.plugin.zentity;
 
 import io.zentity.common.ActionRequestUtil;
 import io.zentity.common.CompletableFutureUtil;
-import io.zentity.common.FunctionalUtil;
 import io.zentity.common.FunctionalUtil.UnCheckedUnaryOperator;
 import io.zentity.common.XContentUtil;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.elasticsearch.ElasticsearchSecurityException;
+import org.elasticsearch.action.ActionResponse;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequestBuilder;
@@ -28,12 +30,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.UnaryOperator;
 
+import static java.util.function.UnaryOperator.identity;
 import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
 import static org.elasticsearch.rest.RestRequest.Method;
 import static org.elasticsearch.rest.RestRequest.Method.DELETE;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 
+
 public class SetupAction extends BaseZentityAction {
+    private static final Logger LOG = LogManager.getLogger(SetupAction.class);
 
     public static final String INDEX_MAPPING = "{\n" +
         "  \"dynamic\": \"strict\",\n" +
@@ -88,7 +93,7 @@ public class SetupAction extends BaseZentityAction {
                 .put("index.number_of_replicas", numberOfReplicas)
             );
 
-        return ActionRequestUtil.toCompletableFuture(reqBuilder)
+        return ActionRequestUtil.toCompletableFuture(reqBuilder, config.threadPool().requests())
             .exceptionally(ex -> {
                 Throwable cause = CompletableFutureUtil.getCause(ex);
                 if (cause instanceof ElasticsearchSecurityException) {
@@ -100,7 +105,7 @@ public class SetupAction extends BaseZentityAction {
     }
 
     /**
-     * Create the .zentity-models index using the default index settings.
+     * Create the zentity models index using the default index settings.
      *
      * @param client The client that will communicate with Elasticsearch.
      * @return A completable future that completes when the index is created.
@@ -115,8 +120,9 @@ public class SetupAction extends BaseZentityAction {
             .indices()
             .prepareDelete(config.getModelsIndexName());
 
-        return ActionRequestUtil.toCompletableFuture(reqBuilder)
+        return ActionRequestUtil.toCompletableFuture(reqBuilder, config.threadPool().requests())
             .exceptionally(ex -> {
+                LOG.info("Delete Index Exceptionally: Thread.currentThread().getName() = " + Thread.currentThread().getName());
                 Throwable cause = CompletableFutureUtil.getCause(ex);
                 if (cause instanceof ElasticsearchSecurityException) {
                     String message = "You do not have the 'delete_index' privilege for the "
@@ -144,12 +150,7 @@ public class SetupAction extends BaseZentityAction {
         final int numberOfReplicas = restRequest.paramAsInt("number_of_replicas", config.getModelsIndexDefaultNumberOfReplicas());
         final Method method = restRequest.method();
 
-        final UnaryOperator<XContentBuilder> prettyPrintModifier = (builder) -> {
-            if (pretty) {
-                return builder.prettyPrint();
-            }
-            return builder;
-        };
+        final UnaryOperator<XContentBuilder> prettyPrintModifier = pretty ? XContentBuilder::prettyPrint : identity();
 
         final UnaryOperator<XContentBuilder> ackResponseModifier = UnCheckedUnaryOperator.from(
             (builder) -> new AcknowledgedResponse(true).toXContent(builder, ToXContent.EMPTY_PARAMS)
@@ -160,18 +161,20 @@ public class SetupAction extends BaseZentityAction {
         );
 
         return errorHandlingConsumer(channel -> {
-            final CompletableFuture<?> fut;
+            final CompletableFuture<? extends ActionResponse> fut;
             if (method == POST) {
-                fut = createIndex(client, numberOfShards, numberOfReplicas);
+                fut = CompletableFuture.supplyAsync(() -> createIndex(client, numberOfShards, numberOfReplicas).join(), config.threadPool().requests());
             } else if (method == DELETE) {
-                fut = deleteIndex(client);
+                fut = CompletableFuture.supplyAsync(() -> deleteIndex(client).join(), config.threadPool().requests());
             } else {
                 throw new NotImplementedException("Method and endpoint not implemented.");
             }
 
-            fut.thenApply(FunctionalUtil.UnCheckedFunction.from(res -> XContentUtil.jsonBuilder(responseBuilderFunc)))
-                .thenAccept(builder -> channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder)))
-                .get();
+            fut.get();
+            LOG.info("Setup: Build response: Thread.currentThread().getName() = " + Thread.currentThread().getName());
+            XContentBuilder builder = XContentUtil.jsonBuilder(responseBuilderFunc);
+            LOG.info("Setup: Send response: Thread.currentThread().getName() = " + Thread.currentThread().getName());
+            channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));
         });
     }
 }

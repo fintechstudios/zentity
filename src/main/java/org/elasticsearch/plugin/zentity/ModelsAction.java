@@ -36,6 +36,8 @@ import java.util.concurrent.CompletionException;
 import java.util.function.UnaryOperator;
 
 import static io.zentity.common.CompletableFutureUtil.composeExceptionally;
+import static io.zentity.common.FunctionalUtil.NOOP_CONSUMER;
+import static java.util.function.UnaryOperator.identity;
 import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
 import static org.elasticsearch.rest.RestRequest.Method;
 import static org.elasticsearch.rest.RestRequest.Method.DELETE;
@@ -44,11 +46,11 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
 public class ModelsAction extends BaseZentityAction {
-
-    public static final String INDEX_NAME = ".zentity-models";
+    private final SetupAction setupAction;
 
     public ModelsAction(ZentityConfig config) {
         super(config);
+        setupAction = new SetupAction(config);
     }
 
     @Override
@@ -72,10 +74,10 @@ public class ModelsAction extends BaseZentityAction {
             .indices()
             .prepareExists(config.getModelsIndexName());
 
-        return ActionRequestUtil.toCompletableFuture(request)
+        return ActionRequestUtil.toCompletableFuture(request, config.threadPool().requests())
             .thenCompose((res) -> {
                 if (!res.isExists()) {
-                    return new SetupAction(config).createIndex(client).thenApply((val) -> null);
+                    return setupAction.createIndex(client).thenAccept(NOOP_CONSUMER);
                 }
                 return CompletableFuture.completedFuture(null);
             });
@@ -94,15 +96,15 @@ public class ModelsAction extends BaseZentityAction {
     <ReqT extends ActionRequest, ResT extends ActionResponse> CompletableFuture<ResT>
     getResponseWithImplicitIndexCreation(NodeClient client, ActionRequestBuilder<ReqT, ResT> builder) {
         return composeExceptionally(
-            ActionRequestUtil.toCompletableFuture(builder),
+            ActionRequestUtil.toCompletableFuture(builder, config.threadPool().requests()),
             (ex) -> {
                 Throwable cause = CompletableFutureUtil.getCause(ex);
                 if (!(cause instanceof IndexNotFoundException)) {
                     throw new CompletionException(cause);
                 }
-                return new SetupAction(config)
+                return setupAction
                     .createIndex(client)
-                    .thenCompose(res -> ActionRequestUtil.toCompletableFuture(builder));
+                    .thenCompose(res -> ActionRequestUtil.toCompletableFuture(builder, config.threadPool().requests()));
             }
         );
     }
@@ -144,7 +146,7 @@ public class ModelsAction extends BaseZentityAction {
             .thenCompose((nil) -> {
                 IndexRequestBuilder request = client.prepareIndex(config.getModelsIndexName(), "doc", entityType);
                 request.setSource(requestBody, XContentType.JSON).setCreate(true).setRefreshPolicy("wait_for");
-                return ActionRequestUtil.toCompletableFuture(request);
+                return ActionRequestUtil.toCompletableFuture(request, config.threadPool().requests());
             });
     }
 
@@ -164,7 +166,7 @@ public class ModelsAction extends BaseZentityAction {
                     .setSource(requestBody, XContentType.JSON)
                     .setCreate(false)
                     .setRefreshPolicy("wait_for");
-                return ActionRequestUtil.toCompletableFuture(request);
+                return ActionRequestUtil.toCompletableFuture(request, config.threadPool().requests());
             });
     }
 
@@ -195,12 +197,7 @@ public class ModelsAction extends BaseZentityAction {
         Method method = restRequest.method();
         String requestBody = restRequest.content().utf8ToString();
 
-        final UnaryOperator<XContentBuilder> prettyPrintModifier = (builder) -> {
-            if (pretty) {
-                return builder.prettyPrint();
-            }
-            return builder;
-        };
+        final UnaryOperator<XContentBuilder> prettyPrintModifier = pretty ? XContentBuilder::prettyPrint : identity();
 
         return errorHandlingConsumer(channel -> {
             // Validate input
@@ -238,7 +235,9 @@ public class ModelsAction extends BaseZentityAction {
             }
 
             responseFuture
-                .thenApply(UnCheckedFunction.from(res -> res.toXContent(XContentUtil.jsonBuilder(prettyPrintModifier), ToXContent.EMPTY_PARAMS)))
+                .thenApply(UnCheckedFunction.from(
+                    res -> res.toXContent(XContentUtil.jsonBuilder(prettyPrintModifier), ToXContent.EMPTY_PARAMS)
+                ))
                 .thenAccept((builder) -> channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder)))
                 .get();
         });

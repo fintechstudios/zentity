@@ -2,6 +2,8 @@ package org.elasticsearch.plugin.zentity;
 
 import io.zentity.common.FunctionalUtil.UnCheckedUnaryOperator;
 import io.zentity.common.XContentUtil;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.rest.BytesRestResponse;
@@ -12,6 +14,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.function.UnaryOperator;
 
+import static java.util.function.UnaryOperator.identity;
 import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
 import static org.elasticsearch.rest.RestRequest.Method.DELETE;
 import static org.elasticsearch.rest.RestRequest.Method.GET;
@@ -20,6 +23,9 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
 public class HomeAction extends BaseZentityAction {
+    private static final Logger LOG = LogManager.getLogger(HomeAction.class);
+
+
     public HomeAction(ZentityConfig config) {
         super(config);
     }
@@ -27,7 +33,13 @@ public class HomeAction extends BaseZentityAction {
     @Override
     public List<Route> routes() {
         return List.of(
-            new Route(GET, "_zentity"),
+            new Route(GET, "_zentity")
+        );
+    }
+
+    @Override
+    public List<DeprecatedRoute> deprecatedRoutes() {
+        return List.of(
             new DeprecatedRoute(POST, "_zentity", "Only GET requests will be supported in future versions"),
             new DeprecatedRoute(PUT, "_zentity", "Only GET requests will be supported in future versions"),
             new DeprecatedRoute(DELETE, "_zentity", "Only GET requests will be supported in future versions"),
@@ -45,12 +57,7 @@ public class HomeAction extends BaseZentityAction {
 
         final boolean pretty = restRequest.paramAsBoolean("pretty", false);
 
-        final UnaryOperator<XContentBuilder> prettyPrintModifier = (builder) -> {
-            if (pretty) {
-                return builder.prettyPrint();
-            }
-            return builder;
-        };
+        final UnaryOperator<XContentBuilder> prettyPrintModifier = pretty ? XContentBuilder::prettyPrint : identity();
 
         final UnaryOperator<XContentBuilder> propsResponseModifier = UnCheckedUnaryOperator.from((builder) -> {
             builder.startObject();
@@ -75,7 +82,10 @@ public class HomeAction extends BaseZentityAction {
             List.of(prettyPrintModifier, propsResponseModifier)
         );
 
+        LOG.info("Prepare Thread.currentThread().getName() = " + Thread.currentThread().getName());
+
         return errorHandlingConsumer(channel -> {
+            LOG.info("Consumer Thread.currentThread().getName() = " + Thread.currentThread().getName());
             XContentBuilder contentBuilder = XContentUtil.jsonBuilder(responseBuilderFunc);
             channel.sendResponse(new BytesRestResponse(RestStatus.OK, contentBuilder));
         });

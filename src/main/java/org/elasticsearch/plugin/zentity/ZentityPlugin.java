@@ -9,6 +9,8 @@ import io.zentity.resolution.LoggedFilter;
 import io.zentity.resolution.LoggedQuery;
 import io.zentity.resolution.LoggedSearch;
 import io.zentity.resolution.ResolutionResponse;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.action.search.SearchAction;
 import org.elasticsearch.action.search.SearchRequestBuilder;
@@ -48,6 +50,7 @@ import java.util.TreeMap;
 import java.util.function.Supplier;
 
 public class ZentityPlugin extends Plugin implements ActionPlugin {
+    private static final Logger LOG = LogManager.getLogger(ZentityPlugin.class);
 
     private static final Properties PROPERTIES = new Properties();
 
@@ -55,6 +58,7 @@ public class ZentityPlugin extends Plugin implements ActionPlugin {
 
     static {
         try {
+            LOG.debug("Loading properties");
             Properties zentityProperties = loadPropertiesFromResources("/zentity.properties");
             Properties pluginDescriptorProperties = loadPropertiesFromResources("/plugin-descriptor.properties");
             PROPERTIES.putAll(zentityProperties);
@@ -63,6 +67,7 @@ public class ZentityPlugin extends Plugin implements ActionPlugin {
             throw new RuntimeException(ex);
         }
 
+        LOG.debug("Setting up jackson");
         // Initializing Jackson requires reflection permissions
         // see: https://github.com/elastic/elasticsearch/blob/fc5725597189a4ee36b265a8fb75fa616b63e41b/plugins/discovery-ec2/src/main/java/org/elasticsearch/discovery/ec2/Ec2DiscoveryPlugin.java#L60-L74
         SecurityUtil.doPrivileged((CheckedSupplier<?, ?>) () -> {
@@ -147,6 +152,7 @@ public class ZentityPlugin extends Plugin implements ActionPlugin {
     }
 
     public ZentityPlugin(final Settings settings, final Path configPath) {
+        LOG.debug("Created plugin");
         this.config = new ZentityConfig(new Environment(settings, configPath));
     }
 
@@ -187,6 +193,6 @@ public class ZentityPlugin extends Plugin implements ActionPlugin {
      */
     @Override
     public List<Setting<?>> getSettings() {
-        return config.getSettings();
+        return config.getAllSettings();
     }
 }
