@@ -5,6 +5,8 @@ import io.zentity.common.CompletableFutureUtil;
 import io.zentity.common.FunctionalUtil.UnCheckedFunction;
 import io.zentity.common.XContentUtil;
 import io.zentity.model.Model;
+import io.zentity.model.ValidationException;
+import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.ActionRequestBuilder;
 import org.elasticsearch.action.ActionResponse;
@@ -18,6 +20,7 @@ import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.node.NodeClient;
+import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentType;
@@ -29,10 +32,13 @@ import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
 
+import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.function.BiFunction;
 import java.util.function.UnaryOperator;
 
 import static io.zentity.common.CompletableFutureUtil.composeExceptionally;
@@ -44,8 +50,54 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
 public class ModelsAction extends BaseZentityAction {
+    public static final int MAX_ENTITY_TYPE_BYTES = 255;
 
-    public static final String INDEX_NAME = ".zentity-models";
+    /**
+     * Check if an entity type meets the name requirements, as specified by the Elasticsearch index
+     * naming requirements.
+     *
+     * @param entityType The entity type.
+     * @throws ValidationException If the type is not in a valid format.
+     * @see <a href="https://www.elastic.co/guide/en/elasticsearch/reference/7.10/indices-create-index.html#indices-create-api-path-params">Elasticsearch Index Name Requirements</a>
+     * @see org.elasticsearch.cluster.metadata.MetadataCreateIndexService#validateIndexOrAliasName
+     */
+    public static void validateEntityType(String entityType) {
+        BiFunction<String, String, ValidationException> errorConstructor = (name, description) -> {
+            String message = "Invalid entity type [" + name + "], " + description;
+            return new ValidationException(message);
+        };
+
+        if (!Strings.validFileName(entityType)) {
+            throw errorConstructor.apply(entityType, "must not contain the following characters " + Strings.INVALID_FILENAME_CHARS);
+        }
+        if (entityType.contains("#")) {
+            throw errorConstructor.apply(entityType, "must not contain '#'");
+        }
+        if (entityType.contains(":")) {
+            throw errorConstructor.apply(entityType, "must not contain ':'");
+        }
+        if (entityType.charAt(0) == '_' || entityType.charAt(0) == '-' || entityType.charAt(0) == '+') {
+            throw errorConstructor.apply(entityType, "must not start with '_', '-', or '+'");
+        }
+        int byteCount = 0;
+        try {
+            byteCount = entityType.getBytes("UTF-8").length;
+        } catch (UnsupportedEncodingException e) {
+            // UTF-8 should always be supported, but rethrow this if it is not for some reason
+            throw new ElasticsearchException("Unable to determine length of entity type", e);
+        }
+
+        if (byteCount > MAX_ENTITY_TYPE_BYTES) {
+            throw errorConstructor.apply(entityType, "entity type is too long, (" + byteCount + " > " + MAX_ENTITY_TYPE_BYTES + ")");
+        }
+        if (entityType.equals(".") || entityType.equals("..")) {
+            throw errorConstructor.apply(entityType, "must not be '.' or '..'");
+        }
+
+        if (!entityType.toLowerCase(Locale.ROOT).equals(entityType)) {
+            throw errorConstructor.apply(entityType, "must be lowercase");
+        }
+    }
 
     public ModelsAction(ZentityConfig config) {
         super(config);
@@ -140,6 +192,7 @@ public class ModelsAction extends BaseZentityAction {
      * @return The response from Elasticsearch.
      */
     CompletableFuture<IndexResponse> indexEntityModel(String entityType, String requestBody, NodeClient client) {
+        validateEntityType(entityType);
         return ensureIndex(client)
             .thenCompose((nil) -> {
                 IndexRequestBuilder request = client.prepareIndex(config.getModelsIndexName(), "doc", entityType);
@@ -157,6 +210,7 @@ public class ModelsAction extends BaseZentityAction {
      * @return The response from Elasticsearch.
      */
     CompletableFuture<IndexResponse> updateEntityModel(String entityType, String requestBody, NodeClient client) {
+        validateEntityType(entityType);
         return ensureIndex(client)
             .thenCompose((nil) -> {
                 IndexRequestBuilder request = client.prepareIndex(config.getModelsIndexName(), "doc", entityType);

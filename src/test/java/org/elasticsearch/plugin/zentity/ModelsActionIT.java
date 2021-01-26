@@ -2,8 +2,11 @@ package org.elasticsearch.plugin.zentity;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.zentity.common.Json;
+import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.entity.ContentType;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
+import org.elasticsearch.client.ResponseException;
 import org.elasticsearch.rest.RestStatus;
 import org.junit.Test;
 
@@ -11,6 +14,7 @@ import static io.zentity.devtools.JsonTestUtil.assertUnorderedEquals;
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertFalse;
 import static junit.framework.TestCase.assertTrue;
+import static org.junit.Assert.fail;
 
 public class ModelsActionIT extends AbstractActionITCase {
     @Test
@@ -124,6 +128,34 @@ public class ModelsActionIT extends AbstractActionITCase {
             assertEquals("deleted", json.get("result").textValue());
         } finally {
             destroyTestResources(testResourceSet);
+        }
+    }
+
+    @Test
+    public void testCannotCreateInvalidEntityType() throws Exception {
+        ByteArrayEntity testEntityModelA = new ByteArrayEntity(getTestEntityModelAJson(), ContentType.APPLICATION_JSON);
+        Request request = new Request("POST", "_zentity/models/_anInvalidType");
+        request.setEntity(testEntityModelA);
+
+        try {
+            client.performRequest(request);
+            fail("expected failure");
+        } catch (ResponseException ex) {
+            Response response = ex.getResponse();
+            assertEquals(400, response.getStatusLine().getStatusCode());
+
+            JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
+
+            assertEquals(400, json.get("status").asInt());
+
+            assertTrue("response has error field", json.has("error"));
+            JsonNode errorJson = json.get("error");
+
+            assertTrue("error has type field", errorJson.has("type"));
+            assertEquals("validation_exception", errorJson.get("type").textValue());
+
+            assertTrue("error has reason field", errorJson.has("reason"));
+            assertTrue(errorJson.get("reason").textValue().contains("Invalid entity type [_anInvalidType]"));
         }
     }
 }
