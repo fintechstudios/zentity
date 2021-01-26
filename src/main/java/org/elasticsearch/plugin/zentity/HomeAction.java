@@ -14,11 +14,7 @@ import java.util.function.UnaryOperator;
 
 import static java.util.function.UnaryOperator.identity;
 import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
-import static org.elasticsearch.rest.RestRequest.Method.DELETE;
 import static org.elasticsearch.rest.RestRequest.Method.GET;
-import static org.elasticsearch.rest.RestRequest.Method.PATCH;
-import static org.elasticsearch.rest.RestRequest.Method.POST;
-import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
 public class HomeAction extends BaseZentityAction {
     public HomeAction(ZentityConfig config) {
@@ -28,11 +24,7 @@ public class HomeAction extends BaseZentityAction {
     @Override
     public List<Route> routes() {
         return List.of(
-            new Route(GET, "_zentity"),
-            new DeprecatedRoute(POST, "_zentity", "Only GET requests will be supported in future versions"),
-            new DeprecatedRoute(PUT, "_zentity", "Only GET requests will be supported in future versions"),
-            new DeprecatedRoute(DELETE, "_zentity", "Only GET requests will be supported in future versions"),
-            new DeprecatedRoute(PATCH, "_zentity", "Only GET requests will be supported in future versions")
+            new Route(GET, "_zentity")
         );
     }
 
