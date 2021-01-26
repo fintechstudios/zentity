@@ -80,7 +80,14 @@ public abstract class AbstractITCase {
     private static PluggableElasticsearchContainer buildEsContainer() {
         PluggableElasticsearchContainer container = (PluggableElasticsearchContainer) new PluggableElasticsearchContainer(DEFAULT_IMAGE)
             .withPluginDir(Paths.get(PLUGIN_DIR))
-            .withLogConsumer(new Slf4jLogConsumer(LOG));
+            // enable assertions
+            // see: https://github.com/zentity-io/zentity/issues/64
+            .withEsJavaOpt("-ea")
+            .withLogConsumer(
+                new Slf4jLogConsumer(LOG)
+                    .withSeparateOutputStreams()
+                    .withPrefix("zentity-es")
+            );
 
         if (DEBUGGER_ENABLED) {
             LOG.info("Starting remote ES debugger on port {}", DEBUGGER_PORT);
