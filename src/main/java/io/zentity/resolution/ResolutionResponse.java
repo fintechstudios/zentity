@@ -18,7 +18,7 @@ import java.util.List;
 @JsonSerialize(using = ResolutionResponse.Serializer.class)
 public class ResolutionResponse {
     // took, in ms
-    public Duration took;
+    public Duration took = Duration.ZERO;
     // into { total: number, hits }
     public List<JsonNode> hits = new ArrayList<>();
     // TODO: move to where the response is needed

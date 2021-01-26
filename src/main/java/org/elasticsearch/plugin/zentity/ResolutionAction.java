@@ -185,7 +185,15 @@ public class ResolutionAction extends BaseZentityAction {
     }
 
     CompletableFuture<ResolutionResponse> buildAndRunJobAsync(NodeClient client, String body, Map<String, String> params, Map<String, String> reqParams) {
-        return buildJobAsync(client, body, params, reqParams).thenCompose(Job::runAsync);
+        return buildJobAsync(client, body, params, reqParams)
+            .handle((job, err) -> {
+                if (err == null) {
+                    return job.runAsync().join();
+                }
+                ResolutionResponse failureResponse = new ResolutionResponse();
+                failureResponse.error = err;
+                return failureResponse;
+            });
     }
 
     CompletableFuture<RestResponse> handleBulkJobRequest(final NodeClient client, final ObjectWriter responseWriter, final String reqBody, final Map<String, String> reqParams) {
@@ -203,7 +211,9 @@ public class ResolutionAction extends BaseZentityAction {
                     try {
                         params = Json.toStringMap(paramsStr);
                     } catch (Exception ex) {
-                        throw new BadRequestException("Could not parse parameters: " + paramsStr);
+                        ResolutionResponse failureResponse = new ResolutionResponse();
+                        failureResponse.error = new BadRequestException("Could not parse parameters: " + paramsStr);
+                        return CompletableFuture.completedFuture(failureResponse);
                     }
                     final String body = tuple[1];
 
