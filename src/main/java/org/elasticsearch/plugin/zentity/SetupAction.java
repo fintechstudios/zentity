@@ -28,6 +28,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.UnaryOperator;
 
+import static java.util.function.UnaryOperator.identity;
+import static org.elasticsearch.plugin.zentity.ActionUtil.channelErrorHandler;
 import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
 import static org.elasticsearch.rest.RestRequest.Method;
 import static org.elasticsearch.rest.RestRequest.Method.DELETE;
@@ -144,12 +146,7 @@ public class SetupAction extends BaseZentityAction {
         final int numberOfReplicas = restRequest.paramAsInt("number_of_replicas", config.getModelsIndexDefaultNumberOfReplicas());
         final Method method = restRequest.method();
 
-        final UnaryOperator<XContentBuilder> prettyPrintModifier = (builder) -> {
-            if (pretty) {
-                return builder.prettyPrint();
-            }
-            return builder;
-        };
+        final UnaryOperator<XContentBuilder> prettyPrintModifier = pretty ? XContentBuilder::prettyPrint : identity();
 
         final UnaryOperator<XContentBuilder> ackResponseModifier = UnCheckedUnaryOperator.from(
             (builder) -> new AcknowledgedResponse(true).toXContent(builder, ToXContent.EMPTY_PARAMS)
@@ -171,7 +168,7 @@ public class SetupAction extends BaseZentityAction {
 
             fut.thenApply(FunctionalUtil.UnCheckedFunction.from(res -> XContentUtil.jsonBuilder(responseBuilderFunc)))
                 .thenAccept(builder -> channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder)))
-                .get();
+                .exceptionally(channelErrorHandler(channel));
         });
     }
 }
