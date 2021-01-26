@@ -47,6 +47,7 @@ jobs:
     strategy:
       matrix:
         elasticsearch:
+          - 7.10.2
           - 7.10.1
           - 7.10.0
           - 7.9.3

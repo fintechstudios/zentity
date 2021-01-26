@@ -33,7 +33,7 @@ public abstract class AbstractITCase {
 
     private static final String DEFAULT_TAG = Optional
         .ofNullable(System.getenv("ELASTICSEARCH_VERSION"))
-        .orElse("7.10.1");
+        .orElse("7.10.2");
 
     private static final DockerImageName DEFAULT_IMAGE = DockerImageName
         .parse("docker.elastic.co/elasticsearch/elasticsearch-oss")
