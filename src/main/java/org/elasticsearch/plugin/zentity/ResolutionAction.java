@@ -41,6 +41,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static java.util.Collections.emptyMap;
+import static org.elasticsearch.plugin.zentity.ActionUtil.channelErrorHandler;
 import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 
@@ -317,7 +318,7 @@ public class ResolutionAction extends BaseZentityAction {
 
             handleFut
                 .thenAccept(channel::sendResponse)
-                .get();
+                .exceptionally(channelErrorHandler(channel));
         });
     }
 }

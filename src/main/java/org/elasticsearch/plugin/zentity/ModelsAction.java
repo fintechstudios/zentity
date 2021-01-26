@@ -42,6 +42,8 @@ import java.util.function.BiFunction;
 import java.util.function.UnaryOperator;
 
 import static io.zentity.common.CompletableFutureUtil.composeExceptionally;
+import static java.util.function.UnaryOperator.identity;
+import static org.elasticsearch.plugin.zentity.ActionUtil.channelErrorHandler;
 import static org.elasticsearch.plugin.zentity.ActionUtil.errorHandlingConsumer;
 import static org.elasticsearch.rest.RestRequest.Method;
 import static org.elasticsearch.rest.RestRequest.Method.DELETE;
@@ -249,12 +251,7 @@ public class ModelsAction extends BaseZentityAction {
         Method method = restRequest.method();
         String requestBody = restRequest.content().utf8ToString();
 
-        final UnaryOperator<XContentBuilder> prettyPrintModifier = (builder) -> {
-            if (pretty) {
-                return builder.prettyPrint();
-            }
-            return builder;
-        };
+        final UnaryOperator<XContentBuilder> prettyPrintModifier = pretty ? XContentBuilder::prettyPrint : identity();
 
         return errorHandlingConsumer(channel -> {
             // Validate input
@@ -294,7 +291,7 @@ public class ModelsAction extends BaseZentityAction {
             responseFuture
                 .thenApply(UnCheckedFunction.from(res -> res.toXContent(XContentUtil.jsonBuilder(prettyPrintModifier), ToXContent.EMPTY_PARAMS)))
                 .thenAccept((builder) -> channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder)))
-                .get();
+                .exceptionally(channelErrorHandler(channel));
         });
     }
 }
