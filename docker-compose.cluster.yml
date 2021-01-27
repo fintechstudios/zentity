@@ -82,8 +82,8 @@ services:
       - *plugin-volume
       - es-data-2:/usr/share/elasticsearch/data
     ports:
-      - "${ES_PORT_DATA_2:-9201}:9200" # http
-      - "${DEBUGGER_PORT_DATA_2:-5051}:5050" # debugger
+      - "${ES_PORT_DATA_2:-9202}:9200" # http
+      - "${DEBUGGER_PORT_DATA_2:-5052}:5050" # debugger
 
   kibana:
     image: docker.elastic.co/kibana/kibana-oss:${KIBANA_VERSION:-7.10.1}
