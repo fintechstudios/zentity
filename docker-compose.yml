@@ -1,7 +1,7 @@
 version: '3'
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch-oss:${ES_VERSION:-7.10.1}
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:${ELASTICSEARCH_VERSION:-7.10.2}
     ports:
       - "9200:9200" # http
       - "${DEBUGGER_PORT:-5050}:5050" # debugger
@@ -30,10 +30,12 @@ services:
       - "ES_JAVA_OPTS=-Xms1500m -Xmx1500m -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:5050"
       - discovery.type=single-node
   kibana:
-    image: docker.elastic.co/kibana/kibana-oss:${KIBANA_VERSION:-7.10.1}
+    image: docker.elastic.co/kibana/kibana-oss:${KIBANA_VERSION:-7.10.2}
     hostname: kibana
     links:
       - elasticsearch
+    logging:
+      driver: none
     ports:
       - "5601:5601"
     environment:
