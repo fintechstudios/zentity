@@ -2,20 +2,6 @@ version: '3.7'
 
 x-plugin-volume: &plugin-volume "./target/releases/:/plugins"
 
-x-base-env: &base-env
-  cluster.name: docker-cluster
-  network.host: 0.0.0.0
-  # minimum_master_nodes need to be explicitly set when bound on a public IP
-  # set to 1 to allow single node clusters
-  # Details: https://github.com/elastic/elasticsearch/pull/17288
-  discovery.zen.minimum_master_nodes: "1"
-  # Reduce virtual memory requirements, see https://github.com/docker/for-win/issues/5202#issuecomment-637782971
-  bootstrap.memory_lock: "false"
-  ES_JAVA_OPTS: "-Xms512m -Xmx512m -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:5050"
-  http.cors.enabled: "true"
-  http.cors.allow-origin: "*"
-  cluster.initial_master_nodes: primary
-
 x-base-es: &base-es
   image: docker.elastic.co/elasticsearch/elasticsearch-oss:${ES_VERSION:-7.10.1}
   user: "elasticsearch"
@@ -31,8 +17,19 @@ x-base-es: &base-es
     memlock:
       soft: -1
       hard: -1
-  environment:
-    <<: *base-env
+  environment: &base-env
+    cluster.name: docker-cluster
+    network.host: 0.0.0.0
+    # minimum_master_nodes need to be explicitly set when bound on a public IP
+    # set to 1 to allow single node clusters
+    # Details: https://github.com/elastic/elasticsearch/pull/17288
+    discovery.zen.minimum_master_nodes: "1"
+    # Reduce virtual memory requirements, see https://github.com/docker/for-win/issues/5202#issuecomment-637782971
+    bootstrap.memory_lock: "false"
+    ES_JAVA_OPTS: "-Xms512m -Xmx512m -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=0.0.0.0:5050"
+    http.cors.enabled: "true"
+    http.cors.allow-origin: "*"
+    cluster.initial_master_nodes: primary
   networks:
     - elastic
 
@@ -73,6 +70,9 @@ services:
     volumes:
       - *plugin-volume
       - es-data-1:/usr/share/elasticsearch/data
+    ports:
+      - "${ES_PORT_DATA_1:-9201}:9200" # http
+      - "${DEBUGGER_PORT_DATA_1:-5051}:5050" # debugger
 
   es-data-2:
     <<: *base-data-node
@@ -81,6 +81,9 @@ services:
     volumes:
       - *plugin-volume
       - es-data-2:/usr/share/elasticsearch/data
+    ports:
+      - "${ES_PORT_DATA_2:-9201}:9200" # http
+      - "${DEBUGGER_PORT_DATA_2:-5051}:5050" # debugger
 
   kibana:
     image: docker.elastic.co/kibana/kibana-oss:${KIBANA_VERSION:-7.10.1}
@@ -96,7 +99,6 @@ services:
       - '${KIBANA_PORT:-5601}:5601'
     networks:
       - elastic
-
 
 volumes:
   es-primary:
