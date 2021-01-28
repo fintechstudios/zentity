@@ -22,6 +22,7 @@ import org.elasticsearch.plugin.zentity.exceptions.NotImplementedException;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
+import org.elasticsearch.threadpool.ThreadPool;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -90,7 +91,7 @@ public class SetupAction extends BaseZentityAction {
                 .put("index.number_of_replicas", numberOfReplicas)
             );
 
-        return ActionRequestUtil.toCompletableFuture(reqBuilder)
+        return ActionRequestUtil.toCompletableFuture(reqBuilder, client.threadPool().executor(ThreadPool.Names.WRITE))
             .exceptionally(ex -> {
                 Throwable cause = CompletableFutureUtil.getCause(ex);
                 if (cause instanceof ElasticsearchSecurityException) {
@@ -117,7 +118,7 @@ public class SetupAction extends BaseZentityAction {
             .indices()
             .prepareDelete(config.getModelsIndexName());
 
-        return ActionRequestUtil.toCompletableFuture(reqBuilder)
+        return ActionRequestUtil.toCompletableFuture(reqBuilder, client.threadPool().executor(ThreadPool.Names.WRITE))
             .exceptionally(ex -> {
                 Throwable cause = CompletableFutureUtil.getCause(ex);
                 if (cause instanceof ElasticsearchSecurityException) {

@@ -47,6 +47,7 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
 
 public class ResolutionAction extends BaseZentityAction {
     private final Executor resolutionExecutor;
+    private final ModelsAction modelsAction;
 
     // All parameters known to the request
     private static final String PARAM_ENTITY_TYPE = "entity_type";
@@ -73,9 +74,10 @@ public class ResolutionAction extends BaseZentityAction {
 
     public ResolutionAction(ZentityConfig config) {
         super(config);
+        modelsAction = new ModelsAction(config);
         // setup a scaling executor that always keeps a few threads on hand but can
         // increase as the load increases
-        this.resolutionExecutor = EsExecutors.newScaling(
+        resolutionExecutor = EsExecutors.newScaling(
             "zentity-resolution",
             3,
             this.config.getResolutionMaxConcurrentJobs(),
@@ -106,8 +108,7 @@ public class ResolutionAction extends BaseZentityAction {
                 if (input != null) {
                     return CompletableFuture.completedFuture(input);
                 }
-                return new ModelsAction(config)
-                    .getEntityModel(entityType, client)
+                return modelsAction.getEntityModel(entityType, client)
                     .thenApply(UnCheckedFunction.from(
                         // cast needed to appease the compiler for the thrown checked exceptions
                         (CheckedFunction<GetResponse, Input, IOException>)
@@ -186,14 +187,14 @@ public class ResolutionAction extends BaseZentityAction {
 
     CompletableFuture<ResolutionResponse> buildAndRunJobAsync(NodeClient client, String body, Map<String, String> params, Map<String, String> reqParams) {
         return buildJobAsync(client, body, params, reqParams)
-            .handle((job, err) -> {
+            .handleAsync((job, err) -> {
                 if (err == null) {
                     return job.runAsync().join();
                 }
                 ResolutionResponse failureResponse = new ResolutionResponse();
-                failureResponse.error = err;
+                failureResponse.error = CompletableFutureUtil.getCause(err);
                 return failureResponse;
-            });
+            }, resolutionExecutor);
     }
 
     CompletableFuture<RestResponse> handleBulkJobRequest(final NodeClient client, final ObjectWriter responseWriter, final String reqBody, final Map<String, String> reqParams) {
@@ -202,6 +203,9 @@ public class ResolutionAction extends BaseZentityAction {
             throw new BadRequestException("Bulk request must have repeating pairs of params and resolution body on separate lines.");
         }
 
+
+        // TODO: these suppliers seem to be executing on the transport thread
+        //       that might be causing blocking, so we should change this to allow passing an executor to `runParallel`
         List<Supplier<CompletableFuture<ResolutionResponse>>> runJobsSuppliers =
             Arrays.stream(lines)
                 .flatMap(StreamUtil.tupleFlatmapper(new String[2]))
@@ -226,7 +230,7 @@ public class ResolutionAction extends BaseZentityAction {
         // Start timer and begin the jobs
         final long startTime = System.nanoTime();
         // maybe this belongs better in a BulkJob class
-        return CompletableFutureUtil.runParallel(runJobsSuppliers, maxConcurrentJobs)
+        return CompletableFuture.supplyAsync(() -> CompletableFutureUtil.runParallel(runJobsSuppliers, maxConcurrentJobs).join(), resolutionExecutor)
             .thenApply(UnCheckedFunction.from((jobResponses) -> {
                 BulkResolutionResponse response = new BulkResolutionResponse();
                 // mark as an error if any of the jobs failed

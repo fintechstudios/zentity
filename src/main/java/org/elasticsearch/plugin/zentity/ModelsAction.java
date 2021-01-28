@@ -31,6 +31,7 @@ import org.elasticsearch.plugin.zentity.exceptions.NotImplementedException;
 import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
+import org.elasticsearch.threadpool.ThreadPool;
 
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
@@ -53,6 +54,8 @@ import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
 public class ModelsAction extends BaseZentityAction {
     public static final int MAX_ENTITY_TYPE_BYTES = 255;
+
+    private final SetupAction setupAction;
 
     /**
      * Check if an entity type meets the name requirements, as specified by the Elasticsearch index
@@ -103,6 +106,7 @@ public class ModelsAction extends BaseZentityAction {
 
     public ModelsAction(ZentityConfig config) {
         super(config);
+        setupAction = new SetupAction(config);
     }
 
     @Override
@@ -126,10 +130,10 @@ public class ModelsAction extends BaseZentityAction {
             .indices()
             .prepareExists(config.getModelsIndexName());
 
-        return ActionRequestUtil.toCompletableFuture(request)
+        return ActionRequestUtil.toCompletableFuture(request, client.threadPool().generic())
             .thenCompose((res) -> {
                 if (!res.isExists()) {
-                    return new SetupAction(config).createIndex(client).thenApply((val) -> null);
+                    return setupAction.createIndex(client).thenApply((val) -> null);
                 }
                 return CompletableFuture.completedFuture(null);
             });
@@ -148,15 +152,15 @@ public class ModelsAction extends BaseZentityAction {
     <ReqT extends ActionRequest, ResT extends ActionResponse> CompletableFuture<ResT>
     getResponseWithImplicitIndexCreation(NodeClient client, ActionRequestBuilder<ReqT, ResT> builder) {
         return composeExceptionally(
-            ActionRequestUtil.toCompletableFuture(builder),
+            ActionRequestUtil.toCompletableFuture(builder, client.threadPool().generic()),
             (ex) -> {
                 Throwable cause = CompletableFutureUtil.getCause(ex);
                 if (!(cause instanceof IndexNotFoundException)) {
                     throw new CompletionException(cause);
                 }
-                return new SetupAction(config)
+                return setupAction
                     .createIndex(client)
-                    .thenCompose(res -> ActionRequestUtil.toCompletableFuture(builder));
+                    .thenCompose(res -> ActionRequestUtil.toCompletableFuture(builder, client.threadPool().generic()));
             }
         );
     }
@@ -199,7 +203,7 @@ public class ModelsAction extends BaseZentityAction {
             .thenCompose((nil) -> {
                 IndexRequestBuilder request = client.prepareIndex(config.getModelsIndexName(), "doc", entityType);
                 request.setSource(requestBody, XContentType.JSON).setCreate(true).setRefreshPolicy("wait_for");
-                return ActionRequestUtil.toCompletableFuture(request);
+                return ActionRequestUtil.toCompletableFuture(request, client.threadPool().executor(ThreadPool.Names.WRITE));
             });
     }
 
@@ -220,7 +224,7 @@ public class ModelsAction extends BaseZentityAction {
                     .setSource(requestBody, XContentType.JSON)
                     .setCreate(false)
                     .setRefreshPolicy("wait_for");
-                return ActionRequestUtil.toCompletableFuture(request);
+                return ActionRequestUtil.toCompletableFuture(request, client.threadPool().executor(ThreadPool.Names.WRITE));
             });
     }
 

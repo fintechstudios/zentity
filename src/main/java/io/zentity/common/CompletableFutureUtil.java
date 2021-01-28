@@ -3,8 +3,8 @@ package io.zentity.common;
 import io.zentity.common.FunctionalUtil.Recursable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -17,6 +17,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 public class CompletableFutureUtil {
     /**
@@ -99,6 +100,17 @@ public class CompletableFutureUtil {
     }
 
     /**
+     * Join all the results of a stream of futures into a list.
+     *
+     * @param futures The stream of {@link CompletableFuture CompletableFutures}.
+     * @param <T> The item result type.
+     * @return The list of results.
+     */
+    public static <T> List<T> joinAllOf(Stream<CompletableFuture<T>> futures) {
+        return futures.map(CompletableFuture::join).collect(Collectors.toList());
+    }
+
+    /**
      * Join all the results of a collection of futures into a list.
      *
      * @param futures The collection of {@link CompletableFuture CompletableFutures}.
@@ -106,7 +118,7 @@ public class CompletableFutureUtil {
      * @return The list of results.
      */
     public static <T> List<T> joinAllOf(Collection<CompletableFuture<T>> futures) {
-        return futures.stream().map(CompletableFuture::join).collect(Collectors.toList());
+        return joinAllOf(futures.stream());
     }
 
     /**
@@ -159,11 +171,12 @@ public class CompletableFutureUtil {
             );
     }
 
+    @SuppressWarnings("unchecked")
     static <T> CompletableFuture<List<T>> runParallelInChains(List<Supplier<CompletableFuture<T>>> suppliers, int parallelism) {
-        // Hold on to all supplied futures so that results can be ordered at the end
-        final List<CompletableFuture<T>> futures = Collections.synchronizedList(new ArrayList<>(suppliers.size()));
-
         final int size = suppliers.size();
+        // Hold on to all supplied futures so that results can be ordered at the end
+        CompletableFuture<T>[] futures = new CompletableFuture[size];
+
         final AtomicInteger currentIdx = new AtomicInteger(0);
 
         final CompletableFuture<Void> FINISHED = CompletableFuture.completedFuture(null);
@@ -177,7 +190,7 @@ public class CompletableFutureUtil {
             }
 
             CompletableFuture<T> nextFuture = suppliers.get(nextIdx).get();
-            futures.add(nextIdx, nextFuture);
+            futures[nextIdx] = nextFuture;
             return nextFuture;
         };
 
@@ -194,7 +207,7 @@ public class CompletableFutureUtil {
             .mapToObj(i -> futureRunner.apply(CompletableFuture.completedFuture(null)))
             .collect(Collectors.toList());
 
-        return allOfIgnored(channels).thenApply((ignored) -> joinAllOf(futures));
+        return allOfIgnored(channels).thenApply((ignored) -> joinAllOf(Arrays.stream(futures)));
     }
 
     static <T> CompletableFuture<List<T>> runParallelInPartitions(List<Supplier<CompletableFuture<T>>> suppliers, int parallelism) {
