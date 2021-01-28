@@ -46,6 +46,7 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptType;
 import org.elasticsearch.search.SearchModule;
+import org.elasticsearch.threadpool.ThreadPool;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -1510,7 +1511,7 @@ public class Job {
 
             // Submit query to Elasticsearch.
             return ActionRequestUtil
-                .toCompletableFuture(searchReqBuilder)
+                .toCompletableFuture(searchReqBuilder, client.threadPool().executor(ThreadPool.Names.SEARCH))
                 .handle(UnCheckedBiFunction.from(
                     (CheckedBiFunction<? super SearchResponse, Throwable, Void, ? extends Exception>)
                     (response, throwable) -> {
